@@ -1,4 +1,5 @@
-"""Coqui XTTS-v2 (CPML licence: NON-COMMERCIAL). hi/en zero-shot cloning from a 6+ s reference."""
+"""Coqui XTTS-v2 (CPML licence: NON-COMMERCIAL). hi/en zero-shot cloning from a 6+ s reference
+(job["ref_wav"]) or one of the built-in studio speakers (job["speaker"])."""
 import os
 import sys
 
@@ -18,7 +19,10 @@ if jobs:
     def fn(j):
         torch.manual_seed(int(j.get("seed", 0)))
         lang = {"en": "en", "hi": "hi"}[j["lang"]]
-        wav = tts.tts(text=j["text"], speaker_wav=j["ref_wav"], language=lang)
+        if j.get("speaker"):
+            wav = tts.tts(text=j["text"], speaker=j["speaker"], language=lang)
+        else:
+            wav = tts.tts(text=j["text"], speaker_wav=j["ref_wav"], language=lang)
         return np.asarray(wav, dtype=np.float32), sr
 
     common.run(jobs, fn, "xtts")

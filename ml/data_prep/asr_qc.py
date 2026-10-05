@@ -67,6 +67,8 @@ def main():
         if j["id"] in done or not os.path.exists(j["out"]):
             continue
         lang = j.get("lang") if j.get("lang") in ("hi", "en", "te", "ta", "mr", "bn", "kn", "ml", "gu") else None
+        if lang not in ("hi", "en"):  # Whisper is too weak on te/ta to judge clone quality
+            continue
         try:
             segs, info = transcribe(j["out"], lang)
             hyp = " ".join(s.text for s in segs)

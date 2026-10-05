@@ -1,45 +1,51 @@
 # ML status (Pehchaan voice provenance)
 
-Last updated: 2026-10-06 00:30 IST
+Last updated: 2026-10-06 01:55 IST
 
 ## BLOCKERS (need the user)
 
-1. **No `.env` yet** (`D:/hackathons/amazon-raksham/.env` missing). Sarvam / OpenAI / Gemini / Deepgram stock-voice generation is skipped until keys appear. I re-check periodically.
-2. **No Hugging Face token on this laptop.** Gated repos need a token from an account that has accepted their terms:
-   - `ai4bharat/IndicF5` (MIT, gated "accept terms") -- core Indic cloner.
-   - `vdivyasharma/IndicSynth` (CC-BY-NC-4.0, gated) -- public Indic spoof set.
-   - Please run `huggingface-cli login` on the laptop (or put `HF_TOKEN=...` in `.env`) after accepting the terms on those two pages. Until then I use ungated alternatives and note it.
-3. **GPU capacity:** p4d.24xlarge (all AZs), p4de.24xlarge, p5.4xlarge (all AZs) and g6e.2xlarge (all AZs) returned `InsufficientInstanceCapacity` at 00:20 IST. Running on **g5.2xlarge (1x A10G 24 GB)** instead; I retry P capacity periodically. Not blocking, just slower.
-4. **Team recordings not in `data/raw/recordings/` yet** (expected ~12:00 IST). Pipelines are being built and tested on synthetic stock-voice references meanwhile.
+1. **HF token cannot download gated repos (403 GatedRepoError).** The token in `.env` is a *fine-grained* token for `galabavamsi`. Downloads of `ai4bharat/IndicF5`, `ai4bharat/indic-parler-tts`, `ai4bharat/IndicVoices` and `mueller91/MLAAD` are denied. Please either
+   - open each page while logged in and click "Agree and access repository" (IndicF5, indic-parler-tts, IndicVoices, MLAAD), **and**
+   - give the token the permission "Read access to contents of all public gated repos you can access" (Settings -> Access Tokens -> edit), or make a classic *read* token.
+   Until then: Indic F5 cloning uses the ungated **SPRINGLab/F5-Hindi-24KHz** (CC-BY-4.0, IIT Madras); IndicSynth is ungated and is being downloaded.
+2. **Keys stay on the laptop.** Copying `.env` (HF token / API keys) to the EC2 box was blocked by the Claude Code permission policy (credential exfiltration guard). So commercial TTS (Sarvam, OpenAI, Deepgram) runs **from the laptop** and only the audio is uploaded; gated HF files would be downloaded on the laptop and uploaded as files. If you want the GPU box/SageMaker to use the keys directly, you would have to allow it explicitly; not needed for Round 1.
+3. **GPU capacity:** EC2 p4d / p4de / p5.4xlarge / g6e.2xlarge had no capacity in us-east-1 (all AZs) at 00:20 IST. Running on **g5.2xlarge (1x A10G 24 GB)**. SageMaker training in ap-southeast-1 (ml.p4d.24xlarge quota 1) is set up as the heavy-batch option.
+4. Team recordings: S01 recording now; S02 later today (planned held-out speaker). Gemini dropped (no key).
 
-## AWS resources I created (all tagged Project=pehchaan, us-east-1)
+## AWS resources I created (all tagged Project=pehchaan)
 
 | Resource | ID |
 |---|---|
-| Key pair | `pehchaan-ml` (key-088fe7c1862ab164d); private key `ml/infra/pehchaan-ml` (gitignored) |
+| Key pair (us-east-1) | `pehchaan-ml` (key-088fe7c1862ab164d); private key `ml/infra/pehchaan-ml` (gitignored) |
 | Security group | `sg-023ef8c13605cbc8b` `pehchaan-ml-ssh`, SSH 22 from 103.147.138.252/32 only |
-| S3 bucket | `pehchaan-ml-301745146083-use1` (private, BPA on, SSE-S3, versioning) |
-| IAM role / instance profile | `pehchaan-ml-ec2` (S3 access to that bucket only) |
-| Launch template | `lt-075d93f2e06074c0b` `pehchaan-ml` (DLAMI PyTorch 2.7 Ubuntu 22.04 ami-012ba162b9cd2729c, 600 GB gp3 encrypted, IMDSv2 required, shutdown=stop, idle watchdog in user-data) |
+| S3 bucket us-east-1 | `pehchaan-ml-301745146083-use1` (private, BPA on, SSE-S3, versioning) |
+| S3 bucket ap-southeast-1 | `pehchaan-ml-301745146083-apse1` (private, BPA on, SSE-S3, versioning) - SageMaker job I/O |
+| IAM role / instance profile | `pehchaan-ml-ec2` (S3 access to the two pehchaan buckets only) |
+| IAM role | `pehchaan-sagemaker-exec` (two pehchaan buckets + ECR pull + CloudWatch Logs) |
+| Launch template | `lt-075d93f2e06074c0b` `pehchaan-ml` (DLAMI PyTorch 2.7 Ubuntu 22.04, 600 GB gp3 encrypted, IMDSv2 required, shutdown=stop, idle watchdog in user-data) |
 | Instance | `i-06da2349859b52482` g5.2xlarge us-east-1b, IP 52.91.206.100 |
 
-## Instance log and cost
+## Instance / job log and cost
 
-| Instance | Type | $/h (on-demand) | Start (IST) | Stop (IST) | Hours | Est. cost |
+| Resource | Type | $/h | Start (IST) | Stop (IST) | Hours | Est. cost |
 |---|---|---|---|---|---|---|
 | i-06da2349859b52482 | g5.2xlarge | 1.212 | 2026-10-06 00:23 | running | | |
 
-EBS: 600 GB gp3 (6000 IOPS, 500 MB/s) ~ $0.08/GB-month + IOPS/throughput extras ~ $2/day.
-Price reference: p4d.24xlarge = $21.96/h (AWS Price List API, 2026-10-06).
+EBS: 600 GB gp3 (6000 IOPS, 500 MB/s) ~ $2/day. Commercial TTS: < $5 total (est.).
+Price reference: EC2 p4d.24xlarge $21.96/h; SageMaker ml.p4d.24xlarge ~ $37-41/h.
 
 ## Progress
 
-- [x] Infra: key, SG, bucket, IAM, launch template, instance
-- [ ] Environments per generator
-- [ ] Public data
-- [ ] Zero-shot baselines
-- [ ] Generators
-- [ ] Channel simulation
-- [ ] Fine-tune + calibration
+- [x] Infra: key, SG, buckets, IAM, launch template, instance, idle watchdog (cron, 45 min)
+- [x] Environments: det, f5, xtts, chatterbox, seedvc, cosy, misc (uv venvs, one per generator)
+- [x] Public data: FLEURS hi/te/ta/en (train/dev/test) + mr/bn/kn/ml/gu (dev/test) = 19,634 bona fide clips; ASVspoof 2019 LA (subset manifest 13.6k)
+- [x] Baselines load and are verified in-domain on ASVspoof19 LA eval subset: SSL-AASIST LA EER 0.27 %, SSL-AASIST DF EER 0.20 %, NII MMS-300M AntiDeepfake EER 2.5 %
+- [x] Generator smoke tests pass (Whisper re-transcription checked): F5-TTS, F5-Hindi, XTTS-v2, Chatterbox-ML, CosyVoice2, Seed-VC, MMS-TTS, Kokoro
+- [~] SynRef corpus (synthetic stock voices as references; no real person cloned): stock MMS 1040 + Kokoro 520 done; XTTS, F5, F5-Hindi, Chatterbox, CosyVoice2, Seed-VC running (ETA ~03:30 IST)
+- [~] Commercial stock voices from the laptop: Sarvam 400, OpenAI 320, Deepgram 130 (running)
+- [ ] IndicSynth subset (hi/te/ta) download
+- [ ] Team recordings: segmentation + cloning (script ready: `data_prep/segment_team.py`)
+- [ ] Channel simulation of the whole corpus; zero-shot baseline scoring (ETA first numbers ~05:00 IST)
+- [ ] Fine-tune + calibration + bands
 - [ ] Results + figures
 - [ ] Serving

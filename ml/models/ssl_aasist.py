@@ -42,19 +42,19 @@ class HFSSLModel(nn.Module):
         return self.model(input_data).last_hidden_state  # [batch, frames, 1024]
 
 
-def convert_fairseq_state_dict(sd, model):
-    """Map SSL_Anti-spoofing checkpoint keys (fairseq wav2vec2 under ssl_model.model.*) to HF names."""
+def convert_fairseq_state_dict(sd, model, src_prefix="ssl_model.model.", dst_prefix="ssl_model.model."):
+    """Map fairseq wav2vec2 keys (under src_prefix) to HF Wav2Vec2Model names (under dst_prefix)."""
     sd = {k[7:] if k.startswith("module.") else k: v for k, v in sd.items()}
     target = model.state_dict()
     out, unmapped = {}, []
-    pos_g = [k for k in target if k.startswith("ssl_model.model.encoder.pos_conv_embed.conv.") and ("weight_g" in k or "original0" in k)]
-    pos_v = [k for k in target if k.startswith("ssl_model.model.encoder.pos_conv_embed.conv.") and ("weight_v" in k or "original1" in k)]
+    pos_g = [k for k in target if k.startswith(dst_prefix + "encoder.pos_conv_embed.conv.") and ("weight_g" in k or "original0" in k)]
+    pos_v = [k for k in target if k.startswith(dst_prefix + "encoder.pos_conv_embed.conv.") and ("weight_v" in k or "original1" in k)]
     for k, v in sd.items():
-        if not k.startswith("ssl_model.model."):
+        if not k.startswith(src_prefix):
             out[k] = v
             continue
-        f = k[len("ssl_model.model."):]
-        p = "ssl_model.model."
+        f = k[len(src_prefix):]
+        p = dst_prefix
         n = None
         if f.startswith("feature_extractor.conv_layers."):
             parts = f.split(".")  # feature_extractor.conv_layers.{i}.{0|2.1}.{weight|bias}

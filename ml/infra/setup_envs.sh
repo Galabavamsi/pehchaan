@@ -54,17 +54,19 @@ env_cosy() {  # CosyVoice2 (Apache-2.0)
   [ -d ~/repos/CosyVoice ] || git clone -q --recursive https://github.com/FunAudioLLM/CosyVoice.git ~/repos/CosyVoice
   mk cosy 3.10
   uv pip install torch==2.3.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
-  grep -viE '^(torch|torchaudio|tensorrt|deepspeed|onnxruntime-gpu|gradio|fastapi|uvicorn|fastapi-cli)' ~/repos/CosyVoice/requirements.txt \
-     | sed 's/;.*//' > /tmp/cosy_req.txt
-  uv pip install -r /tmp/cosy_req.txt
-  uv pip install onnxruntime-gpu huggingface_hub modelscope
+  # the repo's requirements.txt does not resolve with uv (pinned grpcio/tensorrt); install the runtime subset
+  uv pip install "numpy==1.26.4" conformer==0.3.2 diffusers==0.29.0 hydra-core==1.3.2 HyperPyYAML==1.2.3 inflect==7.3.1 \
+     librosa==0.10.2 lightning==2.2.4 modelscope omegaconf==2.3.0 onnx onnxruntime-gpu openai-whisper pyworld rich pyarrow \
+     "protobuf<5" soundfile "transformers==4.51.3" "x-transformers==2.11.24" wetext wget matplotlib huggingface_hub \
+     "setuptools<80" gdown tensorboard
 }
 
 env_misc() {  # MMS-TTS / Indic Parler-TTS stock voices + commercial API clients
   mk misc 3.11
   uv pip install torch==2.6.0 torchaudio==2.6.0 $TORCH_CU124
   uv pip install "transformers==4.46.1" soundfile librosa requests openai google-genai sentencepiece \
-     "git+https://github.com/huggingface/parler-tts.git"
+     kokoro "misaki[en]" pip "git+https://github.com/huggingface/parler-tts.git"
+  python -m spacy download en_core_web_sm   # Kokoro English G2P
 }
 
 target=${1:-all}
