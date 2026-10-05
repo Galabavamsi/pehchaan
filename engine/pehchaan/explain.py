@@ -228,11 +228,13 @@ class _SafeDict(dict):
         return "{" + key + "}"
 
 
-def _fill(template: str, params: dict, defaults: dict) -> str:
+def _fill(template: str, params: dict, defaults: dict, suffix: str = "") -> str:
     fields = {f for _, f, _, _ in Formatter().parse(template) if f}
     values = _SafeDict()
     for f in fields:
-        v = params.get(f)
+        v = params.get(f + suffix) if suffix else None
+        if v in (None, ""):
+            v = params.get(f)
         values[f] = str(v) if v not in (None, "") else defaults.get(f, "")
     out = template.format_map(values)
     # Capitalise a lowercase default at sentence start (e.g. "this person").
@@ -240,9 +242,10 @@ def _fill(template: str, params: dict, defaults: dict) -> str:
 
 
 def reason_text(code: str, params: dict | None = None) -> dict[str, str]:
+    """Params may carry Hindi-specific values with a `_hi` suffix (e.g. relative_hi)."""
     en, hi = REASON_TEXT[code]
     params = params or {}
-    return {"en": _fill(en, params, DEFAULTS_EN), "hi": _fill(hi, params, DEFAULTS_HI)}
+    return {"en": _fill(en, params, DEFAULTS_EN), "hi": _fill(hi, params, DEFAULTS_HI, "_hi")}
 
 
 def copy_text(key: str) -> dict[str, str]:

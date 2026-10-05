@@ -36,7 +36,7 @@ _P_HI = {"relative": "परिवार के सदस्य", "bank": "अ�
 
 
 def _l(en: str, hi: str, params: dict) -> dict[str, str]:
-    return {"en": _fill(en, params, _P_EN), "hi": _fill(hi, params, _P_HI)}
+    return {"en": _fill(en, params, _P_EN), "hi": _fill(hi, params, _P_HI, "_hi")}
 
 
 def actions_for(

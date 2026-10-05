@@ -1,0 +1,10 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2
+pyyaml
+numpy
+cryptography
+httpx
+python-multipart
+playwright  # optional: evidence-pack PDF
+pytest

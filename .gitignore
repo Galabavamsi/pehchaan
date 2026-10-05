@@ -28,3 +28,7 @@ data/generated/
 # scraped caches / sample renders
 research/raw/
 deck/tooling-samples/out/
+
+# app runtime data (SQLite, signing key, packs)
+app/server/data/
+app/web/dist/
