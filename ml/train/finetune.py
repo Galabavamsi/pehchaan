@@ -89,7 +89,7 @@ class TrainSet(Dataset):
 def balanced_weights(df):
     g = df.label + "|" + df.source.astype(str) + "|" + df.generator.astype(str)
     counts = g.value_counts()
-    w = g.map(lambda k: 1.0 / counts[k]).values
+    w = np.array(g.map(lambda k: 1.0 / counts[k]).values, dtype=np.float64)
     # equal total mass per class
     for lab in ("bonafide", "spoof"):
         m = (df.label == lab).values

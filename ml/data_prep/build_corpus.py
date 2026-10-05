@@ -67,6 +67,8 @@ def rows_jobs(pattern, source, gen_from_id=True):
             gen = GEN_NAME.get(gen, gen)
             spk = j.get("speaker_id") or f"syn_{j.get('voice', 'unk')}"
             split = j.get("split", "test")
+            if source == "team_clone" and gen in HELDOUT_GENERATORS:
+                split = "test"  # never trained/calibrated on, so every held-out clone can be a test item
             out.append(dict(utt_id=j["id"].replace(" ", "_"), path=j["out"], label="spoof", generator=gen,
                             speaker=spk, lang=j.get("lang"), line_id=j.get("line_id", ""), text=j.get("text", ""),
                             gender=j.get("gender", ""), source=source, split=split,
@@ -172,7 +174,7 @@ def main():
     tasks, rows = [], []
     for r in ev.itertuples(index=False):
         native = getattr(r, "native_channel", "clean")
-        if isinstance(native, str) and native in ("cellular", "whatsapp"):
+        if isinstance(native, str) and native.startswith(("cellular", "whatsapp")):
             chs = [f"real_{native}"]
         else:
             chs = CHANNELS
@@ -181,7 +183,7 @@ def main():
                 (EVAL / ch).mkdir(parents=True, exist_ok=True)
                 dst = EVAL / ch / f"{r.utt_id}.wav"
                 if not dst.exists():
-                    os.link(SRC / f"{r.utt_id}.wav", dst) if not dst.exists() else None
+                    os.link(SRC / f"{r.utt_id}.wav", dst)
             else:
                 (EVAL / ch).mkdir(parents=True, exist_ok=True)
                 tasks.append((r.utt_id, ch))

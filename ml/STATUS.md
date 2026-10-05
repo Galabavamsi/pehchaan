@@ -1,6 +1,6 @@
 # ML status (Pehchaan voice provenance)
 
-Last updated: 2026-10-06 01:55 IST
+Last updated: 2026-10-06 03:55 IST
 
 ## BLOCKERS (need the user)
 
@@ -11,6 +11,32 @@ Last updated: 2026-10-06 01:55 IST
 2. **Keys stay on the laptop.** Copying `.env` (HF token / API keys) to the EC2 box was blocked by the Claude Code permission policy (credential exfiltration guard). So commercial TTS (Sarvam, OpenAI, Deepgram) runs **from the laptop** and only the audio is uploaded; gated HF files would be downloaded on the laptop and uploaded as files. If you want the GPU box/SageMaker to use the keys directly, you would have to allow it explicitly; not needed for Round 1.
 3. **GPU capacity:** EC2 p4d / p4de / p5.4xlarge / g6e.2xlarge had no capacity in us-east-1 (all AZs) at 00:20 IST. Running on **g5.2xlarge (1x A10G 24 GB)**. SageMaker training in ap-southeast-1 (ml.p4d.24xlarge quota 1) is set up as the heavy-batch option.
 4. Team recordings: S01 recording now; S02 later today (planned held-out speaker). Gemini dropped (no key).
+
+## PROGRESS NOTE (03:00 IST)
+
+Team recordings received (S01, S02 + one real cellular call). Consent images present for **both** speakers, so both will be cloned.
+Copied to the box and synced to `s3://pehchaan-ml-301745146083-use1/raw/recordings/` (private, SSE). Segmentation/alignment running now;
+cloning of S01 + S02 starts right after (~03:15 IST). **ETA first fine-tuned metrics: ~06:00 IST; full results + figures: ~09:00 IST** (well before the 07 Oct 08:00 deadline).
+Note for the lead: **the S01 consent image (Galaba Vamsi) says "speaker ID S02"** (S02's form also says S02). Looks like a typo on S01's form; please correct it on the signed copy. I treat the Galaba Vamsi form as S01's consent.
+Gender is not on the forms, so per-gender slices for team speakers will read "unknown" unless you add `{"S01": {"gender": ...}, "S02": {...}}` to `data/raw/recordings/speakers.json`.
+
+## EARLY RESULTS (03:55 IST, preliminary; test = FLEURS bona fide + SynRef/commercial/IndicSynth spoofs, 5 simulated channels pooled; team audio not yet in this table)
+
+Zero-shot (off-the-shelf) detectors, 7,500 bona fide / 9,020 spoof test clips:
+
+| Detector | In-domain sanity (ASVspoof19 LA eval) | Our Indic test, pooled EER | AUC | clean | PSTN | AMR-NB | Opus | replay |
+|---|---|---|---|---|---|---|---|---|
+| XLS-R+AASIST (LA ckpt) | 0.27 % | **33.8 %** | 0.72 | 27.4 | 29.0 | 32.5 | 29.1 | 37.2 |
+| XLS-R+AASIST (DF ckpt) | 0.20 % | **40.0 %** | 0.65 | 25.3 | 37.1 | 40.4 | 34.8 | 47.7 |
+| NII MMS-300M AntiDeepfake (NC licence) | 2.5 % | **15.3 %** | 0.92 | 1.2 | 3.7 | 6.5 | 2.9 | 31.2 |
+
+Notes: per-channel EERs are lower than the pooled EER because each channel shifts the score distribution, so one
+global threshold (what a product must use) does worse than per-channel thresholds. NII is the strongest public model
+but its weights are non-commercial, and it still fails on speaker->mic replay (31 %).
+Fine-tuned run v0 (no team data yet): dev EER (seen generators) 28 % -> 1.6 % after one epoch; test numbers incl.
+held-out generators pending (~05:00 IST).
+Perth watermark (Chatterbox outputs): detected 100 % clean / PSTN / Opus, 88 % replay, **30 % after AMR-NB**;
+false positives 0-0.7 % except 6.7 % on replay.
 
 ## AWS resources I created (all tagged Project=pehchaan)
 

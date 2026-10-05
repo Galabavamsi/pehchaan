@@ -22,3 +22,4 @@ serve/weights/
 work/
 cache/
 __pycache__/
+infra/known_hosts

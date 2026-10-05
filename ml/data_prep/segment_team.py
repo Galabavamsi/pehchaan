@@ -37,7 +37,7 @@ def vad_regions(x, min_gap=0.7, min_len=0.6):
     import torch
     m = load_silero_vad()
     ts = get_speech_timestamps(torch.from_numpy(x), m, sampling_rate=SR, min_silence_duration_ms=int(min_gap * 1000),
-                               speech_pad_ms=120, min_speech_duration_ms=int(min_len * 1000))
+                               speech_pad_ms=60 if min_gap < 0.5 else 120, min_speech_duration_ms=int(min_len * 1000))
     return [(t["start"], t["end"]) for t in ts]
 
 
@@ -64,26 +64,119 @@ def chunk_regions(regs, max_len=10.0, min_len=3.0, x_len=None):
     return final
 
 
-def align_scripted(x, regs, lines, lang):
-    segs = []
+def _sim(ref, hyp):
+    return max(0.0, 1.0 - cer(ref, hyp))
+
+
+_word_cache = {}
+
+
+def words_of(x, lang):
+    """Whisper on the whole file with word timestamps (cached per file+lang)."""
+    key = (id(x), lang)
+    if key not in _word_cache:
+        save(_tmp, x)
+        segs, _ = transcribe(_tmp, lang, word_ts=True)
+        _word_cache[key] = [(int(w.start * SR), int(w.end * SR), w.word) for sg in segs for w in (sg.words or [])]
+    return _word_cache[key]
+
+
+def _region_words(x, s, e, lang):
+    """Re-transcribe one VAD region (used when the long-form pass skipped words there)."""
+    save(_tmp, x[s:e])
+    sg, _ = transcribe(_tmp, lang, word_ts=True)
+    return [(s + int(w.start * SR), s + int(w.end * SR), w.word) for g in sg for w in (g.words or [])]
+
+
+def _units(x, regs, lang):
+    """Monotonic DP alignment of the ordered script lines to sentence-like units.
+    Units come from a long-form Whisper pass with word timestamps, split at sentence punctuation or at
+    word gaps >= 0.35 s (the kit asks for pauses, but people read fast). VAD regions where Whisper
+    produced almost no words are re-transcribed on their own. A line may span up to `max_merge`
+    consecutive units; extra units (false starts, retakes) are skipped; a line may be missing.
+    Keeping the kit's order lets number-heavy lines (ASR writes digits) still land correctly."""
+    W = list(words_of(x, lang))
     for s, e in regs:
-        r, _ = transcribe_arr(x[s:e], lang)
-        segs.append(dict(s=s, e=e, text=r))
-    cands = []
-    for i in range(len(segs)):
-        cands.append((i, i, segs[i]["text"]))
-        if i + 1 < len(segs):
-            cands.append((i, i + 1, segs[i]["text"] + " " + segs[i + 1]["text"]))
-    chosen = {}
-    for lid, ref in lines.items():
-        best = None
-        for (i, j, t) in cands:
-            c = cer(ref, t)
-            # ties (within 0.02) go to the later take
-            if best is None or c < best[0] - 0.02 or (abs(c - best[0]) <= 0.02 and i > best[1]):
-                best = (c, i, j, t)
-        if best and best[0] <= 0.6:
-            chosen[lid] = dict(start=segs[best[1]]["s"], end=segs[best[2]]["e"], cer=round(best[0], 3), asr=best[3])
+        n_w = sum(1 for w in W if s <= (w[0] + w[1]) // 2 < e)
+        if (e - s) / SR > 2.0 and n_w / ((e - s) / SR) < 0.8:
+            W = [w for w in W if not (s <= (w[0] + w[1]) // 2 < e)] + _region_words(x, s, e, lang)
+    W.sort()
+    units, cur = [], []
+    for k, w in enumerate(W):
+        cur.append(w)
+        gap = (W[k + 1][0] - w[1]) / SR if k + 1 < len(W) else 9
+        if w[2].strip()[-1:] in ".?!।" or gap >= 0.35:
+            units.append(cur)
+            cur = []
+    if cur:
+        units.append(cur)
+    segs = []
+    for k, u in enumerate(units):
+        prev_end = units[k - 1][-1][1] if k else 0
+        next_start = units[k + 1][0][0] if k + 1 < len(units) else len(x)
+        a = max((prev_end + u[0][0]) // 2, u[0][0] - int(0.25 * SR))
+        b = min((u[-1][1] + next_start) // 2, u[-1][1] + int(0.3 * SR))
+        segs.append(dict(s=int(a), e=int(b), text="".join(w[2] for w in u).strip()))
+    return segs
+
+
+def _regions(x, regs, lang):
+    W = words_of(x, lang)
+    return [dict(s=s, e=e, text="".join(w[2] for w in W if s - 1600 <= (w[0] + w[1]) // 2 < e + 1600).strip()) for s, e in regs]
+
+
+def align_scripted(x, regs, lines, lang, max_cer=0.75):
+    """Run the DP on two segmentations (fine VAD regions, and sentence-like word units) and keep the
+    one that aligns more of the script (sum of 1-CER over aligned lines)."""
+    best = None
+    for segs, mm in ((_regions(x, regs, lang), 6), (_units(x, regs, lang), 8)):
+        ch, sg = _dp(segs, lines, max_cer, mm)
+        sc = sum(1 - c["cer"] for c in ch.values())
+        if best is None or sc > best[0]:
+            best = (sc, ch, sg)
+    return best[1], best[2]
+
+
+def _dp(segs, lines, max_cer, max_merge):
+    ids, refs = list(lines.keys()), list(lines.values())
+    n, m = len(ids), len(segs)
+    NEG = -1e9
+    skip_line, skip_seg = -0.15, -0.02
+    dp = np.full((n + 1, m + 1), NEG)
+    bt = {}
+    dp[0, 0] = 0.0
+    for j in range(1, m + 1):
+        dp[0, j] = dp[0, j - 1] + skip_seg
+        bt[(0, j)] = ("skipS",)
+    for i in range(1, n + 1):
+        dp[i, 0] = dp[i - 1, 0] + skip_line
+        bt[(i, 0)] = ("skipL",)
+        for j in range(1, m + 1):
+            best, arg = dp[i, j - 1] + skip_seg, ("skipS",)
+            v = dp[i - 1, j] + skip_line
+            if v > best:
+                best, arg = v, ("skipL",)
+            txt = ""
+            for k in range(1, min(max_merge, j) + 1):
+                txt = (segs[j - k]["text"] + " " + txt).strip()
+                v = dp[i - 1, j - k] + _sim(refs[i - 1], txt)
+                if v > best:
+                    best, arg = v, ("take", k)
+            dp[i, j], bt[(i, j)] = best, arg
+    i, j, chosen = n, m, {}
+    while i > 0 or j > 0:
+        op = bt.get((i, j), ("skipL",) if i > 0 else ("skipS",))
+        if op[0] == "skipS":
+            j -= 1
+        elif op[0] == "skipL":
+            i -= 1
+        else:
+            k = op[1]
+            t = " ".join(sg["text"] for sg in segs[j - k:j]).strip()
+            c = cer(refs[i - 1], t)
+            if c <= max_cer:
+                chosen[ids[i - 1]] = dict(start=segs[j - k]["s"], end=segs[j - 1]["e"], cer=round(c, 3), asr=t)
+            i, j = i - 1, j - k
     return chosen, segs
 
 
@@ -100,6 +193,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--raw", default=str(H / "work/team_raw"))
     ap.add_argument("--out", default=str(H / "work/team_seg"))
+    ap.add_argument("--manifest", default=str(H / "work/manifests/team_bona.csv"))
     ap.add_argument("--meta", default=str(H / "work/team_raw/speakers.json"),
                     help='optional {"S01": {"gender": "m", "mother_tongue": "te"}}')
     a = ap.parse_args()
@@ -112,7 +206,7 @@ def main():
         spk, spk2, sec, tag = m.group(1).upper(), (m.group(2) or "").upper(), m.group(3).upper(), m.group(4).lower()
         gender = meta.get(spk, {}).get("gender", "unknown")
         x = load_any(f)
-        regs = vad_regions(x)
+        regs = vad_regions(x, min_gap=0.25 if sec in ("A", "B") else 0.7, min_len=0.25 if sec in ("A", "B") else 0.6)
         od = Path(a.out) / spk
         od.mkdir(parents=True, exist_ok=True)
         print(f.name, f"{len(x) / SR:.0f}s", len(regs), "regions", flush=True)
@@ -153,18 +247,21 @@ def main():
                                  lang=tag, line_id=lid, text=t, asr=t, align_cer=None, gender=gender, source="team",
                                  section=sec, native_channel="clean", dur=round(len(y) / SR, 2)))
         else:  # D free speech, E real calls
-            ch = "clean" if sec == "D" else tag  # cellular / whatsapp
+            # E: the dialer's own 8 kHz WAV is true network audio ("cellular"); another capture of the same
+            # call (e.g. m4a) is kept as a separate channel so the two are never mixed up
+            ext = f.suffix.lower().lstrip(".")
+            ch = "clean" if sec == "D" else (tag if ext == "wav" else f"{tag}_{ext}")
             for k, (s, e) in enumerate(chunk_regions(regs)):
                 y = trim_silence(x[s:e])
-                uid = f"team_{spk}{('-' + spk2) if spk2 else ''}_{sec}{tag}_{k:03d}"
+                uid = f"team_{spk}{('-' + spk2) if spk2 else ''}_{sec}{ch}_{k:03d}"
                 save(od / f"{uid}.wav", y)
                 rows.append(dict(utt_id=uid, path=str(od / f"{uid}.wav"), label="bonafide", generator="bonafide",
                                  speaker=spk if not spk2 else f"{spk}-{spk2}", lang="mixed", line_id=f"{sec}{k:03d}", text="",
                                  asr="", align_cer=None, gender=gender if not spk2 else "mixed", source="team", section=sec,
                                  native_channel=ch, dur=round(len(y) / SR, 2)))
-    json.dump(meta, open(H / "work/manifests/team_speakers.json", "w"), indent=1)
     df = pd.DataFrame(rows)
-    out = H / "work/manifests/team_bona.csv"
+    out = Path(a.manifest)
+    json.dump(meta, open(out.with_name(out.stem + "_speakers.json"), "w"), indent=1)
     df.to_csv(out, index=False)
     print("wrote", out, len(df))
     if len(df):
