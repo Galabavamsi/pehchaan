@@ -55,6 +55,7 @@
 .gr { display: grid; grid-template-columns: 28px 1fr; gap: 6px; margin-bottom: 11px; }
 .gr .gk { font: 700 11px/1.3 var(--mono); color: var(--saffd); }
 .gr p { font-size: 12.6px; line-height: 1.36; }
+.chart svg { width: 100%; height: auto; display: block; }
 /* ---------- slide 8 ---------- */
 .q4 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; gap: 12px; }
 /* ---------- slide 10 ---------- */
@@ -317,14 +318,15 @@
     </div>
     <div class="card fill" style="padding:12px 14px">
       <div class="lbl">Tiers</div>
-      <p class="sm" style="margin-top:5px"><span class="chip g">GO</span> p &lt; 10% · <span class="chip a">PAUSE</span> 10–60% · <span class="chip r">HOLD</span> ≥ 60% <i>and</i> G1</p>
+      <p class="sm" style="margin-top:5px"><span class="chip g">GO</span> p &lt; 15% · <span class="chip a">PAUSE</span> 15–75% · <span class="chip r">HOLD</span> ≥ 75% <i>and</i> G1, or G7</p><p class="xs" style="margin-top:4px">Thresholds tuned to an alert budget: ≤0.25% of genuine triggered payments held, ≤6% paused.</p>
       <div class="lbl" style="margin-top:10px;margin-bottom:6px">Guardrails (hard rules)</div>
-      <div class="gr"><span class="gk">G1</span><p><b>No single weak signal.</b> HOLD needs ≥2 families each ≥3×, or a decisive out-of-band "no".</p></div>
-      <div class="gr"><span class="gk">G2</span><p><b>Voice is supporting evidence.</b> Voice alone caps at PAUSE; "sounds real" counts for little (0.7×).</p></div>
+      <div class="gr"><span class="gk">G1</span><p><b>No single weak signal.</b> HOLD needs ≥2 families each ≥3×, not counting what fired the trigger (new payee, amount) or voice.</p></div>
+      <div class="gr"><span class="gk">G2</span><p><b>Voice only raises suspicion.</b> It can never create a HOLD, and "sounds real" never lowers risk (1×).</p></div>
       <div class="gr"><span class="gk">G3</span><p><b>Quality gate.</b> &lt;4 s speech or SNR &lt;10 dB → inconclusive, never "real".</p></div>
-      <div class="gr"><span class="gk">G4</span><p><b>Decisive yes.</b> Relative confirms → GO (PAUSE if the payee is flagged high).</p></div>
+      <div class="gr"><span class="gk">G4</span><p><b>Decisive yes.</b> Relative's phone, or the bank's 1600 registry, confirms → GO.</p></div>
       <div class="gr"><span class="gk">G5</span><p><b>Trusted payees</b> (paid ≥3×, usual amount) are never interrupted.</p></div>
       <div class="gr"><span class="gk">G6</span><p><b>No accusation.</b> Copy says what we noticed and what to check, in Hindi or English.</p></div>
+      <div class="gr"><span class="gk">G7</span><p><b>Decisive no.</b> Relative's signed "not me" or the bank's "we're not calling" → HOLD, always. Self-reported checks stay advisory.</p></div>
     </div>
   </div>
 <div class="foot"><span class="src">p = sigmoid(logit(prior) + Σ_family clip(Σ ln LR)). Full LR table, assumptions and their basis: appendix A4 · engine: engine/pehchaan (unit-tested guardrails)</span><span class="pg">06 / 10</span></div>
@@ -334,34 +336,40 @@
 <section class="slide"><div class="inner">
   <div class="kicker">06 · Data, evidence &amp; validation <span class="tag">what we measured · what we assume</span></div>
   <h1 class="t">We measured it on <em>our own consented voices</em>, in Hindi, English and our mother tongues, over real phone lines.</h1>
-  <div class="body row" style="gap:16px">
-    <div class="card" style="width:330px">
-      <div class="lbl">Consented Indic clone corpus</div>
-      <div class="col" style="gap:8px;margin-top:8px">
-        <p class="sm"><b>[n] team speakers</b> · signed consent · deleted by 31 Dec 2026</p>
-        <p class="sm"><b>Languages:</b> Hindi · English · [mother tongues]</p>
-        <p class="sm"><b>Generators [n]:</b> [list pending]</p>
-        <p class="sm"><b>Channels:</b> clean · PSTN 8 kHz G.711 · AMR-NB · Opus (WhatsApp-like) · speaker→mic replay, plus <b>real cellular and WhatsApp calls</b> as genuine phone audio</p>
-        <p class="sm"><b>Content-matched:</b> real and cloned voices say the same lines, so the model can't cheat on content</p>
-        <p class="sm"><b>Held out:</b> [generators] and 1 speaker, never seen in training</p>
-        <p class="xs">Public data used only as genuine speech or published spoof sets, within licence (appendix A6). We cloned no one without signed consent.</p>
+  <div class="body row" style="gap:14px">
+    <div class="col" style="width:330px;gap:10px">
+      <div class="card" style="padding:10px 13px">
+        <div class="lbl">Consented Indic clone corpus</div>
+        <ul class="tight" style="margin-top:6px">
+          <li class="sm"><b>2 team speakers</b>, signed consent, deleted by 31 Dec 2026 · Telugu · Hindi · English · a <b>real cellular call</b> as genuine phone audio</li>
+          <li class="sm"><b>Generators:</b> [ML list] · stock voices: Sarvam, OpenAI, Deepgram</li>
+          <li class="sm"><b>5 channels:</b> clean · PSTN 8 kHz · AMR-NB · Opus (WhatsApp-like) · speaker→mic</li>
+          <li class="sm"><b>Content-matched</b> lines, so the model can't cheat on content · <b>held out:</b> [gens] + speaker S02</li>
+        </ul>
+        <p class="xs" style="margin-top:4px">Public data only as genuine speech (FLEURS) or published spoof sets, within licence (appendix A7). No one cloned without signed consent.</p>
+      </div>
+      <div class="card" style="padding:9px 12px">
+        <div class="lbl">Key assumptions → how we test them</div>
+        <table class="tb" style="margin-top:3px;font-size:10.8px">
+          <tr><td class="k">A1 "Who asked?" is answered truthfully</td><td>5-elder test at the finale; coached "no one" still gets the checklist</td></tr>
+          <tr><td class="k">A2 Relatives reply within 3 min</td><td>Pilot metric; callback / safe-word fallback</td></tr>
+          <tr><td class="k">A3 The bank can say "are we calling you?"</td><td>Dialer / Amazon Connect API; mocked now</td></tr>
+          <tr><td class="k">A4 FRI and registry lookups are available</td><td>1,600+ orgs already on DoT DIP<sup class="r">15</sup></td></tr>
+          <tr><td class="k">A5 LRs transfer to the field</td><td>Shadow mode recalibrates every LR first</td></tr>
+        </table>
       </div>
     </div>
-    <div class="card" style="width:430px">
-      <div class="lbl">Detector results (EER, lower is better)</div>
-      <div class="ph" style="height:330px;margin-top:8px">ml/results figures<br>baseline vs ours · held-out gap · channel heatmap</div>
+    <div class="card" style="width:400px;padding:10px 13px">
+      <div class="lbl">Detector · measured (EER, lower is better)</div>
+      <div class="ph" style="height:440px;margin-top:8px">ml/results figures<br>baseline vs ours · held-out gap</div>
     </div>
-    <div class="col fill" style="gap:10px">
-      <div class="card"><div class="lbl">Alert budget (simulated, 100k triggered sessions)</div><div class="ph" style="height:118px;margin-top:7px">engine/results sim charts</div></div>
-      <div class="card" style="padding:10px 13px">
-        <div class="lbl">Key assumptions → how we test them</div>
-        <table class="tb" style="margin-top:4px;font-size:11px">
-          <tr><td class="k">A1 Users answer "who asked?" truthfully most of the time</td><td>Hallway test (5 elders) at the finale; coaching copy; <i>no-one</i> still keeps context risk</td></tr>
-          <tr><td class="k">A2 Relatives reply to Family Verify in ≤3 min</td><td>Measure in pilot; fallback to callback / safe word</td></tr>
-          <tr><td class="k">A3 Bank can answer "are we calling this customer?"</td><td>Dialer / Amazon Connect API; mocked in prototype</td></tr>
-          <tr><td class="k">A4 FRI and suspect-registry lookups are available</td><td>Banks already on DoT DIP (1,600+ orgs)<sup class="r">15</sup></td></tr>
-          <tr><td class="k">A5 Lab LRs transfer to the field</td><td>Shadow mode recalibrates every LR before any user sees a screen</td></tr>
-        </table>
+    <div class="card fill" style="padding:10px 13px">
+      <div class="lbl">Decision engine · simulated, 100k triggered payments</div>
+      <div class="chart" style="margin-top:6px">{{svg:../engine/results/chart_ablation.svg}}</div>
+      <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px">
+        <div class="stat"><div class="n" style="font-size:22px">[g_red]%</div><div class="d" style="font-size:11px">of genuine payments held (budget ≤0.25%)</div></div>
+        <div class="stat"><div class="n" style="font-size:22px">[hps]</div><div class="d" style="font-size:11px">genuine holds per scam held (was 4.8 in v0.1)</div></div>
+        <div class="stat"><div class="n" style="font-size:22px">₹[ratio]</div><div class="d" style="font-size:11px">protected per ₹1 delayed</div></div>
       </div>
     </div>
   </div>
@@ -601,12 +609,12 @@
       <div class="an box node" data-n="f1" style="left:0;top:30px;width:150px"><div class="bt">Pay tapped</div><div class="bd">payee · amount · call state</div></div>
       <div class="an box node" data-n="f2" style="left:190px;top:6px;width:170px;border-color:var(--saff)"><div class="bt">Trigger?</div><div class="bd">on call / ≤10 min AND (new payee OR &gt;p95 OR ≥₹10k), not a trusted payee</div></div>
       <div class="an box node out" data-n="f2n" style="left:410px;top:30px;width:150px"><div class="bt teal">GO · no screen</div><div class="bd">anonymous counter only</div></div>
-      <div class="an box node" data-n="f3" style="left:190px;top:104px;width:170px;border-color:var(--saff)"><div class="bt">"Who asked you to pay?"</div><div class="bd">5 large buttons · Hindi/English · read-aloud</div></div>
+      <div class="an box node" data-n="f3" style="left:190px;top:104px;width:170px;border-color:var(--saff)"><div class="bt">"Who asked you to pay?"</div><div class="bd">6 large buttons · Hindi/English · read-aloud</div></div>
 
       <div class="an box node" data-n="k1" style="left:0;top:206px;width:140px"><div class="bt">Family member</div><div class="bd">Family Verify push · callback to saved no. · safe word</div></div>
-      <div class="an box node" data-n="k2" style="left:154px;top:206px;width:140px"><div class="bt">Bank / UPI app</div><div class="bd">1600 check · bank's live call registry</div></div>
+      <div class="an box node" data-n="k2" style="left:154px;top:206px;width:140px"><div class="bt">My bank (named)</div><div class="bd">1600 check · bank's live call registry; not integrated → "unknown"</div></div>
       <div class="an box node" data-n="k3" style="left:308px;top:206px;width:140px"><div class="bt">Police · CBI · Govt</div><div class="bd">fact card: no "digital arrest"; money requests = high risk</div></div>
-      <div class="an box node" data-n="k4" style="left:462px;top:206px;width:140px"><div class="bt">Someone else / no one</div><div class="bd">context + optional voice / cue check</div></div>
+      <div class="an box node" data-n="k4" style="left:462px;top:206px;width:140px"><div class="bt">UPI app · shop · other · no one</div><div class="bd">context + 3-tap cue checklist (secrecy, OTP, arrest) + optional voice</div></div>
 
       <div class="an box node core" data-n="f4" style="left:190px;top:318px;width:250px;height:70px"><div class="bt">Fuse + guardrails</div><div class="bd">re-scored after every check result (WebSocket)</div></div>
 
@@ -624,9 +632,9 @@
         {"f":"f3","fs":"b","t":"k3","ts":"t","mid":0.5},{"f":"f3","fs":"b","t":"k4","ts":"t","mid":0.5},
         {"f":"k1","fs":"b","t":"f4","ts":"t","to":-90,"mid":0.5},{"f":"k2","fs":"b","t":"f4","ts":"t","to":-30,"mid":0.5},
         {"f":"k3","fs":"b","t":"f4","ts":"t","to":30,"mid":0.5},{"f":"k4","fs":"b","t":"f4","ts":"t","to":90,"mid":0.5},
-        {"f":"f4","fs":"b","t":"t1","ts":"t","mid":0.5,"c":"teal","lab":"p<10%","lp":0.86,"lx":-28},
-        {"f":"f4","fs":"b","t":"t2","ts":"t","mid":0.5,"c":"amber","lab":"10–60%","lp":0.86,"lx":-30},
-        {"f":"f4","fs":"b","t":"t3","ts":"t","mid":0.5,"c":"red","lab":"≥60% + G1","lp":0.86,"lx":38},
+        {"f":"f4","fs":"b","t":"t1","ts":"t","mid":0.5,"c":"teal","lab":"p<15%","lp":0.86,"lx":-28},
+        {"f":"f4","fs":"b","t":"t2","ts":"t","mid":0.5,"c":"amber","lab":"15–75%","lp":0.86,"lx":-30},
+        {"f":"f4","fs":"b","t":"t3","ts":"t","mid":0.5,"c":"red","lab":"≥75% + G1 · G7","lp":0.86,"lx":38},
         {"f":"t3","t":"h2","fo":10,"c":"red"},
         {"f":"t3","fs":"r","t":"h1","ts":"l","fo":-10,"c":"red","mid":0.4},
         {"f":"h1","fs":"b","t":"h2","ts":"t","c":"teal","lab":"confirm fraud","lx":46}
@@ -758,7 +766,32 @@
 <section class="slide"><div class="inner">
   <div class="kicker">Appendix A4 <span class="tag">fusion likelihood ratios · simulator assumptions</span></div>
   <h1 class="t" style="font-size:24px">Every number the decision engine uses, and where it comes from.</h1>
-  <div class="body"><div class="ph" style="height:100%">engine config v0.2 + sim assumptions pending</div></div>
+  <div class="body row" style="gap:16px">
+    <div class="card" style="width:820px;padding:10px 13px">
+      <div class="lbl">Likelihood ratios (scam vs genuine, given the trigger fired) · engine config v0.2</div>
+      <div style="margin-top:7px">{{include:fragments/a4_lrs.html}}</div>
+      <p class="xs" style="margin-top:6px">All values start as documented team assumptions, each with a one-line rationale in the config, and are recalibrated in shadow mode before any user sees a screen. Voice LRs are replaced by the detector's <b>measured</b> calibrated band rates and floored at 1× (never reassuring). Watermark hits are capped by the V family cap.</p>
+    </div>
+    <div class="col fill" style="gap:10px">
+      <div class="card" style="padding:10px 13px">
+        <div class="lbl">Prior, tiers, budgets</div>
+        <ul class="tight" style="margin-top:5px">
+          <li class="sm"><b>Prior 1 in 400</b> scams per triggered payment: deliberately cautious. The public base rate (NPCI volumes × NCRP call-driven scams) gives ≈1 in 1,300.</li>
+          <li class="sm"><b>GO</b> &lt;15% · <b>PAUSE</b> 15–75% · <b>HOLD</b> ≥75% + G1, or G7</li>
+          <li class="sm"><b>Budgets:</b> ≤0.25% of genuine triggered payments held; ≤6% paused. Both met.</li>
+        </ul>
+      </div>
+      <div class="card" style="padding:10px 13px">
+        <div class="lbl">Simulator assumptions (team assumptions, all swept)</div>
+        <ul class="tight" style="margin-top:5px">
+          <li class="sm"><b>Scam mix:</b> T1 cloned relative 20% · T2 fake bank 45% · T3 digital arrest 35%, informed by Chakshu category counts<sup class="r">1</sup></li>
+          <li class="sm"><b>Genuine mix:</b> merchant/delivery 38% · friend 30% · relative 15% · elderly on noisy lines 12% · genuine 1600 bank call 5%</li>
+          <li class="sm"><b>Behaviour:</b> half of payers have a family circle · voice check run by 30% · checklist by 60% · callback by 35% · bank registry covers 70% of banks · 15–25% of coached victims answer "no one"</li>
+          <li class="sm"><b>Not modelled:</b> learning effects, repeat victims, and adversaries probing thresholds. That is why shadow mode comes first.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
 <div class="foot"><span class="src">engine/pehchaan/config.yaml · engine/sim_assumptions.yaml</span><span class="pg">APPENDIX A4</span></div>
 </section>
 

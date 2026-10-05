@@ -66,7 +66,7 @@ Initial LRs (scam vs genuine, given the trigger fired):
 | payee_flagged_medium / high | 4 / 25 | payee_name_mismatch | 5 |
 | burst_new_payees | 4 | | |
 | voice_likely_synthetic | 8 | voice_inconclusive | 1.0 |
-| voice_no_strong_evidence | 0.7 | watermark_detected | 50 → capped at 8 |
+| voice_no_strong_evidence | **1.0** (never reassures) | watermark_detected | 50 → capped at 8 |
 | cue_secrecy / urgency | 4 / 2 | cue_otp_pin / arrest_threat | 8 / 10 |
 | cue_remote_app / refund_verification | 6 / 5 | | |
 | fv_denied | 300 (decisive, G7) | callback_denied | 30 (user-reported) |
@@ -75,9 +75,9 @@ Initial LRs (scam vs genuine, given the trigger fired):
 | fv_timeout | 1.0 | | |
 
 **Tiers** (thresholds in config, tuned by the simulator to an **alert budget**: at π0 = 1/400, ≤ 0.25% of genuine triggered sessions end in Red and ≤ 6% see Pause & Verify):
-- **Green** `p < 0.10`: proceed silently.
-- **Amber** `0.10 ≤ p < θ_red`: Pause & Verify interstitial. The user may continue after reading it (minimum 5 s).
-- **Red** `p ≥ θ_red` (default 0.80, tuned) **and** a guardrail-qualified condition, **or** any decisive negative (G7): cooling-off hold. The payment is not sent.
+- **Green** `p < 0.15`: proceed silently. (Raised from 0.10 to meet the Pause & Verify budget; simulator sweep in `engine/results/sim_threshold_sweep.json`.)
+- **Amber** `0.15 ≤ p < θ_red`: Pause & Verify interstitial. The user may continue after reading it (minimum 5 s).
+- **Red** `p ≥ θ_red` (0.75, chosen from the plateau in the 0.72–0.76 band) **and** a guardrail-qualified condition, **or** any decisive negative (G7): cooling-off hold. The payment is not sent.
 
 **Guardrails (hard rules, applied after scoring):**
 - **G1 (no single weak signal):** Red requires either:
@@ -85,7 +85,7 @@ Initial LRs (scam vs genuine, given the trigger fired):
   - (b) a decisive negative from a channel outside the user's own taps: `fv_denied` (device-signed by the relative) or `bank_no_active_call` (only for an integrated bank that the user named).
 
   Otherwise the result is capped at Amber.
-- **G2 (voice is supporting evidence):** V never counts toward G1, and if removing V would drop the tier below Red, the result is capped at Amber (strict). `voice_no_strong_evidence` is weak (0.7) because detectors miss unseen generators. "Sounds real" is not proof.
+- **G2 (voice is supporting evidence):** V never counts toward G1, and if removing V would drop the tier below Red, the result is capped at Amber (strict). `voice_no_strong_evidence` has LR 1.0: the detector can raise suspicion but **never lower it**, because detectors miss unseen generators. "Sounds real" is not proof.
 - **G3 (quality gate):** speech < 4 s or SNR < 10 dB means `voice_inconclusive`.
 - **G4 (decisive positive):** `fv_confirmed`, `callback_confirmed` or `bank_active_call_1600` (the bank's own registry confirms a live 1600 call) put the result at Green, unless `payee_flagged_high` is present (then Amber).
 - **G5 (trusted bypass):** see §2.
@@ -93,7 +93,8 @@ Initial LRs (scam vs genuine, given the trigger fired):
 - **G7 (decisive floor):** `fv_denied` or `bank_no_active_call` puts the result at **Red regardless of p**. If the real relative's phone says "not me", "Continue anyway" is not offered.
   - User-reported negatives (`callback_denied`, `safeword_failed`) are strong evidence (LR 30) but **not** decisive. The UI makes "Cancel" the primary action instead.
   - A registry lookup against a bank that isn't integrated returns `bank_registry_unknown` (LR 1), never `bank_no_active_call`.
-- **Coached "no one":** when the claim is `claim_none` or `claim_other` and context is Amber, show the 3-tap cue checklist (secrecy · OTP/PIN · arrest threat).
+- **Coached "no one":** show the 3-tap cue checklist (secrecy · OTP/PIN · arrest threat) when the claim is `claim_none` or `claim_other` **and the context alone (K + P, before the claim) was Amber**, even if the claim answer lowers p below Amber.
+- **Auto Family Verify:** when the claim is `claim_family` and the named relative is in the payer's Pehchaan circle, the verify push is sent **automatically**. The payer sees "We've asked Rahul to confirm on his own phone" and can cancel the request. This defeats "don't call your son" coaching and removes taps for elders.
 
 Every decision returns `reasons[]`: code, plain-language text (EN + HI), contribution in ln-LR, and family. The UI shows the top 2–3, while the analyst sees all of them.
 
