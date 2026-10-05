@@ -1,0 +1,9 @@
+Host pehchaan
+  HostName 52.91.206.100
+  User ubuntu
+  IdentityFile D:/hackathons/amazon-raksham/ml/infra/pehchaan-ml
+  StrictHostKeyChecking accept-new
+  UserKnownHostsFile D:/hackathons/amazon-raksham/ml/infra/known_hosts
+  ServerAliveInterval 30
+  ServerAliveCountMax 6
+  ConnectTimeout 20
