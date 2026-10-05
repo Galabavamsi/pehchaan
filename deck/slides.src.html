@@ -241,7 +241,7 @@
       <div class="jn box node" data-n="n1" style="left:100px;top:152px;width:150px;height:80px"><div class="bt">Same call, same payment</div><div class="bd">she taps Pay</div></div>
       <div class="jn box node" data-n="n2" style="left:272px;top:152px;width:172px;height:80px;border-color:var(--saff)"><div class="bt">Trigger fires</div><div class="bd">on call · new payee · ≥₹10k<br><b>metadata only, no audio</b></div></div>
       <div class="jn box node" data-n="n3" style="left:466px;top:152px;width:160px;height:80px;border-color:var(--saff)"><div class="bt">"Who asked you to pay?"</div><div class="bd">she taps <b>Family member → Rahul</b></div></div>
-      <div class="jn box node" data-n="n4" style="left:648px;top:152px;width:168px;height:80px;border-color:var(--saff)"><div class="bt">Family Verify</div><div class="bd">push to <b>Rahul's own registered phone</b> (+ call his saved number)</div></div>
+      <div class="jn box node" data-n="n4" style="left:648px;top:152px;width:168px;height:80px;border-color:var(--saff)"><div class="bt">Family Verify, auto-sent</div><div class="bd">to <b>Rahul's own registered phone</b>; callback and safe word as fallback</div></div>
       <div class="jn box node" data-n="n5" style="left:850px;top:152px;width:150px;height:80px;border-color:var(--red);background:#FBE9E6"><div class="bt red">Hold: nothing sent</div><div class="bd">Rahul taps "No, not me" → 30-min cooling-off</div></div>
       <div class="jn box node" data-n="n6" style="left:1024px;top:152px;width:144px;height:80px"><div class="bt">Report pack</div><div class="bd">1930/NCRP pre-filled · payee VPA flagged</div></div>
       <div class="jn box node" data-n="g1" style="left:272px;top:268px;width:172px;height:68px;border-color:var(--teal);background:#F1FAF7"><div class="bt teal">No trigger → no screen</div><div class="bd">not on a call · trusted payee · small amount</div></div>
@@ -257,7 +257,7 @@
     </div>
     <div class="grid" style="position:absolute;left:0;right:0;top:368px;grid-template-columns:repeat(3,1fr);gap:14px">
       <div class="card"><div class="row" style="gap:8px;align-items:center">{{icon:identification-card}}<span class="h3">Verifies the claim, not just the audio</span></div><p class="sm" style="margin-top:6px">Each claim goes to the check that defeats it: <b>family</b> → the relative's own device, <b>bank</b> → the bank's live 1600 call registry, <b>police</b> → "there is no digital arrest". The clone detector is one capped signal.</p></div>
-      <div class="card"><div class="row" style="gap:8px;align-items:center">{{icon:target}}<span class="h3">Targets RBI's proposed controls</span></div><p class="sm" style="margin-top:6px">RBI proposes a 1-hour lag on transfers above ₹10k and trusted-person approval above ₹50k for people 70+<sup class="r">6</sup>. Pehchaan applies them <b>only where risk is real</b>, so genuine payments aren't slowed: [sim: x% of triggered genuine payments see a hold].</p></div>
+      <div class="card"><div class="row" style="gap:8px;align-items:center">{{icon:target}}<span class="h3">Targets RBI's proposed controls</span></div><p class="sm" style="margin-top:6px">RBI proposes a 1-hour lag on transfers above ₹10k and trusted-person approval above ₹50k for people 70+<sup class="r">6</sup>. Pehchaan applies them <b>only where risk is real</b>: in our simulation just <b>0.21%</b> of genuine triggered payments are held, while <b>73%</b> of scams are.</p></div>
       <div class="card"><div class="row" style="gap:8px;align-items:center">{{icon:waveform}}<span class="h3">Indian-language, phone-line forensics</span></div><p class="sm" style="margin-top:6px">A detector fine-tuned on <b>consented clones of our own voices</b> in Hindi, English and our mother tongues, over PSTN, AMR, WhatsApp-style and speakerphone channels, and reported on <b>generators it never saw</b>.</p></div>
     </div>
   </div>
@@ -271,7 +271,7 @@
   <div class="body">
     <div class="grid" style="grid-template-columns:repeat(6,1fr);gap:14px;align-items:start">
       <div><img src="../app/screenshots/02_pause_who.png" style="width:100%;height:auto;display:block"><p class="cap"><b>1 · Pause &amp; ask</b>On a call with an unknown +44 number, paying ₹50,000 to a new payee: one question.</p></div>
-      <div><img src="../app/screenshots/03_family_options.png" style="width:100%;height:auto;display:block"><p class="cap"><b>2 · Family claim</b>Ask Rahul on his phone, call his saved number, or ask the family safe word.</p></div>
+      <div><img src="../app/screenshots/03_family_options.png" style="width:100%;height:auto;display:block"><p class="cap"><b>2 · Family claim</b>Rahul is asked automatically on his own phone; callback and safe word as fallbacks.</p></div>
       <div><img src="../app/screenshots/04_relative_prompt.png" style="width:100%;height:auto;display:block"><p class="cap"><b>3 · Relative's phone</b>"Is this you?" Signed by a device-bound key. One tap.</p></div>
       <div><img src="../app/screenshots/05_red_hold.png" style="width:100%;height:auto;display:block"><p class="cap"><b>4 · Cooling-off hold</b>Nothing is sent. Release via verification or a bank analyst.</p></div>
       <div><img src="../app/screenshots/07_bank_claim.png" style="width:100%;height:auto;display:block"><p class="cap"><b>5 · Bank claim</b>"Bharat Demo Bank is not calling you right now." 1600 + call registry.</p></div>
@@ -306,14 +306,14 @@
       <div class="wf" style="margin-top:10px">
         <div class="wl">Prior, given trigger fired</div><div class="wb" style="border-left-color:transparent"><span style="left:0;color:var(--mute)">1 in 400 · log-odds −5.99</span></div><div class="wp">0.25%</div>
         <div class="wl"><b>C</b> claim: family member</div><div class="wb"><i style="width:11px;background:var(--saff)"></i><span style="left:16px">+0.41</span></div><div class="wp">0.37%</div>
-        <div class="wl"><b>K</b> unknown · international · internet call <span class="xs">(capped 30×)</span></div><div class="wb"><i style="width:88px;background:var(--saff)"></i><span style="left:93px">+3.40</span></div><div class="wp"><span class="chip a" style="padding:2px 5px">10%</span></div>
+        <div class="wl"><b>K</b> unknown · international · internet call <span class="xs">(capped 30×)</span></div><div class="wb"><i style="width:88px;background:var(--saff)"></i><span style="left:93px">+3.40</span></div><div class="wp"><span class="chip g" style="padding:2px 5px">10%</span></div>
         <div class="wl"><b>P</b> new payee · name ≠ Rahul</div><div class="wb"><i style="width:66px;background:var(--saff)"></i><span style="left:71px">+2.53</span></div><div class="wp"><span class="chip a" style="padding:2px 5px">58%</span></div>
-        <div class="wl"><b>V</b> voice: likely synthetic<br><span class="xs">capped at 8×</span></div><div class="wb"><i style="width:54px;background:#F2B07E"></i><span style="left:59px">+2.08</span></div><div class="wp"><span class="chip r" style="padding:2px 5px">92%</span></div>
+        <div class="wl"><b>V</b> voice: likely synthetic<br><span class="xs">capped at 8×</span></div><div class="wb"><i style="width:54px;background:#F2B07E"></i><span style="left:59px">+2.08</span></div><div class="wp"><span class="chip a" style="padding:2px 5px">92%</span></div>
         <div class="wl"><b>O</b> Rahul's phone: "No, not me"</div><div class="wb"><i style="width:148px;background:var(--red)"></i><span style="left:153px">+5.70</span></div><div class="wp"><span class="chip r" style="padding:2px 5px">99.97%</span></div>
       </div>
       <div class="hr" style="margin:10px 0 8px"></div>
-      <p class="sm"><b>Result: <span class="red">HOLD</span></b>. G1 is met twice: K and P each ≥3×, plus a decisive out-of-band "no". <b>Without the voice check it is still 99.8%</b>, so the clone detector is never the deciding vote.</p>
-      <p class="sm" style="margin-top:6px"><b>Genuine twin:</b> the real Rahul calls from his saved UK number about his own new account, amount above usual → 34% → <span class="chip a" style="padding:2px 5px">PAUSE</span> → he taps "Yes, it's me" → <span class="chip g" style="padding:2px 5px">GO</span> (G4).</p>
+      <p class="sm"><b>Result: <span class="red">HOLD</span> via G7</b>: Rahul's own phone said "not me". Look at the V row: the detector lifts p to 92%, but <b>strict G2 keeps it at PAUSE</b>. A clone score alone can never hold anyone's money.</p>
+      <p class="sm" style="margin-top:6px"><b>Genuine twin:</b> the real Rahul calls from his saved UK number about his own new account → 34% <span class="chip a" style="padding:2px 5px">PAUSE</span> → Family Verify is sent automatically → he taps "Yes, it's me" → 1% <span class="chip g" style="padding:2px 5px">GO</span> (G4).</p>
       <p class="xs" style="margin-top:6px">Each bar is ln(likelihood ratio) after family caps, exactly as the analyst console shows it. Voice ratios are replaced by <b>measured</b> values from our detector's calibrated bands; the others start as documented assumptions and are recalibrated in shadow mode.</p>
     </div>
     <div class="card fill" style="padding:12px 14px">
@@ -329,7 +329,7 @@
       <div class="gr"><span class="gk">G7</span><p><b>Decisive no.</b> Relative's signed "not me" or the bank's "we're not calling" → HOLD, always. Self-reported checks stay advisory.</p></div>
     </div>
   </div>
-<div class="foot"><span class="src">p = sigmoid(logit(prior) + Σ_family clip(Σ ln LR)). Full LR table, assumptions and their basis: appendix A4 · engine: engine/pehchaan (unit-tested guardrails)</span><span class="pg">06 / 10</span></div>
+<div class="foot"><span class="src">p = sigmoid(logit(prior) + Σ_family clip(Σ ln LR)). Full LR table, assumptions and their basis: appendix A5 · engine: engine/pehchaan (unit-tested guardrails)</span><span class="pg">06 / 10</span></div>
 </section>
 
 <!-- =============================== 7. DATA & VALIDATION =============================== -->
@@ -364,16 +364,16 @@
       <div class="ph" style="height:440px;margin-top:8px">ml/results figures<br>baseline vs ours · held-out gap</div>
     </div>
     <div class="card fill" style="padding:10px 13px">
-      <div class="lbl">Decision engine · simulated, 100k triggered payments</div>
-      <div class="chart" style="margin-top:6px">{{svg:../engine/results/chart_ablation.svg}}</div>
+      <div class="lbl">Decision engine · simulated, 100k triggered payments · what each layer adds</div>
+      <div class="chart" style="margin-top:6px">{{svg:../engine/results/chart_ablation_deck.svg}}</div>
       <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px">
-        <div class="stat"><div class="n" style="font-size:22px">[g_red]%</div><div class="d" style="font-size:11px">of genuine payments held (budget ≤0.25%)</div></div>
-        <div class="stat"><div class="n" style="font-size:22px">[hps]</div><div class="d" style="font-size:11px">genuine holds per scam held (was 4.8 in v0.1)</div></div>
-        <div class="stat"><div class="n" style="font-size:22px">₹[ratio]</div><div class="d" style="font-size:11px">protected per ₹1 delayed</div></div>
+        <div class="stat"><div class="n" style="font-size:22px">0.21%</div><div class="d" style="font-size:11px">of genuine payments held (budget ≤0.25%)</div></div>
+        <div class="stat"><div class="n" style="font-size:22px">1.2</div><div class="d" style="font-size:11px">genuine holds per scam held (was 4.8 in v0.1)</div></div>
+        <div class="stat"><div class="n" style="font-size:22px">₹2.98</div><div class="d" style="font-size:11px">protected per ₹1 delayed</div></div>
       </div>
     </div>
   </div>
-<div class="foot"><span class="src">Simulator outputs are assumption-driven projections, labelled as such; detector numbers are measured. Detector tables: appendix A3 · simulator assumptions: A4 · [15] DoT DIP via ET Gov 10 Sep 2026</span><span class="pg">07 / 10</span></div>
+<div class="foot"><span class="src">Simulator outputs are assumption-driven projections, labelled as such; detector numbers are measured. Detector tables: appendix A3 · simulator results and assumptions: A4–A5 · [15] DoT DIP via ET Gov 10 Sep 2026</span><span class="pg">07 / 10</span></div>
 </section>
 
 <!-- =============================== 8. SAFEGUARDS =============================== -->
@@ -469,9 +469,9 @@
       <div class="card">
         <div class="lbl">Latency, friction and cost</div>
         <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:10px;margin-top:6px">
-          <div class="stat"><div class="n" style="font-size:26px">[x] ms</div><div class="d">risk assess p95 at Pay tap (target &lt;300 ms, no audio)</div></div>
+          <div class="stat"><div class="n" style="font-size:26px">3.9 ms</div><div class="d">risk assess p95 at Pay tap, engine + API in-process (target &lt;300 ms end-to-end)</div></div>
           <div class="stat"><div class="n" style="font-size:26px">[x] s</div><div class="d">voice check inference for a 10 s clip on one GPU</div></div>
-          <div class="stat"><div class="n" style="font-size:26px">[x]%</div><div class="d">of triggered genuine payments ever see a screen (sim)</div></div>
+          <div class="stat"><div class="n" style="font-size:26px">5.6%</div><div class="d">of genuine triggered payments see PAUSE; 0.21% are held (sim)</div></div>
         </div>
         <p class="xs" style="margin-top:8px">Only payments made during or just after a call to a new or unusual payee are assessed. The rest of India's 24 bn monthly UPI transactions<sup class="r">18</sup> never touch Pehchaan.</p>
       </div>
@@ -704,9 +704,9 @@
         <div class="lbl">Performance assumptions</div>
         <table class="tb" style="margin-top:4px;font-size:11px">
           <tr><th>Path</th><th>Budget</th><th>Measured (prototype)</th></tr>
-          <tr><td class="k">Risk assess at Pay tap</td><td>&lt;300 ms p95</td><td>[x] ms p95</td></tr>
+          <tr><td class="k">Risk assess at Pay tap</td><td>&lt;300 ms p95</td><td>3.9 ms p95 (in-process; network excluded)</td></tr>
           <tr><td class="k">Voice score (10 s clip)</td><td>&lt;1.5 s</td><td>[x] s GPU · [x] s CPU</td></tr>
-          <tr><td class="k">Family Verify round trip</td><td>&lt;3 min, async</td><td>[x] s (demo)</td></tr>
+          <tr><td class="k">Family Verify round trip</td><td>&lt;3 min, async</td><td>human response time; measured in pilot (A2)</td></tr>
           <tr><td class="k">Triggered share of UPI txns</td><td>assumed &lt;1%</td><td>validate in shadow mode</td></tr>
         </table>
         <p class="xs" style="margin-top:5px">Scale: stateless API on Fargate auto-scaling; GPU voice endpoint only for opt-in checks; per-region deployment for RBI payment-data localisation.</p>
@@ -762,9 +762,54 @@
 <div class="foot"><span class="src">All clones are of consenting team members or are stock synthetic voices; genuine speech from team recordings and FLEURS (CC-BY-4.0).</span><span class="pg">APPENDIX A3</span></div>
 </section>
 
+
+<!-- =============================== APPENDIX: SIM RESULTS =============================== -->
+<section class="slide"><div class="inner">
+  <div class="kicker">Appendix A4 · 1/2 <span class="tag">decision-engine simulation · assumption-driven projection</span></div>
+  <h1 class="t" style="font-size:24px">Genuine friction stays inside budget, and v0.2's guardrails made holds 4× more precise.</h1>
+  <div class="body row" style="gap:16px;align-items:flex-start">
+    <div class="card" style="width:600px;padding:10px 13px"><div class="lbl">Genuine triggered payments: what they see</div><div class="chart" style="margin-top:6px">{{svg:../engine/results/chart_friction_funnel_deck.svg}}</div></div>
+    <div class="col fill" style="gap:12px">
+      <div class="card" style="padding:12px 14px">
+        <div class="lbl">Genuine holds per scam held (lower is better)</div>
+        <div class="bars" style="margin-top:12px;gap:14px">
+          <div class="bar" style="grid-template-columns:150px 1fr"><div class="bl">prior 1 in 400<br><span class='xs'>cautious default</span></div><div>
+      <div class="bt" style="height:20px"><i style="width:106px;background:var(--faint)"></i><span style="left:112px">4.8 · v0.1</span></div>
+      <div class="bt" style="height:20px;margin-top:4px"><i style="width:26px;background:var(--saff)"></i><span style="left:32px">1.2 · v0.2</span></div></div></div>
+          <div class="bar" style="grid-template-columns:150px 1fr"><div class="bl">prior 1 in 1,300<br><span class='xs'>public base-rate anchor</span></div><div>
+      <div class="bt" style="height:20px"><i style="width:81px;background:var(--faint)"></i><span style="left:87px">3.7 · v0.1</span></div>
+      <div class="bt" style="height:20px;margin-top:4px"><i style="width:15px;background:var(--saff)"></i><span style="left:21px">0.7 · v0.2</span></div></div></div>
+        </div>
+        <p class="xs" style="margin-top:10px">₹ protected per ₹1 of genuine money delayed: <b>1.19 → 2.98</b>. Main drivers: G7 (the relative's signed "not me" is decisive), user-reported checks made advisory, a bank registry miss for a bank that isn't integrated treated as "unknown", and the bank vs UPI/shop claim split.</p>
+      </div>
+      <div class="card" style="padding:12px 14px">
+        <div class="lbl">Alert budgets at prior 1/400</div>
+        <table class="tb" style="margin-top:5px;font-size:12px">
+          <tr><th>Budget</th><th>Target</th><th>v0.1</th><th>v0.2 final</th></tr>
+          <tr><td class="k">Genuine payments paused</td><td>≤ 6%</td><td>10.1%</td><td class="b teal">5.6%</td></tr>
+          <tr><td class="k">Genuine payments held</td><td>≤ 0.25%</td><td>0.92%</td><td class="b teal">0.21%</td></tr>
+          <tr><td class="k">Scams paused / held</td><td>maximise</td><td>96% / 77%</td><td class="b">95% / 73%</td></tr>
+        </table>
+        <p class="xs" style="margin-top:6px">We traded about 4 points of scam holds for 4× fewer wrongful holds. Every remaining hold has a human release path.</p>
+      </div>
+    </div>
+  </div>
+<div class="foot"><span class="src">100k simulated triggered sessions per run, 30% voice-check uptake, placeholder voice-band rates until measured; distributions in engine/sim_assumptions.yaml.</span><span class="pg">APPENDIX A4 · 1/2</span></div>
+</section>
+
+<section class="slide"><div class="inner">
+  <div class="kicker">Appendix A4 · 2/2 <span class="tag">decision-engine simulation · assumption-driven projection</span></div>
+  <h1 class="t" style="font-size:24px">Digital-arrest and fake-bank scams are held most often; cloned-relative protection grows with family-circle enrolment.</h1>
+  <div class="body row" style="gap:16px;align-items:flex-start">
+    <div class="card" style="width:576px;padding:10px 13px"><div class="lbl">Catch rate by scam pattern (and genuine friction)</div><div class="chart" style="margin-top:6px">{{svg:../engine/results/chart_catch_by_pattern_deck.svg}}</div></div>
+    <div class="card fill" style="padding:10px 13px"><div class="lbl">T1 cloned relative: held vs family-circle enrolment (auto Family Verify)</div><div class="chart" style="margin-top:6px">{{svg:../engine/results/chart_fv_enrolment_deck.svg}}</div></div>
+  </div>
+<div class="foot"><span class="src">T1 holds: 53% → 66% as enrolment goes 20% → 90%; genuine friction is unchanged (5.6% paused, 0.21% held). Enrolling seniors' families is the main adoption lever (slide 9 rollout).</span><span class="pg">APPENDIX A4 · 2/2</span></div>
+</section>
+
 <!-- =============================== APPENDIX: FUSION + SIM =============================== -->
 <section class="slide"><div class="inner">
-  <div class="kicker">Appendix A4 <span class="tag">fusion likelihood ratios · simulator assumptions</span></div>
+  <div class="kicker">Appendix A5 <span class="tag">fusion likelihood ratios · simulator assumptions</span></div>
   <h1 class="t" style="font-size:24px">Every number the decision engine uses, and where it comes from.</h1>
   <div class="body row" style="gap:16px">
     <div class="card" style="width:820px;padding:10px 13px">
@@ -792,12 +837,12 @@
       </div>
     </div>
   </div>
-<div class="foot"><span class="src">engine/pehchaan/config.yaml · engine/sim_assumptions.yaml</span><span class="pg">APPENDIX A4</span></div>
+<div class="foot"><span class="src">engine/pehchaan/config.yaml · engine/sim_assumptions.yaml</span><span class="pg">APPENDIX A5</span></div>
 </section>
 
 <!-- =============================== APPENDIX: SOURCES =============================== -->
 <section class="slide"><div class="inner">
-  <div class="kicker">Appendix A5 <span class="tag">sources (accessed Oct 2026)</span></div>
+  <div class="kicker">Appendix A6 <span class="tag">sources (accessed Oct 2026)</span></div>
   <h1 class="t" style="font-size:24px">Sources</h1>
   <div class="body srcs">
     <p><b>[1]</b> PIB / Department of Telecommunications, Rajya Sabha reply on Chakshu report categories, 5 Feb 2026. pib.gov.in/PressReleasePage.aspx?PRID=2223779</p>
@@ -825,12 +870,12 @@
     <p><b>[23]</b> Times of India, interview with Amazon India's trust and safety lead, 4 Aug 2026 ("Behaviour is much harder to fake than documents or images").</p>
     <p><b>[24]</b> Digital Personal Data Protection Act, 2023 (Government of India).</p>
   </div>
-<div class="foot"><span class="src">Full research notes with URLs and verification status are in the project repository (research/).</span><span class="pg">APPENDIX A5</span></div>
+<div class="foot"><span class="src">Full research notes with URLs and verification status are in the project repository (research/).</span><span class="pg">APPENDIX A6</span></div>
 </section>
 
 <!-- =============================== APPENDIX: DISCLOSURES =============================== -->
 <section class="slide"><div class="inner">
-  <div class="kicker">Appendix A6 <span class="tag">AI-generated content · datasets · models · third-party assets</span></div>
+  <div class="kicker">Appendix A7 <span class="tag">AI-generated content · datasets · models · third-party assets</span></div>
   <h1 class="t" style="font-size:24px">Disclosures</h1>
   <div class="body row" style="gap:16px">
     <div class="card fill">
@@ -858,7 +903,7 @@
       <p class="xs" style="margin-top:4px"><b>Brands:</b> the prototype uses a fictional "DemoPay / Bharat Demo Bank"; Amazon, AWS and other names are referenced descriptively; no endorsement implied.</p>
     </div>
   </div>
-<div class="foot"><span class="src">Non-commercial licences (where flagged) are used for research evaluation only; the production path uses commercially licensed or self-trained weights.</span><span class="pg">APPENDIX A6</span></div>
+<div class="foot"><span class="src">Non-commercial licences (where flagged) are used for research evaluation only; the production path uses commercially licensed or self-trained weights.</span><span class="pg">APPENDIX A7</span></div>
 </section>
 
 <script src="vendor/rough.js"></script>
