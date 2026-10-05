@@ -6,7 +6,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-10-06T03:40:42.011624</dc:date>
+    <dc:date>2026-10-06T04:18:36.601508</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -36,7 +36,7 @@ L 490 106
 L 490 128 
 L 20 128 
 z
-" clip-path="url(#p779e86ac2a)" style="fill: #e2d9c6; opacity: 0.5"/>
+" clip-path="url(#p379f50c2e8)" style="fill: #e2d9c6; opacity: 0.5"/>
    </g>
    <g id="patch_3">
     <path d="M 20 190 
@@ -44,7 +44,7 @@ L 490 190
 L 490 212 
 L 20 212 
 z
-" clip-path="url(#p779e86ac2a)" style="fill: #e2d9c6; opacity: 0.5"/>
+" clip-path="url(#p379f50c2e8)" style="fill: #e2d9c6; opacity: 0.5"/>
    </g>
    <g id="patch_4">
     <path d="M 20 274 
@@ -52,7 +52,7 @@ L 490 274
 L 490 296 
 L 20 296 
 z
-" clip-path="url(#p779e86ac2a)" style="fill: #e2d9c6; opacity: 0.5"/>
+" clip-path="url(#p379f50c2e8)" style="fill: #e2d9c6; opacity: 0.5"/>
    </g>
    <g id="patch_5">
     <path d="M 20 358 
@@ -60,7 +60,7 @@ L 490 358
 L 490 380 
 L 20 380 
 z
-" clip-path="url(#p779e86ac2a)" style="fill: #e2d9c6; opacity: 0.5"/>
+" clip-path="url(#p379f50c2e8)" style="fill: #e2d9c6; opacity: 0.5"/>
    </g>
    <g id="text_1">
     <text style="fill: #1b1f24; font: 600 14px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="20" y="96" transform="rotate(-0 20 96)">Genuine payments made during or just after a call</text>
@@ -76,7 +76,7 @@ Q 20 128 20 124
 L 20 110 
 Q 20 106 24 106 
 z
-" clip-path="url(#p779e86ac2a)" style="fill: #6b7280"/>
+" clip-path="url(#p379f50c2e8)" style="fill: #6b7280"/>
    </g>
    <g id="patch_7">
     <path d="M 20 106 
@@ -84,7 +84,7 @@ L 486 106
 L 486 128 
 L 20 128 
 z
-" clip-path="url(#p779e86ac2a)" style="fill: #6b7280"/>
+" clip-path="url(#p379f50c2e8)" style="fill: #6b7280"/>
    </g>
    <g id="text_2">
     <text style="fill: #1b1f24; font: 16px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="500" y="121.4" transform="rotate(-0 500 121.4)">100%</text>
@@ -106,7 +106,7 @@ Q 20 212 20 208
 L 20 194 
 Q 20 190 24 190 
 z
-" clip-path="url(#p779e86ac2a)" style="fill: #e8742a"/>
+" clip-path="url(#p379f50c2e8)" style="fill: #e8742a"/>
    </g>
    <g id="patch_9">
     <path d="M 20 190 
@@ -114,70 +114,70 @@ L 289.6387 190
 L 289.6387 212 
 L 20 212 
 z
-" clip-path="url(#p779e86ac2a)" style="fill: #e8742a"/>
+" clip-path="url(#p379f50c2e8)" style="fill: #e8742a"/>
    </g>
    <g id="text_5">
     <text style="fill: #1b1f24; font: 16px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="500" y="205.4" transform="rotate(-0 500 205.4)">58%</text>
    </g>
    <g id="text_6">
-    <text style="fill: #6b7280; font: 12.5px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="20" y="232" transform="rotate(-0 20 232)">49% answer and pay straight away</text>
+    <text style="fill: #6b7280; font: 12.5px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="20" y="232" transform="rotate(-0 20 232)">53% answer and pay straight away</text>
    </g>
    <g id="text_7">
     <text style="fill: #1b1f24; font: 600 14px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="20" y="264" transform="rotate(-0 20 264)">Shown Pause &amp; Verify (reasons + one-tap checks)</text>
    </g>
    <g id="patch_10">
     <path d="M 24 274 
-L 59.3058 274 
-Q 63.3058 274 63.3058 278 
-L 63.3058 292 
-Q 63.3058 296 59.3058 296 
+L 41.6855 274 
+Q 45.6855 274 45.6855 278 
+L 45.6855 292 
+Q 45.6855 296 41.6855 296 
 L 24 296 
 Q 20 296 20 292 
 L 20 278 
 Q 20 274 24 274 
 z
-" clip-path="url(#p779e86ac2a)" style="fill: #e0a526"/>
+" clip-path="url(#p379f50c2e8)" style="fill: #e0a526"/>
    </g>
    <g id="patch_11">
     <path d="M 20 274 
-L 59.3058 274 
-L 59.3058 296 
+L 41.6855 274 
+L 41.6855 296 
 L 20 296 
 z
-" clip-path="url(#p779e86ac2a)" style="fill: #e0a526"/>
+" clip-path="url(#p379f50c2e8)" style="fill: #e0a526"/>
    </g>
    <g id="text_8">
-    <text style="fill: #1b1f24; font: 16px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="500" y="289.4" transform="rotate(-0 500 289.4)">9.2%</text>
+    <text style="fill: #1b1f24; font: 16px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="500" y="289.4" transform="rotate(-0 500 289.4)">5.5%</text>
    </g>
    <g id="text_9">
-    <text style="fill: #6b7280; font: 12.5px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="20" y="316" transform="rotate(-0 20 316)">4.1% cleared by a check, e.g. the relative taps “Yes, it’s me”</text>
+    <text style="fill: #6b7280; font: 12.5px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="20" y="316" transform="rotate(-0 20 316)">2.4% cleared by a check, e.g. the relative taps “Yes, it’s me”</text>
    </g>
    <g id="text_10">
     <text style="fill: #1b1f24; font: 600 14px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="20" y="348" transform="rotate(-0 20 348)">Payment held for 30 minutes (Red)</text>
    </g>
    <g id="patch_12">
-    <path d="M 20.56635 358 
-L 20.56635 358 
-Q 21.1327 358 21.1327 358.56635 
-L 21.1327 379.43365 
-Q 21.1327 380 20.56635 380 
-L 20.56635 380 
-Q 20 380 20 379.43365 
-L 20 358.56635 
-Q 20 358 20.56635 358 
+    <path d="M 20.50055 358 
+L 20.50055 358 
+Q 21.0011 358 21.0011 358.50055 
+L 21.0011 379.49945 
+Q 21.0011 380 20.50055 380 
+L 20.50055 380 
+Q 20 380 20 379.49945 
+L 20 358.50055 
+Q 20 358 20.50055 358 
 z
-" clip-path="url(#p779e86ac2a)" style="fill: #c8372d"/>
+" clip-path="url(#p379f50c2e8)" style="fill: #c8372d"/>
    </g>
    <g id="patch_13">
     <path d="M 20 358 
-L 20.56635 358 
-L 20.56635 380 
+L 20.50055 358 
+L 20.50055 380 
 L 20 380 
 z
-" clip-path="url(#p779e86ac2a)" style="fill: #c8372d"/>
+" clip-path="url(#p379f50c2e8)" style="fill: #c8372d"/>
    </g>
    <g id="text_11">
-    <text style="fill: #1b1f24; font: 16px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="500" y="373.4" transform="rotate(-0 500 373.4)">0.24%</text>
+    <text style="fill: #1b1f24; font: 16px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="500" y="373.4" transform="rotate(-0 500 373.4)">0.21%</text>
    </g>
    <g id="text_12">
     <text style="fill: #6b7280; font: 12.5px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="20" y="400" transform="rotate(-0 20 400)">released after a check with the real person, or a bank review</text>
@@ -194,7 +194,7 @@ z
   </g>
  </g>
  <defs>
-  <clipPath id="p779e86ac2a">
+  <clipPath id="p379f50c2e8">
    <rect x="0" y="0" width="600" height="470"/>
   </clipPath>
  </defs>

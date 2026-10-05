@@ -119,8 +119,8 @@ const FAM_NAME: Record<string, string> = {
 };
 
 /** Horizontal waterfall of ln-LR contributions from the prior to the final log-odds,
- *  drawn over the tier zones (green < 10% < amber < 60% < red). */
-export function Waterfall({ reasons, priorLogOdds, logOdds, p, prior, width = 760, compact = false, redAt = 0.8, greenBelow = 0.1 }: {
+ *  drawn over the tier zones (green < green_below <= amber < red_at_or_above <= red; values from the case thresholds). */
+export function Waterfall({ reasons, priorLogOdds, logOdds, p, prior, width = 760, compact = false, redAt = 0.75, greenBelow = 0.15 }: {
   reasons: Reason[]; priorLogOdds: number; logOdds: number; p: number; prior: number; width?: number; compact?: boolean;
   redAt?: number; greenBelow?: number;
 }) {

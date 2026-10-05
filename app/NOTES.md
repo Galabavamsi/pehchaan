@@ -3,6 +3,10 @@
 **Status (SPEC v0.2):** the coordinator adopted proposals B1, B2, B3, B4, B6 and B7 below into SPEC v0.2; the engine, server, web and simulator now implement them (config v0.2.0).
 - B5 (precision of Red) is addressed by tuning θ_red with the simulator. See `engine/results/sim_threshold_sweep.json` and `deck_numbers.json`.
 - Section A2 is superseded by strict G2, A3 by the v0.2 rules in A13, and A4 by G7.
+- **Final v0.2 tuning (coordinator decision, for SPEC.md):**
+  - `tiers.green_below` **0.15** (was 0.10). θ_red stays **0.75**. At π0 = 1/400 this meets both budgets: genuine Pause & Verify 5.5% (≤ 6%) and genuine Red 0.21% (≤ 0.25%). Scam Amber+ drops 96.3 → 95.0% (T1 96.2 → 92.9%).
+  - **Voice is one-directional.** `voice_no_strong_evidence` LR **1.0** (was 0.7), and `voice.lr_floor: 1.0` floors every voice-band LR, assumed or measured, at 1.0. The config refuses to load an assumed voice-band LR below 1.0. Deck line: "the detector can raise suspicion, never lower it", because detectors miss unseen generators. With strict G2 the detector band can lift Green → Amber but never create or remove a hold (A18).
+  - New sensitivity: Family Verify enrolment (A19).
 
 The SPEC is implemented as written. The prototype has to make some choices the SPEC leaves open; they are listed in section A. Section B lists changes we recommend the SPEC adopt. Section C covers the contract with the ML teammate. None of these edits SPEC.md.
 
@@ -15,7 +19,7 @@ The SPEC is implemented as written. The prototype has to make some choices the S
 4. **G5** does not apply when a decisive out-of-band negative is present.
 5. **G3** is applied by the engine. The server passes the detector's raw band, so the console shows the G3 downgrade explicitly instead of hiding it inside the voice service.
 6. **Exclusive groups.** `fri_*`, `amount_gt_p95/p99`, `payee_flagged_*`, the voice bands and each O-check keep only their strongest member, so nothing double counts.
-7. **Voice reassurance floor.** When measured LRs replace the voice values, `voice_no_strong_evidence` is floored at the SPEC value 0.7 (`voice.no_strong_evidence_lr_floor`). Measured data can make "sounds real" weaker but never more reassuring, because unseen generators are the realistic case.
+7. **Voice floor (superseded: voice is now one-directional, see the status note and A18).** Every voice-band LR is floored at 1.0 (`voice.lr_floor`), so "sounds real" is neutral and measured data can never make any band reassuring. Unseen generators are the realistic case.
 8. **Privacy of silent Greens.** A triggered payment that clears silently creates no case. Only an anonymous counter is kept (SPEC 5). Cases exist only once the customer has interacted.
 9. **Family Verify message.** It shows an amount band (exact only for round figures, otherwise "about ₹X") and the payee name. The relative never sees the caller number or any history.
 10. **Hold release.** Below ₹50,000, a positive out-of-band check lets the customer release the hold. At ₹50,000 or more, an analyst must release it, even after a positive check. Expiry never auto-sends.
@@ -35,6 +39,18 @@ The SPEC is implemented as written. The prototype has to make some choices the S
 16. **Cue checklist.** It is offered for `claim_none` / `claim_other` when the tier is Amber.
     - It is sent as `cues[]` plus `checklist_done`. "None of these" closes it without adding signals.
 17. **Cancel-primary.** After a user-reported negative, the Amber screen shows Cancel as the saffron primary button with "Cancel is the safer choice", and the claim checks lose their primary styling.
+18. **What "voice never creates or removes a hold" covers.**
+    - It covers the detector band and the watermark (family V): LRs are ≥ 1, G1 never counts V, and strict G2 caps a V-tipped Red at Amber. The engine and simulator tests check this (`test_v02.py`, `test_voice_is_one_directional_in_the_flow`).
+    - It does not cover the script cues the ASR hears in the same audio (family S: secrecy, OTP, arrest threat). Those are ordinary evidence and can qualify a Red through G1. In the simulator, this is the whole of the voice layer's +3.4 pp of scam holds and +0.014 pp of genuine holds.
+    - In the product flow the voice check is only offered on the Pause & Verify screen. So in practice the band's Green → Amber lift appears only through the API, not in the simulated flow.
+    - Simulator bug fixed with this change: the voice step used to overwrite the checklist cue answers with the ASR cues instead of adding to them. That wiped checklist-derived holds whenever a voice check ran, and is why the previous report showed voice slightly lowering scam holds.
+19. **Family Verify enrolment sensitivity.** `fv.enrolled` is set to 0.2 / 0.35 / 0.5 / 0.7 / 0.9 in every scenario, regenerating the same sessions from the same seed (`sim_sensitivity.json` → `fv_enrolment`, `chart_fv_enrolment.svg`, `deck_numbers.json` → `t1_red_pct_by_fv_enrolment`).
+    - T1 held goes 51 → 58% and weighted scam held 71 → 73%. T1 Amber+ is flat at 93%, and genuine friction is flat.
+    - The ceiling is uptake, not enrolment. Even at 90% enrolment, only 34% of T1 victims run Family Verify (assumed 50% uptake, because "police took his phone").
+    - What-if, not in the deck numbers: with Family Verify sent by default after "Family member" (uptake 0.9), T1 held is 59% at 50% enrolment and 66% at 90%.
+    - Proposal: send Family Verify automatically when the payer names an enrolled relative, rather than offering it as an option.
+20. **Green 0.15 and coached "No one" on T1.** T1's demo context (stage-1 p 0.158) answered "No one" (LR 0.8) falls to p 0.13 and now proceeds Green. That is the accepted Amber+ cost. "Someone else" (LR 1.0) stays Amber with the checklist. The checklist demo and screenshot 13 therefore use T3 (digital arrest), where coaching to say "no one" is the pattern itself.
+    - Possible follow-up: show the checklist whenever stage-1 context was Amber and the answer is "No one", even if the claim drops p below green_below.
 
 ## B. Proposed SPEC changes (product-logic weak spots). B1–B4, B6 and B7 were adopted in v0.2
 

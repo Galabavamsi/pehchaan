@@ -153,7 +153,7 @@ def main() -> None:
 
         # ---------------------------------------------------------------- coached "no one" checklist (v0.2)
         if want("13"):
-            load(page, "T1")
+            load(page, "T3")  # digital arrest: the victim is coached to answer "no one"
             pay_and_claim(page, "none")
             p = payer(page)
             p.get_by_test_id("cue-checklist").wait_for()

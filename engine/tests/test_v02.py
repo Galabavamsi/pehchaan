@@ -95,6 +95,40 @@ def test_strict_g2_allows_red_when_red_without_voice():
     assert assess(sig + ["voice_likely_synthetic"]).tier == "red"
 
 
+# ---------------------------------------------------------------- one-directional voice
+def test_voice_no_strong_evidence_is_neutral():
+    sig = ["claim_bank", "caller_unknown", "bank_claim_not_1600", "payee_new"]
+    a, b = assess(sig), assess(sig + ["voice_no_strong_evidence"])
+    assert b.p == pytest.approx(a.p) and b.tier == a.tier
+
+
+def test_voice_can_lift_green_to_amber():
+    sig = ["caller_unknown", "caller_international", "payee_new"]
+    a = assess(sig)
+    assert a.tier == "green"
+    b = assess(sig + ["voice_likely_synthetic"])
+    assert b.p > a.p and b.tier == "amber"
+
+
+def test_voice_never_removes_a_hold():
+    sig = ["claim_authority", "caller_unknown", "caller_voip_unknown", "payee_new", "payee_flagged_medium"]
+    a = assess(sig)
+    assert a.tier == "red"
+    for band in ("voice_no_strong_evidence", "voice_inconclusive"):
+        b = assess(sig + [band])
+        assert b.tier == "red" and b.p >= a.p - 1e-12
+
+
+def test_voice_never_creates_a_hold_alone():
+    # Amber context + the strongest voice band: still Amber (strict G2)
+    for sig in (["claim_bank", "caller_unknown", "bank_claim_not_1600", "payee_new"],
+                ["claim_family", "caller_unknown", "caller_international", "payee_new", "amount_gt_p99"]):
+        base = assess(sig)
+        assert base.tier == "amber"
+        a = assess(sig + ["voice_likely_synthetic", "watermark_detected"])
+        assert a.tier == "amber" and a.p > base.p
+
+
 # ---------------------------------------------------------------- registry
 def test_registry_unknown_is_neutral_and_never_red():
     sig = ["claim_bank", "caller_unknown", "bank_claim_not_1600", "payee_new"]

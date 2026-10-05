@@ -87,7 +87,7 @@ class ActionsCfg(BaseModel):
 
 class VoiceCfg(BaseModel):
     lr_source: str = "assumed"
-    no_strong_evidence_lr_floor: float | None = 0.7
+    lr_floor: float | None = 1.0  # one-directional: no voice band may lower suspicion
     band_thresholds: dict[str, float] = {
         "likely_synthetic_at_or_above": 0.70,
         "no_strong_evidence_below": 0.30,
@@ -119,6 +119,11 @@ class Config(BaseModel):
             s.family = SIGNAL_FAMILY[code]
         if not (0 < self.tiers.green_below < self.tiers.red_at_or_above < 1):
             raise ValueError("tier thresholds must satisfy 0 < green < red < 1")
+        floor = self.voice.lr_floor
+        if floor is not None:
+            low = [f"voice_{b}" for b in VOICE_BANDS if self.signals[f"voice_{b}"].lr < floor]
+            if low:  # one-directional voice: the detector can raise suspicion, never lower it
+                raise ValueError(f"voice-band LRs must be >= {floor} (one-directional voice): {low}")
         return self
 
     # convenience -------------------------------------------------------
@@ -227,12 +232,12 @@ def _apply_measured_voice(cfg: Config, base_dir: Path) -> Config:
         warnings.warn(f"voice.lr_source {path} not found; keeping assumed voice LRs")
         return cfg
     lrs, prov = load_measured_voice_lrs(path)
-    floor = cfg.voice.no_strong_evidence_lr_floor
+    floor = cfg.voice.lr_floor
     for band, lr in lrs.items():
         code = f"voice_{band}"
         note = f"measured from {prov['file']} ({prov['json_path']})"
-        if band == "no_strong_evidence" and floor is not None and lr < floor:
-            note += f"; raw {lr:.3f} floored at {floor} (G2 safety floor)"
+        if floor is not None and lr < floor:
+            note += f"; raw {lr:.3f} floored at {floor} (one-directional voice: can raise suspicion, never lower it)"
             lr = floor
         cfg.signals[code] = SignalCfg(lr=lr, basis="measured", rationale=note, family="V", source=prov["file"])
     cfg.voice.measured_from = prov["file"]

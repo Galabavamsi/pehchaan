@@ -21,6 +21,7 @@ ASSUMPTION-DRIVEN PROJECTION, not a measurement.
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import math
 import sys
@@ -433,8 +434,8 @@ def run_flow(S: Sessions, eng: BatchEngine, prior: float, voice_uptake: float, l
                     X3[:, IDX[f"voice_{b}"]] = voice_done & (S["band"] == bi)
                 X3[:, IDX["watermark_detected"]] = voice_done & S["watermark"]
                 asr_ok = voice_done & S["quality_ok"]
-                for cue in CUES:
-                    X3[:, IDX[cue]] = asr_ok & S[cue]
+                for cue in CUES:  # ASR cues add to (never replace) the checklist answers
+                    X3[:, IDX[cue]] |= asr_ok & S[cue]
                 quality = np.where(voice_done, S["quality_ok"], True)
             a3 = eng.assess(X3, prior, quality_ok=quality, trusted=S["trusted"])
             final = np.where(shown, a3.tier, a2_tier)
@@ -626,10 +627,48 @@ def threshold_sweep(S: Sessions, A: dict, cfg: Config, prior: float, uptake: flo
         "selection_rule": "meets the Red budget; within 1 pp of the best scam-Red catch; most headroom; ties -> higher theta",
         "config_meets_red_budget": cur["genuine_red_pct"] <= red_max,
         "config_meets_pause_verify_budget": cur["genuine_saw_pause_and_verify_pct"] <= pv_max,
-        "note": ("theta_red moves Red only; Pause & Verify is set by green_below (kept at 0.10, SPEC) and by "
-                 "the claim mix. green_rows show the P&V trade-off if green_below were raised."),
+        "note": ("theta_red moves Red only; Pause & Verify is set by green_below (0.15 in config, raised from the "
+                 "SPEC v0.2 0.10 to meet the P&V budget) and by the claim mix. green_rows show the P&V / Amber+ trade-off."),
         "theta_rows": theta_rows, "green_rows": green_rows, "what_if": what_if,
     }
+
+
+def fv_enrolment_sweep(A: dict, n_by: dict[str, int], seed: int, band_rates: dict, eng: "BatchEngine",
+                       prior: float, uptake: float, kw: dict) -> dict:
+    """Catch / friction vs the share of payers with Family Verify enrolled.
+
+    Every scenario's fv.enrolled is set to the grid value; sessions are regenerated
+    from the same seed, so the enrolment draw uses the same uniforms (common random
+    numbers) and only the enrolled/not-enrolled split moves. The 0.5 row equals the
+    headline run.
+    """
+    grid = [float(x) for x in A["behaviour"]["fv_enrolment_sweep"]["value"]]
+    rows = []
+    for e in grid:
+        Ae = copy.deepcopy(A)
+        for sc in Ae["scenarios"].values():
+            if isinstance(sc.get("fv"), dict):
+                sc["fv"]["enrolled"] = e
+        Se = generate(Ae, n_by, np.random.default_rng(seed), band_rates)
+        h = summarise(Se, run_flow(Se, eng, prior, uptake, 3, **kw), Ae, prior)
+        ps = h["per_scenario"]
+        rows.append({
+            "fv_enrolment": e,
+            "T1_red_pct": _pct(ps["T1"]["final_red"]), "T1_amber_plus_pct": _pct(ps["T1"]["amber_plus"]),
+            "T1_stopped_pct": _pct(ps["T1"]["stopped"]), "T1_used_fv_pct": _pct(ps["T1"].get("used_fv", 0.0)),
+            "scam_weighted_red_pct": _pct(h["scam"]["final_red"]),
+            "scam_weighted_amber_plus_pct": _pct(h["scam"]["amber_plus"]),
+            "scam_weighted_stopped_pct": _pct(h["scam"]["stopped"]),
+            "per_pattern_red_pct": {k: _pct(ps[k]["final_red"]) for k in Se.names if k.startswith("T")},
+            "genuine_saw_pause_and_verify_pct": _pct(h["genuine"]["saw_pause_and_verify"]),
+            "genuine_resolved_green_by_a_check_pct": _pct(h["genuine"]["resolved_green_after_check"]),
+            "genuine_final_amber_pct": _pct(h["genuine"]["final_amber"]),
+            "genuine_red_pct": _pct(h["genuine"]["final_red"]),
+        })
+    return {"note": ("Family Verify enrolment applied to every scenario; same sessions (common random numbers), "
+                     f"prior {_frac(prior)}, voice uptake {uptake:.0%}; all other assumptions fixed. Headline uses 0.5."),
+            "grid": grid, "headline_enrolment": float(A["scenarios"]["T1"]["fv"]["enrolled"]),
+            "assumed_T1_fv_uptake": float(A["scenarios"]["T1"]["fv"]["uptake"]), "rows": rows}
 
 
 def precision_priors(A: dict) -> list[float]:
@@ -748,6 +787,15 @@ def deck_numbers(summary: dict, ablation: dict, sensitivity: dict, sweep: dict, 
         d[f"ablation_{r['level']}_scam_red_pct"] = r["scam_red_pct"]
         d[f"ablation_{r['level']}_genuine_pause_verify_pct"] = r["genuine_saw_pause_and_verify_pct"]
         d[f"ablation_{r['level']}_genuine_red_pct"] = r["genuine_red_pct"]
+    fvs = sensitivity.get("fv_enrolment")
+    if fvs:
+        key = lambda r: f"{r['fv_enrolment']:g}"  # noqa: E731
+        d["fv_enrolment_grid"] = fvs["grid"]
+        d["t1_red_pct_by_fv_enrolment"] = {key(r): r["T1_red_pct"] for r in fvs["rows"]}
+        d["t1_amber_plus_pct_by_fv_enrolment"] = {key(r): r["T1_amber_plus_pct"] for r in fvs["rows"]}
+        d["scam_weighted_red_pct_by_fv_enrolment"] = {key(r): r["scam_weighted_red_pct"] for r in fvs["rows"]}
+        d["genuine_pause_verify_pct_by_fv_enrolment"] = {key(r): r["genuine_saw_pause_and_verify_pct"] for r in fvs["rows"]}
+        d["genuine_red_pct_by_fv_enrolment"] = {key(r): r["genuine_red_pct"] for r in fvs["rows"]}
     d["zero_voice_scam_red_pct_1_400"] = zero["scam_red_pct"]
     d["zero_voice_scam_amber_plus_pct_1_400"] = zero["scam_amber_plus_pct"]
     d["zero_voice_genuine_red_pct_1_400"] = zero["genuine_red_pct"]
@@ -919,7 +967,9 @@ def simulate(n_genuine: int | None = None, n_scam: int | None = None, seed: int 
             "level": name,
             "label": {"context_only": "Context only (call + payment)",
                       "plus_claim": "+ one-tap claim (incl. the 3-tap cue checklist for 'no one' / 'someone else')",
-                      "plus_out_of_band": "+ out-of-band checks", "plus_voice": f"+ voice check ({uptake:.0%} uptake)"}[name],
+                      "plus_out_of_band": "+ out-of-band checks",
+                      "plus_voice": f"+ voice check ({uptake:.0%} uptake; detector band + script cues heard in the call audio. "
+                                    "Holds added here come from the cues: the band never creates or removes one)"}[name],
             "genuine_saw_pause_and_verify_pct": gp(h["genuine"], "saw_pause_and_verify"),
             "genuine_final_amber_pct": gp(h["genuine"], "final_amber"),
             "genuine_red_pct": gp(h["genuine"], "final_red"),
@@ -933,6 +983,9 @@ def simulate(n_genuine: int | None = None, n_scam: int | None = None, seed: int 
         })
     ablation = {"assumption_driven_projection": True, "disclaimer": DISCLAIMER, "seed": seed,
                 "prior": prior, "voice_uptake": uptake, "rows": abl_rows}
+
+    # sensitivity: Family Verify enrolment (all other assumptions fixed)
+    sensitivity["fv_enrolment"] = fv_enrolment_sweep(A, n_by, seed, band_rates, eng, prior, uptake, kw)
 
     # alert budget: theta_red / green_below sweeps; Red precision vs prior (v0.2 and the v0.1 baseline)
     sweep = threshold_sweep(S, A, cfg, prior, uptake, kw)

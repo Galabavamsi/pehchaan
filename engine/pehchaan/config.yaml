@@ -14,12 +14,12 @@ prior:
     deliberately cautious (risk-leaning) default.
 
 tiers:
-  green_below: 0.10        # p < 0.10 -> Green (proceed silently)
+  green_below: 0.15        # p < 0.15 -> Green (proceed silently); sim-tuned to the <=6% Pause & Verify budget (was 0.10)
   red_at_or_above: 0.75    # theta_red (sim-tuned, SPEC v0.2 default 0.80): p >= theta_red AND guardrail-qualified -> Red (or any G7 decisive negative)
   ask_claim_at_or_above: 0.01
   basis: assumed
   rationale: >-
-    Green threshold from SPEC; theta_red (SPEC v0.2 default 0.80) is tuned by
+    Green threshold raised from the SPEC 0.10 to 0.15 so genuine Pause & Verify meets the <= 6% budget (accepting a ~1.4 pp Amber+ drop); theta_red (SPEC v0.2 default 0.80) is tuned by
     engine/pehchaan/sim.py against the alert budget (pi0 = 1/400: <= 0.25% of
     genuine triggered sessions end Red, <= 6% see Pause & Verify). ask_claim_at_or_above is a prototype addition (see
     app/NOTES.md): the one-tap "who asked you?" question is skipped when
@@ -61,7 +61,7 @@ signals:
   # ---- V: Voice provenance (replaced by measured values: see voice.lr_source)
   voice_likely_synthetic:   {lr: 8,   basis: assumed, rationale: "Placeholder until ml/results/metrics.json gives calibrated band rates."}
   voice_inconclusive:       {lr: 1.0, basis: assumed, rationale: "Uninformative by construction (G3 routes low-quality audio here)."}
-  voice_no_strong_evidence: {lr: 0.7, basis: assumed, rationale: "Weak: detectors miss unseen generators; 'sounds real' is not proof (G2)."}
+  voice_no_strong_evidence: {lr: 1.0, basis: assumed, rationale: "Neutral by design: the detector can raise suspicion, never lower it (detectors miss unseen generators; 'sounds real' is not proof)."}
   watermark_detected:       {lr: 50,  basis: assumed, rationale: "Positive-only provenance hit (e.g. Perth/AudioSeal); capped to 8 by the V family cap."}
   # ---- S: Script cues -----------------------------------------------------
   cue_secrecy:             {lr: 4,  basis: assumed, rationale: "'Mummy ko mat batana' secrecy requests."}
@@ -114,7 +114,10 @@ voice:
   # voice-band LRs with measured values (basis flips to 'measured').
   #   lr_source: ../../ml/results/metrics.json
   lr_source: assumed
-  # Safety floor for the reassuring band: measured LR on in-distribution
-  # generators overstates reassurance on unseen ones (G2). See app/NOTES.md.
-  no_strong_evidence_lr_floor: 0.7   # = SPEC value: measured data can only make "sounds real" weaker, never stronger
+  # One-directional voice: every voice-band LR (measured or assumed) is floored
+  # at 1.0, so the detector can raise suspicion but never lower it. Measured LRs
+  # on in-distribution generators overstate reassurance on unseen ones. With
+  # strict G2 this means voice can lift Green -> Amber but never create or
+  # remove a hold. See app/NOTES.md.
+  lr_floor: 1.0
   band_thresholds: {likely_synthetic_at_or_above: 0.70, no_strong_evidence_below: 0.30}

@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from pehchaan import assess, default_config, should_ask_claim
-from pehchaan.sim import IDX, SIG, BatchEngine, base_rate_prior, load_assumptions, simulate
+from pehchaan.sim import CUES, IDX, SIG, BatchEngine, base_rate_prior, generate, load_assumptions, run_flow, simulate
 
 CFG = default_config()
 TIER = {"green": 0, "amber": 1, "red": 2}
@@ -105,7 +105,22 @@ def test_sim_smoke(tmp_path):
                 "holds_per_scam_held_1_1300", "inr_protected_per_inr_delayed", "theta_red",
                 "zero_voice_scam_red_pct_1_400", "ablation_plus_out_of_band_scam_red_pct"):
         assert key in d
-    assert all(isinstance(v, (int, float, str, bool)) or v is None for v in d.values())  # flat
+    scalar = (int, float, str, bool, type(None))
+    for k, v in d.items():  # flat, except the *_by_fv_enrolment maps and their grid
+        if k.endswith("_by_fv_enrolment"):
+            assert set(v) == {f"{e:g}" for e in d["fv_enrolment_grid"]} and all(isinstance(x, scalar) for x in v.values())
+        elif k == "fv_enrolment_grid":
+            assert v == [0.2, 0.35, 0.5, 0.7, 0.9]
+        else:
+            assert isinstance(v, scalar), k
+    # FV enrolment sensitivity: same sessions, the 0.5 row is the headline run
+    fv = out["sensitivity"]["fv_enrolment"]["rows"]
+    assert len(fv) == 5
+    half = next(r for r in fv if r["fv_enrolment"] == 0.5)
+    assert half["T1_red_pct"] == s["catch_rates_pct"]["T1"]["red_hold"]
+    assert half["scam_weighted_red_pct"] == s["catch_rates_pct"]["all_scams_weighted"]["red_hold"]
+    assert fv[-1]["T1_red_pct"] > fv[0]["T1_red_pct"]
+    assert d["t1_red_pct_by_fv_enrolment"]["0.5"] == d["scam_T1_red_pct"]
     sw = out["sweep"]
     assert sw["theta_rows"] and sw["green_rows"] and "auto_registry" in sw["what_if"]
 
@@ -128,3 +143,35 @@ def test_upi_or_shop_claim_never_picks_up_bank_checks():
     fx = R["final_X"]
     for code in ("bank_claim_not_1600", "bank_no_active_call", "bank_registry_unknown", "bank_active_call_1600"):
         assert not fx[upi, IDX[code]].any()
+
+
+def test_voice_is_one_directional_in_the_flow():
+    """Running the voice check never lowers a session's tier; any hold it adds comes from ASR
+    script cues (family S) captured during the check, never from the detector band (strict G2)."""
+    A = load_assumptions()
+    beh = A["behaviour"]
+    kw = dict(review_at=CFG.actions.analyst_review_at_or_above_inr,
+              amber_cancel_neg=beh["amber_cancel_if_decisive_negative"]["value"],
+              red_genuine_completes=beh["red_genuine_completes"]["value"],
+              checklist_uptake=beh["checklist_uptake"]["value"],
+              amber_cancel_user_neg=beh["amber_cancel_if_user_reported_negative"]["value"])
+    n_by = {k: 3000 for k in A["mix"]["genuine"] if k.startswith("G_")}
+    n_by.update({k: 3000 for k in A["mix"]["scam"] if k.startswith("T")})
+    S = generate(A, n_by, np.random.default_rng(11), A["detector"]["band_rates"])
+    eng = BatchEngine(CFG)
+    r0 = run_flow(S, eng, 1 / 400, 0.0, 3, **kw)
+    r1 = run_flow(S, eng, 1 / 400, 1.0, 3, **kw)
+    assert (r1["final"] >= r0["final"]).all()  # never removes a hold or an Amber
+    lifted = (r1["final"] > r0["final"])
+    assert lifted.any()
+    new_red = (r1["final"] == 2) & (r0["final"] < 2)
+    cue_cols = [IDX[c] for c in CUES]
+    new_cue = (r1["final_X"][:, cue_cols] & ~r0["final_X"][:, cue_cols]).any(axis=1)
+    assert not (new_red & ~new_cue).any()  # the detector band alone never creates a hold
+    # with ASR cues switched off, voice creates no holds at all
+    for c in CUES:
+        S.cols[c] = np.zeros_like(S.cols[c])
+    r2 = run_flow(S, eng, 1 / 400, 1.0, 3, **kw)
+    r20 = run_flow(S, eng, 1 / 400, 0.0, 3, **kw)
+    assert ((r2["final"] == 2) == (r20["final"] == 2)).all()
+

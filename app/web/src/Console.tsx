@@ -160,7 +160,7 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
             <h3>Why this decision</h3>
             <div className="ph-sub">Each bar is one signal's ln-LR contribution after family caps, from the prior to the final score. Guardrails then decide the tier.</div>
             <Waterfall reasons={reasons} priorLogOdds={d.prior_log_odds} logOdds={d.log_odds} p={d.p} prior={d.prior} compact={compact}
-              width={compact ? 640 : 760} redAt={d.thresholds?.red_at_or_above ?? 0.8} greenBelow={d.thresholds?.green_below ?? 0.1} />
+              width={compact ? 640 : 760} redAt={d.thresholds?.red_at_or_above ?? 0.75} greenBelow={d.thresholds?.green_below ?? 0.15} />
           </section>
           {!compact && (
             <section className="panel">

@@ -64,7 +64,8 @@ def test_claim_split_upi_or_shop(client):
 
 
 def test_cue_checklist_for_coached_no_one(client):
-    sc, a1 = start(client, "T1")
+    # T3 (digital arrest): the victim is coached to say "no one"; the context alone keeps it Amber
+    sc, a1 = start(client, "T3")
     cid = a1["case_id"]
     a2 = client.post("/v1/risk/assess", json={"case_id": cid, "claim": "none"}).json()
     assert a2["tier"] == "amber" and ids(a2)[0] == "cue_checklist"
@@ -72,7 +73,7 @@ def test_cue_checklist_for_coached_no_one(client):
     assert {"cue_secrecy", "cue_otp_pin"} <= set(a3["signals"]) and a3["p"] > a2["p"]
     assert "cue_checklist" not in ids(a3)
     # answering "none of these" also closes the checklist
-    sc, b1 = start(client, "T1")
+    sc, b1 = start(client, "T3")
     client.post("/v1/risk/assess", json={"case_id": b1["case_id"], "claim": "other"})
     b3 = client.post("/v1/risk/assess", json={"case_id": b1["case_id"], "cues": [], "checklist_done": True}).json()
     assert "cue_checklist" not in ids(b3)
@@ -87,3 +88,15 @@ def test_user_reported_denial_makes_cancel_primary(client):
     assert a3["tier"] == "amber" and not any(g["id"] == "G7" for g in a3["guardrails"])
     cancel = next(x for x in a3["actions"] if x["id"] == "cancel_payment")
     assert cancel["primary"] is True
+
+
+def test_green_threshold_015_coached_no_one_on_t1_context_is_green(client):
+    # documents the accepted trade-off of green_below = 0.15: T1 context (p 0.158) answered "no one"
+    # (LR 0.8) falls to p 0.13 < 0.15 and proceeds; "someone else" (LR 1.0) stays Amber with the checklist
+    sc, a1 = start(client, "T1")
+    assert a1["tier"] == "amber" and a1["thresholds"]["green_below"] == 0.15
+    a2 = client.post("/v1/risk/assess", json={"case_id": a1["case_id"], "claim": "none"}).json()
+    assert a2["tier"] == "green"
+    sc, b1 = start(client, "T1")
+    b2 = client.post("/v1/risk/assess", json={"case_id": b1["case_id"], "claim": "other"}).json()
+    assert b2["tier"] == "amber" and ids(b2)[0] == "cue_checklist"

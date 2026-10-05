@@ -8,102 +8,102 @@
     {
       "level": "context_only",
       "label": "Context only (call + payment)",
-      "genuine_saw_pause_and_verify_pct": 3.684,
-      "genuine_final_amber_pct": 3.684,
+      "genuine_saw_pause_and_verify_pct": 2.043,
+      "genuine_final_amber_pct": 2.043,
       "genuine_red_pct": 0.0,
-      "scam_amber_plus_pct": 88.027,
+      "scam_amber_plus_pct": 85.303,
       "scam_red_pct": 0.0,
-      "scam_stopped_pct": 33.505,
+      "scam_stopped_pct": 32.43,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 89.137,
+          "amber_plus_pct": 84.49,
           "red_pct": 0.0
         },
         "T2": {
-          "amber_plus_pct": 80.193,
+          "amber_plus_pct": 76.833,
           "red_pct": 0.0
         },
         "T3": {
-          "amber_plus_pct": 97.463,
+          "amber_plus_pct": 96.657,
           "red_pct": 0.0
         }
       },
-      "inr_protected_per_100k": 4452632
+      "inr_protected_per_100k": 4363747
     },
     {
       "level": "plus_claim",
       "label": "+ one-tap claim (incl. the 3-tap cue checklist for 'no one' / 'someone else')",
-      "genuine_saw_pause_and_verify_pct": 9.214,
-      "genuine_final_amber_pct": 9.082,
+      "genuine_saw_pause_and_verify_pct": 5.465,
+      "genuine_final_amber_pct": 5.333,
       "genuine_red_pct": 0.132,
-      "scam_amber_plus_pct": 96.466,
-      "scam_red_pct": 60.445,
-      "scam_stopped_pct": 66.136,
+      "scam_amber_plus_pct": 95.114,
+      "scam_red_pct": 60.426,
+      "scam_stopped_pct": 65.593,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 96.437,
-          "red_pct": 31.57
+          "amber_plus_pct": 93.057,
+          "red_pct": 31.54
         },
         "T2": {
-          "amber_plus_pct": 94.38,
-          "red_pct": 62.257
+          "amber_plus_pct": 93.147,
+          "red_pct": 62.233
         },
         "T3": {
-          "amber_plus_pct": 99.163,
-          "red_pct": 74.617
+          "amber_plus_pct": 98.82,
+          "red_pct": 74.61
         }
       },
-      "inr_protected_per_100k": 9212713
+      "inr_protected_per_100k": 9164641
     },
     {
       "level": "plus_out_of_band",
       "label": "+ out-of-band checks",
-      "genuine_saw_pause_and_verify_pct": 9.214,
-      "genuine_final_amber_pct": 5.137,
-      "genuine_red_pct": 0.235,
-      "scam_amber_plus_pct": 96.323,
-      "scam_red_pct": 68.327,
-      "scam_stopped_pct": 69.576,
+      "genuine_saw_pause_and_verify_pct": 5.465,
+      "genuine_final_amber_pct": 2.887,
+      "genuine_red_pct": 0.199,
+      "scam_amber_plus_pct": 94.958,
+      "scam_red_pct": 68.094,
+      "scam_stopped_pct": 68.929,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 96.27,
-          "red_pct": 51.747
+          "amber_plus_pct": 92.86,
+          "red_pct": 50.71
         },
         "T2": {
-          "amber_plus_pct": 94.147,
-          "red_pct": 69.01
+          "amber_plus_pct": 92.913,
+          "red_pct": 68.987
         },
         "T3": {
-          "amber_plus_pct": 99.15,
-          "red_pct": 76.923
+          "amber_plus_pct": 98.787,
+          "red_pct": 76.88
         }
       },
-      "inr_protected_per_100k": 9574221
+      "inr_protected_per_100k": 9512290
     },
     {
       "level": "plus_voice",
-      "label": "+ voice check (30% uptake)",
-      "genuine_saw_pause_and_verify_pct": 9.214,
-      "genuine_final_amber_pct": 4.906,
-      "genuine_red_pct": 0.241,
-      "scam_amber_plus_pct": 96.305,
-      "scam_red_pct": 67.797,
-      "scam_stopped_pct": 69.235,
+      "label": "+ voice check (30% uptake; detector band + script cues heard in the call audio. Holds added here come from the cues: the band never creates or removes one)",
+      "genuine_saw_pause_and_verify_pct": 5.465,
+      "genuine_final_amber_pct": 2.876,
+      "genuine_red_pct": 0.213,
+      "scam_amber_plus_pct": 94.962,
+      "scam_red_pct": 71.473,
+      "scam_stopped_pct": 70.536,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 96.247,
-          "red_pct": 52.987
+          "amber_plus_pct": 92.877,
+          "red_pct": 54.353
         },
         "T2": {
-          "amber_plus_pct": 94.12,
-          "red_pct": 69.623
+          "amber_plus_pct": 92.913,
+          "red_pct": 72.06
         },
         "T3": {
-          "amber_plus_pct": 99.147,
-          "red_pct": 73.913
+          "amber_plus_pct": 98.787,
+          "red_pct": 80.5
         }
       },
-      "inr_protected_per_100k": 9485946
+      "inr_protected_per_100k": 9738660
     }
   ]
 }

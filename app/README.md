@@ -59,11 +59,11 @@ python app/screenshots/shoot.py         # needs both servers running; writes the
    - Say: "Same context, one tap, done. Genuine families aren't punished for living abroad."
 6. **Voice is a clue, not the judge (30 s, optional).** On T1 at the Amber screen, tap **Check the caller's voice** and choose a demo clip, or upload a WAV / record from the speakerphone.
    - Show the quality gate and the "one clue, not proof" copy.
-   - Mention G2: voice alone can never cause a hold.
+   - Say: "The detector can raise suspicion, never lower it." A "no strong evidence" result changes nothing (LR 1.0), and under strict G2 the detector score can never create or remove a hold.
 7. **Bank and police (40 s).**
    - Click **T2** and pick **My bank**, then **Bharat Demo Bank**, then **Check with Bharat Demo Bank**. Result: "Bharat Demo Bank is not calling you right now."
    - Click **T3** and pick **Police, CBI or Govt** to show the "no digital arrest" fact card.
-8. **Coached "no one" (20 s, optional).** On T1, answer **No one**. The three-question checklist appears (secrecy, OTP/PIN, arrest threat); ticking "keep it secret" raises the risk.
+8. **Coached "no one" (20 s, optional).** On T3 (digital arrest), answer **No one**. The three-question checklist appears (secrecy, OTP/PIN, arrest threat); ticking "keep it secret" raises the risk.
 9. **Analyst (20 s).** In the console, open the T1 case.
    - Show the guardrail notes and the access-logged banner.
    - Click **Confirm scam and report**, which flags the payee VPA to the PSP.

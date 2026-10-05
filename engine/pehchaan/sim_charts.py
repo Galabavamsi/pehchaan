@@ -225,7 +225,7 @@ def chart_ablation(ablation: dict, summary: dict, out: Path):
     series = [("scam_amber_plus_pct", AMBER, "Scams paused (Amber+)"),
               ("scam_red_pct", RED, "Scams held (Red)"),
               ("genuine_saw_pause_and_verify_pct", SLATE, "Genuine payments paused")]
-    H = 430
+    H = 452
     fig = _fig(H)
     _header(fig, "What each layer adds",
             f"Cumulative layers · scam patterns weighted T1/T2/T3 · prior {summary['prior']['as_fraction']}")
@@ -235,7 +235,7 @@ def chart_ablation(ablation: dict, summary: dict, out: Path):
                                      facecolor=col, edgecolor="none"))
         fig.text(*_px(fig, lx + 20, ly), lab, family=BODY, size=13, color=INK, va="center")
         lx += {AMBER: 196, RED: 160, SLATE: 0}[col]
-    ax = fig.add_axes([52 / 600, 112 / H, 530 / 600, (H - 112 - 118) / H])
+    ax = fig.add_axes([52 / 600, 134 / H, 530 / 600, (H - 134 - 118) / H])
     ax.set_xlim(-0.6, len(rows) - 0.4)
     ax.set_ylim(0, 100)
     _clean(ax, "y")
@@ -254,6 +254,8 @@ def chart_ablation(ablation: dict, summary: dict, out: Path):
             ax.text(x, v + 1.6, _fmt_pct(v), family=MONO, size=12, color=INK, ha="center", va="bottom")
         ax.text(i, -36, f"genuine held {_fmt_pct(r['genuine_red_pct'])}", family=BODY, size=12, color=SLATE,
                 ha="center", va="top", clip_on=False)
+    fig.text(*_px(fig, 20, H - 34), "Holds added by the voice layer come from script cues in the call audio, "
+             "not the detector score", family=BODY, size=12, color=INK)
     _footer(fig, f"voice band rates: {summary['voice']['band_rates_source'].split(' (')[0]}")
     _save(fig, out, "chart_ablation")
 
@@ -387,6 +389,66 @@ def chart_red_precision(precision: list[dict], baseline: dict | None, summary: d
     _save(fig, out, "chart_red_precision")
 
 
+def chart_fv_enrolment(fv: dict, summary: dict, out: Path):
+    """T1 / all-scam catch vs the share of payers with Family Verify enrolled."""
+    rows = sorted(fv["rows"], key=lambda r: r["fv_enrolment"])
+    xs = [r["fv_enrolment"] for r in rows]
+    r0, r1 = rows[0], rows[-1]
+    H = 450
+    fig = _fig(H)
+    _header(fig, "Family Verify enrolment lifts cloned-relative holds",
+            f"T1 held {r0['T1_red_pct']:.0f}% → {r1['T1_red_pct']:.0f}% as enrolment goes {r0['fv_enrolment']:.0%} → "
+            f"{r1['fv_enrolment']:.0%} · all scams {r0['scam_weighted_red_pct']:.0f}% → {r1['scam_weighted_red_pct']:.0f}%")
+    series = [("T1_amber_plus_pct", AMBER, "T1 paused (Amber+)", 2.2),
+              ("T1_red_pct", RED, "T1 held (Red)", 2.6),
+              ("scam_weighted_red_pct", INK, "All scams held (Red, weighted)", 2.2)]
+    rend = fig.canvas.get_renderer()
+    lx, ly = 20, 78
+    for _, col, lab, _lw in series:
+        fig.add_artist(plt.Line2D([lx / 600, (lx + 18) / 600], [1 - ly / H] * 2, color=col, linewidth=2.5,
+                                  transform=fig.transFigure))
+        t = fig.text(*_px(fig, lx + 24, ly), lab, family=BODY, size=13, color=INK, va="center")
+        lx += 24 + t.get_window_extent(rend).width + 22
+    ax = fig.add_axes([56 / 600, 128 / H, 500 / 600, (H - 128 - 100) / H])
+    ax.set_xlim(xs[0] - 0.06, xs[-1] + 0.06)
+    ax.set_ylim(0, 100)
+    _clean(ax, "y")
+    ax.set_xticks(xs)
+    ax.set_xticklabels([f"{x:.0%}" for x in xs], family=MONO, size=12)
+    ax.set_yticks([0, 25, 50, 75, 100])
+    ax.set_yticklabels(["0", "25", "50", "75", "100%"], family=MONO, size=12)
+    head = fv.get("headline_enrolment", 0.5)
+    ax.axvline(head, color="#cfc5b0", linewidth=1, zorder=1)
+    ax.text(head + 0.012, 3, "headline assumption", family=BODY, size=12, color=SLATE, va="bottom", ha="left")
+    for key, col, _lab, lw in series:
+        ys = [r[key] for r in rows]
+        ax.plot(xs, ys, color=col, linewidth=lw, solid_capstyle="round", zorder=3)
+        ax.plot(xs, ys, "o", color=col, markersize=7, markeredgecolor=PAPER, markeredgewidth=2, zorder=5)
+        for i in (0, len(xs) - 1):
+            ax.text(xs[i], ys[i] + 3.2, f"{ys[i]:.0f}%", family=MONO, size=12.5, color=INK, va="bottom",
+                    ha="center", zorder=6)
+
+    def span(key):
+        a_, b_ = _fmt_pct(r0[key]), _fmt_pct(r1[key])
+        return a_ if a_ == b_ else f"{a_} → {b_}"
+
+    up = fv.get("assumed_T1_fv_uptake")
+    why = f" (assumed {up:.0%} uptake)" if up is not None else ""
+    fig.text(*_px(fig, 56, H - 82),
+             f"Even at {r1['fv_enrolment']:.0%} enrolled, only {r1['T1_used_fv_pct']:.0f}% of T1 victims run Family Verify{why}",
+             family=BODY, size=12.5, color=INK)
+    fig.text(*_px(fig, 56, H - 60),
+             f"Genuine: {span('genuine_saw_pause_and_verify_pct')} paused, {span('genuine_red_pct')} held; "
+             f"cleared to Green by a check {span('genuine_resolved_green_by_a_check_pct')}",
+             family=BODY, size=12.5, color=SLATE)
+    fig.text(*_px(fig, 56, H - 38),
+             f"x: payers with a relative enrolled in Family Verify · prior {summary['prior']['as_fraction']} · "
+             f"{summary['voice']['check_uptake']:.0%} voice-check uptake",
+             family=BODY, size=12.5, color=SLATE)
+    _footer(fig, f"seed {summary['seed']}")
+    _save(fig, out, "chart_fv_enrolment")
+
+
 def chart_threshold_tradeoff(sweep: dict, summary: dict, out: Path):
     rows = sweep["theta_rows"]
     th = [r["theta_red"] for r in rows]
@@ -397,7 +459,7 @@ def chart_threshold_tradeoff(sweep: dict, summary: dict, out: Path):
             f"payments held")
     chosen = sweep["theta_red_in_config"]
 
-    def panel(x_px, w_px, key, title, col, budget=None, ymax=None):
+    def panel(x_px, w_px, key, title, col, budget=None, ymax=None, label_below_left=False):
         ax = fig.add_axes([x_px / 600, 96 / H, w_px / 600, (H - 96 - 96) / H])
         ys = [r[key] for r in rows]
         top = ymax or max(ys) * 1.15
@@ -418,11 +480,15 @@ def chart_threshold_tradeoff(sweep: dict, summary: dict, out: Path):
         ax.plot(th, ys, "o", color=col, markersize=5, markeredgecolor=PAPER, markeredgewidth=1.5, zorder=4)
         v = next(r[key] for r in rows if abs(r["theta_red"] - chosen) < 1e-9)
         ax.plot([chosen], [v], "o", color=col, markersize=9, markeredgecolor=PAPER, markeredgewidth=2, zorder=5)
-        ax.text(chosen + 0.015, v + top * 0.03, f"{v:.2f}%" if v < 10 else f"{v:.0f}%", family=MONO, size=13,
-                color=INK, va="bottom")
+        lab = f"{v:.2f}%" if v < 10 else f"{v:.0f}%"
+        if label_below_left:  # the curve falls to the right, so the lower-left is clear
+            ax.text(chosen - 0.015, v - top * 0.03, lab, family=MONO, size=13, color=INK, va="top", ha="right")
+        else:
+            ax.text(chosen + 0.015, v + top * 0.03, lab, family=MONO, size=13, color=INK, va="bottom")
         return ax
 
-    panel(46, 240, "genuine_red_pct", "Genuine payments held", RED, budget=sweep["budget"]["genuine_red_max_pct"])
+    panel(46, 240, "genuine_red_pct", "Genuine payments held", RED, budget=sweep["budget"]["genuine_red_max_pct"],
+          label_below_left=True)
     panel(346, 234, "scam_red_pct", "Scam payments held", ORANGE, ymax=100)
     fig.text(*_px(fig, 46, H - 40), f"x: θ_red (Red threshold on p) · chosen θ_red = {chosen:g} (vertical line)",
              family=BODY, size=12.5, color=SLATE)
@@ -441,3 +507,5 @@ def render_all(summary: dict, sensitivity: dict, ablation: dict, out: Path, swee
         chart_red_precision(precision, baseline, summary, out)
     if sweep:
         chart_threshold_tradeoff(sweep, summary, out)
+    if sensitivity.get("fv_enrolment"):
+        chart_fv_enrolment(sensitivity["fv_enrolment"], summary, out)

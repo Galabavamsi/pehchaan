@@ -21,5 +21,5 @@ All people, numbers, banks and UPI IDs are fictional. Context adapters are mocks
 | `09_console_case.png` | The analyst console for the T1 case: tier and hold, the ln-LR contribution waterfall from the 1-in-400 prior to p = 0.998, all reasons (EN + HI, LR, basis), Release / Confirm / False-positive actions, the guardrail status, the checks, the verified evidence chain, the timeline, the RBAC role badge and the "access logged" notice. |
 | `10_split_demo.png` | Demo-control split view at the moment of the hold: the payer phone in Red, Rahul's phone after answering, and the console updated live over WebSockets. |
 | `11_hindi_amber.png` | The same Amber screen as 03 in Hindi (Devanagari): "रुको, पहले पहचान करो". |
-| `13_cue_checklist.png` | SPEC v0.2: a coached "No one" answer in an Amber context shows the three-tap checklist (keep it secret, OTP/PIN, arrest threat). |
+| `13_cue_checklist.png` | SPEC v0.2, T3 (digital arrest): a coached "No one" answer in an Amber context shows the three-tap checklist (keep it secret, OTP/PIN, arrest threat). With green_below 0.15, T1's context answered "No one" falls to Green, so this shot uses T3. |
 | `12_green_legit.png` | L2, the real son on his new +44 number: "Rahul confirmed on his own phone that it really is him", which turns the result Green. "Why you saw a check" lists the context, then Pay ₹50,000. |

@@ -248,8 +248,9 @@ def test_measured_voice_lr_swap(tmp_path):
     assert cfg.signals["voice_likely_synthetic"].basis == "measured"
     assert cfg.signals["voice_likely_synthetic"].lr == pytest.approx(11.0)
     assert cfg.signals["voice_inconclusive"].lr == pytest.approx(1.5)
-    # 0.2 measured -> floored at 0.7 (G2 safety floor)
-    assert cfg.signals["voice_no_strong_evidence"].lr == pytest.approx(0.7)
+    # 0.2 measured -> floored at 1.0 (one-directional voice)
+    assert cfg.signals["voice_no_strong_evidence"].lr == pytest.approx(1.0)
+    assert "floored at 1.0" in cfg.signals["voice_no_strong_evidence"].rationale
     assert cfg.voice.model_version == "xlsr-aasist-0.3"
     # the default config is untouched
     assert default_config().signals["voice_likely_synthetic"].basis == "assumed"
@@ -260,4 +261,19 @@ def test_measured_voice_direct_band_lr(tmp_path):
     mp.write_text(json.dumps({"fusion": {"band_lr": {"voice_likely_synthetic": 6.5, "voice_no_strong_evidence": 0.9}}}))
     cfg = load_config(overrides={"voice": {"lr_source": str(mp)}})
     assert cfg.signals["voice_likely_synthetic"].lr == pytest.approx(6.5)
-    assert cfg.signals["voice_no_strong_evidence"].lr == pytest.approx(0.9)
+    assert cfg.signals["voice_no_strong_evidence"].lr == pytest.approx(1.0)  # 0.9 floored
+
+
+def test_measured_voice_never_below_one_for_any_band(tmp_path):
+    # even a badly inverted detector cannot make any voice band reassuring
+    mp = tmp_path / "m.json"
+    mp.write_text(json.dumps({"band_lr": {"likely_synthetic": 0.6, "inconclusive": 0.8, "no_strong_evidence": 0.1}}))
+    cfg = load_config(overrides={"voice": {"lr_source": str(mp)}})
+    for b in ("likely_synthetic", "inconclusive", "no_strong_evidence"):
+        assert cfg.signals[f"voice_{b}"].lr >= 1.0
+        assert cfg.signals[f"voice_{b}"].basis == "measured"
+
+
+def test_assumed_voice_lr_below_one_is_rejected():
+    with pytest.raises(ValueError, match="one-directional"):
+        load_config(overrides={"signals": {"voice_no_strong_evidence": {"lr": 0.7}}})

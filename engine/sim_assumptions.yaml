@@ -74,6 +74,7 @@ behaviour:
   red_genuine_completes:             {value: 0.95, src: "team assumption", note: "genuine held payments are released after a check/review; counted as Rs delayed."}
   checklist_uptake:                  {value: 0.60, src: "team assumption", note: "SPEC v0.2: the 3-tap cue checklist is the primary action on the Amber screen for 'No one' / 'Someone else'; 60% answer it."}
   amber_cancel_if_user_reported_negative: {value: 0.75, src: "team assumption", note: "after their own callback/safe-word check fails, Cancel is the primary button (SPEC v0.2); most users cancel."}
+  fv_enrolment_sweep: {value: [0.2, 0.35, 0.5, 0.7, 0.9], src: "team assumption", note: "sensitivity only: share of payers with at least one Family Verify relative enrolled, applied to every scenario (headline uses each scenario's fv.enrolled = 0.5). Same sessions (common random numbers); everything else fixed."}
 
 # ---------------------------------------------------------------------------
 # Bank outbound-call registry (SPEC v0.2). Only an INTEGRATED bank that the user
