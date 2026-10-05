@@ -49,14 +49,25 @@ class Service:
         sd = {k: v.float() for k, v in sd.items()}
         self.model.load_state_dict(sd, strict=False)
         self.model.to(self.device).eval()
+        self.int8 = False
         if self.device.type == "cpu":
-            torch.set_num_threads(max(1, os.cpu_count() or 1))
+            self.threads = int(os.environ.get("PEHCHAAN_THREADS", min(8, os.cpu_count() or 1)))
+            torch.set_num_threads(self.threads)
+            if os.environ.get("PEHCHAAN_CPU_INT8", "1") == "1":
+                # dynamic int8 Linear layers: ~2x faster on CPU; raw scores move by < 0.2 logits on our checks
+                self.model = torch.quantization.quantize_dynamic(self.model, {torch.nn.Linear}, dtype=torch.qint8)
+                self.int8 = True
         self.a, self.b = self.cfg["platt"]["a"], self.cfg["platt"]["b"]
         self.p_lo, self.p_hi = self.cfg["bands"]["p_lo"], self.cfg["bands"]["p_hi"]
         self.version = self.cfg["model_version"]
         self._vad = None
         self._perth = None
         self._perth_err = None
+        # warm-up so latency_ms reflects steady state (VAD, watermark net and the model are loaded once)
+        z = (np.random.default_rng(0).normal(size=SR * 5) * 0.01).astype(np.float32)
+        self.quality(z)
+        self.watermark(z)
+        self.score(z)
 
     # ---------------------------------------------------------------- quality gate
     def vad(self):
@@ -104,6 +115,8 @@ class Service:
     # ---------------------------------------------------------------- detector
     @torch.no_grad()
     def score(self, x):
+        if self.device.type == "cpu":  # silero-vad sets torch threads to 1 when it loads; restore
+            torch.set_num_threads(self.threads)
         segs = windows(x, 64600, hop=32000, max_windows=6)
         t = torch.from_numpy(np.stack(segs)).to(self.device)
         if self.device.type == "cuda":
@@ -144,7 +157,7 @@ class Service:
             "latency_ms": round((time.perf_counter() - t0) * 1000, 1),
         }
         if debug:  # not part of the SPEC contract; only with ?debug=1
-            out["debug"] = {"raw_score": round(raw, 4), "device": self.device.type, "watermark": wm}
+            out["debug"] = {"raw_score": round(raw, 4), "device": self.device.type, "int8": self.int8, "watermark": wm}
         return out
 
 
@@ -157,6 +170,11 @@ def svc():
     if _svc is None:
         _svc = Service()
     return _svc
+
+
+@app.on_event("startup")
+def _load():
+    svc()
 
 
 @app.get("/healthz")

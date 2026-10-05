@@ -1,0 +1,14 @@
+# Voice Provenance Service (CPU or CUDA). torch/torchaudio: install the build matching your platform first.
+torch>=2.4
+transformers==4.56.1
+fastapi
+uvicorn[standard]
+python-multipart
+soundfile
+scipy
+numpy
+librosa
+safetensors
+silero-vad
+resemble-perth
+setuptools<80

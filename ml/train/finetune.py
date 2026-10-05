@@ -33,6 +33,9 @@ from eval.metrics import eer  # noqa: E402
 
 WIN = 64600
 CH_P = {"clean": 0.2, "pstn": 0.2, "amr": 0.2, "opus": 0.2, "replay": 0.2}
+# v2: adds training-only telephony variety (low AMR modes, codec tandems, handset NS/AGC, codec->speakerphone)
+CH_P_V2 = {"clean": 0.12, "pstn": 0.10, "amr": 0.10, "opus": 0.12, "replay": 0.10, "amr_lowrate": 0.12,
+           "tandem": 0.12, "narrowband_dsp": 0.12, "codec_replay": 0.10}
 
 
 def rawboost(x, rng):
@@ -51,12 +54,13 @@ def rawboost(x, rng):
 
 
 class TrainSet(Dataset):
-    def __init__(self, df, channel_aug=True, rawboost_p=0.3, seed=0):
+    def __init__(self, df, channel_aug=True, rawboost_p=0.3, seed=0, ch_p=None):
         self.paths = df.src16.tolist()
         self.y = (df.label == "spoof").astype(int).tolist()
         self.channel_aug = channel_aug
         self.rawboost_p = rawboost_p
         self.seed = seed
+        self.ch_p = ch_p or CH_P
 
     def __len__(self):
         return len(self.paths)
@@ -71,7 +75,7 @@ class TrainSet(Dataset):
             x = x[s:s + n]
         if self.channel_aug:
             from channel.channels import apply
-            ch = rng.choice(list(CH_P), p=list(CH_P.values()))
+            ch = rng.choice(list(self.ch_p), p=list(self.ch_p.values()))
             try:
                 x = apply(x, ch, rng)
             except Exception:
@@ -141,6 +145,7 @@ def main():
     ap.add_argument("--lr_head", type=float, default=3e-5)
     ap.add_argument("--no_channel_aug", action="store_true")
     ap.add_argument("--rawboost_p", type=float, default=0.3)
+    ap.add_argument("--aug_set", default="v1", choices=["v1", "v2"])
     ap.add_argument("--exclude_sources", default="")
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--dev_max", type=int, default=3000)
@@ -180,7 +185,8 @@ def main():
 
     w = balanced_weights(tr)
     sampler = WeightedRandomSampler(torch.as_tensor(w, dtype=torch.double), num_samples=a.steps_per_epoch * a.bs, replacement=True)
-    ds = TrainSet(tr, channel_aug=not a.no_channel_aug, rawboost_p=a.rawboost_p, seed=a.seed)
+    ds = TrainSet(tr, channel_aug=not a.no_channel_aug, rawboost_p=a.rawboost_p, seed=a.seed,
+                  ch_p=CH_P_V2 if a.aug_set == "v2" else CH_P)
     dl = DataLoader(ds, batch_size=a.bs, sampler=sampler, num_workers=a.workers, drop_last=True, persistent_workers=True,
                     prefetch_factor=4)
 

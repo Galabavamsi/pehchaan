@@ -4,9 +4,9 @@
         --ours ours --out results/metrics.json
 
 Calibration: Platt scaling (1-D logistic regression on the raw score) fitted on the DEV split
-(seen generators and seen speakers only). Bands for `ours` are chosen on DEV too:
-  likely_synthetic   p >= p_hi, where p_hi is the smallest threshold giving <= 2 % of dev bona fide in the band
-  no_strong_evidence p <= p_lo, where p_lo is the largest threshold giving <= 5 % of dev spoofs in the band
+(seen generators and seen speakers only, ASVspoof excluded). Bands are chosen on DEV too:
+  likely_synthetic   p >= p_hi = max(0.8, 98th percentile of dev bona fide p)
+  no_strong_evidence p <= p_lo = min(0.2, 5th percentile of dev spoof p)
   inconclusive       otherwise
 Measured LR(band) = P(band | spoof) / P(band | bona fide) on TEST, with +0.5 smoothing and bootstrap CIs,
 reported for seen generators, held-out generators and all. Nothing on TEST is used to fit anything.
@@ -37,15 +37,15 @@ def sigmoid(z):
     return 1 / (1 + np.exp(-z))
 
 
-def bands_from_dev(p, y, bona_budget=0.02, spoof_budget=0.05):
+def bands_from_dev(p, y, bona_budget=0.02, spoof_budget=0.05, min_hi=0.8, max_lo=0.2):
+    """Band cut points on calibrated p. likely_synthetic needs p >= p_hi with p_hi = max(0.8, 98th pct of dev
+    bona fide); no_strong_evidence needs p <= p_lo with p_lo = min(0.2, 5th pct of dev spoofs). The fixed
+    floors keep the bands meaningful when dev is almost separable (then quantiles collapse to ~0.5)."""
     p = np.asarray(p)
     y = np.asarray(y)
-    pb, ps = np.sort(p[y == 0]), np.sort(p[y == 1])
-    # p_hi: (1 - budget) quantile of bona fide calibrated probabilities
-    p_hi = float(np.quantile(pb, 1 - bona_budget)) if len(pb) else 0.9
-    p_lo = float(np.quantile(ps, spoof_budget)) if len(ps) else 0.1
-    p_hi = max(p_hi, 0.5)
-    p_lo = min(p_lo, p_hi - 1e-3)
+    pb, ps = p[y == 0], p[y == 1]
+    p_hi = max(min_hi, float(np.quantile(pb, 1 - bona_budget))) if len(pb) else 0.9
+    p_lo = min(max_lo, float(np.quantile(ps, spoof_budget))) if len(ps) else 0.1
     return p_lo, p_hi
 
 
@@ -122,7 +122,7 @@ def main():
         "frr_at_far5": "FRR when the threshold is set so that FAR = 5 %", "far_at_frr5": "FAR when FRR = 5 %",
         "heldout_generators": sorted(HELDOUT_GENERATORS), "heldout_speakers": sorted(HELDOUT_SPEAKERS),
         "calibration": "Platt scaling fitted on dev (seen generators/speakers), applied to test",
-        "bands": "chosen on dev: p_hi -> <=2 % dev bona fide in likely_synthetic; p_lo -> <=5 % dev spoofs in no_strong_evidence",
+        "bands": "chosen on dev: p_hi = max(0.8, 98th pct of dev bona fide); p_lo = min(0.2, 5th pct of dev spoofs); inconclusive in between; quality-gate failures are inconclusive in the service",
     }, "detectors": {}}
     dumps = []
     for spec in a.scores:
@@ -152,6 +152,10 @@ def main():
         team = test[test.source.isin(["team", "team_clone"])]
         if len(team) and team.y.nunique() == 2:
             r["team_subset"] = slice_metrics(team)
+        tb = test[test.source == "team"]
+        if len(tb):
+            r["team_bonafide_flag_rate_at_dev_threshold"] = {"by_speaker": frr_at(tb, thr, "speaker"), "by_section": frr_at(tb, thr, "section"),
+                                                            "by_channel": frr_at(tb, thr, "channel")}
         calls = test[test.channel.str.startswith("real_")]
         if len(calls):
             r["real_calls_bonafide"] = {ch: {"frr_at_dev_threshold": round(float((g.score >= thr).mean()), 4), "n": int(len(g)),
@@ -170,6 +174,13 @@ def main():
         }
         r["band_share"] = {lab: test[test.y == yv].band.value_counts(normalize=True).round(4).to_dict()
                            for lab, yv in (("spoof", 1), ("bonafide", 0))}
+        rc = test[test.channel.str.startswith("real_")]
+        if len(rc) and ph_held.y.nunique() == 2:
+            # Real-network stress test: numerator = held-out-generator clones on simulated phone channels,
+            # denominator = genuine speech from the real cellular call (no clones exist over a real network yet)
+            mix = pd.concat([ph_held[ph_held.y == 1], rc])
+            r["band_share"]["real_call_bonafide"] = rc.band.value_counts(normalize=True).round(4).to_dict()
+            r["band_LRs"]["real_call_stress_heldout_clones_vs_real_call_bonafide"] = band_lrs(mix.band, mix.y)
         res["detectors"][name] = r
         test["detector"] = name
         dumps.append(test[["utt_id", "detector", "y", "score", "p", "band", "channel", "generator", "lang", "split", "source",

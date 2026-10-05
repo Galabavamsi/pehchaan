@@ -158,7 +158,7 @@ def main():
     SRC.mkdir(parents=True, exist_ok=True)
     parts = [rows_fleurs(), rows_asv19(), rows_indicsynth(), rows_team(),
              rows_jobs("synref_stock_*.jsonl", "synref"), rows_jobs("synref_clone_*.jsonl", "synref"),
-             rows_jobs("team_*.jsonl", "team_clone"), rows_api()]
+             rows_jobs("team_*.jsonl", "team_clone"), rows_jobs("heldout_*.jsonl", "heldout_extra"), rows_api()]
     df = pd.concat([p for p in parts if len(p)], ignore_index=True)
     df = df.drop_duplicates("utt_id")
     df = qc_filter(df)

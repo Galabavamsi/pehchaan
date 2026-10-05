@@ -6,6 +6,37 @@ Gated values: `false` = open; `auto` = must log in, accept the conditions on the
 
 > Before using any **NC** item: a hackathon demo is usually research or evaluation use, but anything shipped commercially (including an Amazon-facing product) must leave out NC data, weights, and outputs. This is not legal advice.
 
+## 0. What Pehchaan actually used (Round 1) - disclose these in the appendix
+
+| Item | Role | Licence | NC? |
+|---|---|---|---|
+| google/fleurs (hi, te, ta, en_us train/dev/test; mr, bn, kn, ml, gu dev/test) | bona fide | CC-BY-4.0 | |
+| ASVspoof 2019 LA (subset: 2,580 bona / ~4k spoof train, eval subset for sanity) | bona fide + published spoofs (A01-A19) | ODC-By 1.0 | |
+| vdivyasharma/IndicSynth (hi/te/ta subset, FreeVC24 + XTTS-v2 outputs) | published spoofs | CC-BY-NC-4.0 | **NC** |
+| Team recordings S01, S02 + one real cellular call (signed consent) | bona fide + clone references | own data, consent form | |
+| TakHemlata/SSL_Anti-spoofing LA_model.pth / Best_LA_model_for_DF.pth (XLS-R-300M + AASIST) | baseline + init of our model | code MIT; weights: no licence stated | (unclear) |
+| facebook/wav2vec2-xls-r-300m architecture (inside the checkpoint) | SSL front-end | Apache-2.0 | |
+| nii-yamagishilab/mms-300m-anti-deepfake | baseline | CC-BY-NC-SA-4.0 | **NC** |
+| SWivid/F5-TTS (F5TTS_v1_Base) | generator (en) | code MIT, weights CC-BY-NC-4.0 | **NC** |
+| SPRINGLab/F5-Hindi-24KHz (IIT Madras) | generator (hi) | CC-BY-4.0 | |
+| coqui/XTTS-v2 via idiap `coqui-tts` | generator (hi/en, cloning + studio voices) | CPML | **NC** |
+| ResembleAI/chatterbox multilingual | held-out generator (hi/en; Perth watermark) | MIT | |
+| FunAudioLLM/CosyVoice2-0.5B | generator (en) | Apache-2.0 | |
+| Plachta/Seed-VC | held-out voice-conversion attack | GPL-3.0 (code + weights) | (copyleft) |
+| facebook/mms-tts-{hin,tel,tam,eng} | stock-voice generator | CC-BY-NC-4.0 | **NC** |
+| hexgrad/Kokoro-82M | stock-voice generator (hi/en) | Apache-2.0 | |
+| ai4bharat/indic-parler-tts | extra held-out stock-voice generator | Apache-2.0 (gated, terms accepted) | |
+| Sarvam Bulbul v3 (stock voices only) | held-out commercial generator | Sarvam API terms | (commercial API) |
+| OpenAI gpt-4o-mini-tts (stock voices only) | held-out commercial generator | OpenAI terms (AI-voice disclosure) | (commercial API) |
+| Deepgram Aura-2 (stock English voices only) | held-out commercial generator | Deepgram terms | (commercial API) |
+| faster-whisper + OpenAI Whisper large-v3 | ASR for alignment and clone QC | MIT | |
+| silero-vad | VAD (alignment, service quality gate) | MIT | |
+| resemble-perth | watermark detection in the service | MIT | |
+| libopus, libopencore-amrnb, ffmpeg, sox, pyroomacoustics | channel simulation | BSD / Apache-2.0 / LGPL-GPL / GPL / MIT | |
+| RawBoost (from SSL_Anti-spoofing) | augmentation | MIT | |
+Not used (access or time): IndicF5 and MLAAD (gated downloads still returned 403 with the team token), IndicVoices, Kathbath, ASVspoof 5, In-the-Wild, Gemini TTS (no key).
+**Production note:** a commercial deployment would have to drop every NC item above (NII weights, F5-TTS weights, XTTS, MMS-TTS, IndicSynth) and retrain on permissive data plus the team's own consented corpus.
+
 ## 1. Datasets
 
 | Name | Source URL | Licence | Gated? | Commercial use? | How we use it | Notes |

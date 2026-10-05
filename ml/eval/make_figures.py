@@ -30,10 +30,19 @@ plt.rcParams.update({
 })
 NAMES = {"ours": "Pehchaan (fine-tuned)", "ssl_la": "XLS-R+AASIST (LA, off-the-shelf)",
          "ssl_df": "XLS-R+AASIST (DF, off-the-shelf)", "nii": "NII MMS-300M AntiDeepfake (off-the-shelf)"}
+NL = chr(10)
+SHORT_CH = {"clean": "Clean", "pstn": "PSTN" + NL + "G.711", "amr": "AMR-NB" + NL + "12.2k", "opus": "Opus" + NL + "(WhatsApp)",
+            "replay": "Speaker" + NL + "→mic"}
 CH_NAMES = {"clean": "Clean 16 kHz", "pstn": "PSTN G.711", "amr": "AMR-NB 12.2k", "opus": "Opus (WhatsApp-like)", "replay": "Speaker→mic replay"}
 GEN_NAMES = {"f5": "F5-TTS", "f5hi": "F5-Hindi", "indicf5": "IndicF5", "xtts": "XTTS-v2", "cosyvoice2": "CosyVoice2", "mms": "MMS-TTS",
              "kokoro": "Kokoro", "seedvc": "Seed-VC (VC) †", "chatterbox": "Chatterbox †", "sarvam": "Sarvam Bulbul †",
              "openai": "OpenAI TTS †", "deepgram": "Deepgram Aura †"}
+
+
+def save(fig, out, name):
+    fig.savefig(os.path.join(out, name + ".svg"))
+    fig.savefig(os.path.join(out, name + ".png"), dpi=100)  # 1280 px wide preview
+    plt.close(fig)
 
 
 def det_xy(y, s):
@@ -47,10 +56,11 @@ def det_xy(y, s):
 
 def fig_det(sc, metrics, out, baselines):
     ticks = [0.01, 0.02, 0.05, 0.1, 0.2, 0.4]
-    fig, axes = plt.subplots(1, 2, figsize=(12.8, 5.6), sharey=True)
-    for ax, (title, mask_fn) in zip(axes, [("Seen generators", lambda d: (d.y == 0) | (~d.heldout_gen)),
-                                          ("Held-out generators (never trained on)", lambda d: (d.y == 0) | (d.heldout_gen))]):
-        for name in baselines + ["ours"]:
+    fig, axes = plt.subplots(1, 2, figsize=(12.8, 5.8), sharey=True)
+    for ax, (title, key, mask_fn) in zip(axes, [("Seen generators", "seen_generators", lambda d: (d.y == 0) | (~d.heldout_gen)),
+                                                ("Held-out generators (never trained on)", "heldout_generators", lambda d: (d.y == 0) | (d.heldout_gen))]):
+        handles = []
+        for k, name in enumerate(baselines + ["ours"]):
             d = sc[sc.detector == name]
             d = d[mask_fn(d) & ~d.channel.str.startswith("real_")]
             if d.y.nunique() < 2:
@@ -58,15 +68,14 @@ def fig_det(sc, metrics, out, baselines):
             x, yv = det_xy(d.y, d.score)
             is_ours = name == "ours"
             ls = "-" if (is_ours or name == baselines[0]) else "--"
-            ax.plot(x, yv, color=ORANGE if is_ours else SLATE, lw=2.4 if is_ours else 2, ls=ls)
-            key = "seen_generators" if "Seen" in title else "heldout_generators"
             e = metrics["detectors"][name]["test"][key]["eer"]
-            # direct label at the EER point
+            h, = ax.plot(x, yv, color=ORANGE if is_ours else SLATE, lw=2.6 if is_ours else 2, ls=ls,
+                         label=f"{NAMES.get(name, name).split(' (')[0]}: EER {e * 100:.1f}%")
+            handles.append(h)
             i = np.argmin(np.abs(x - yv))
-            ax.annotate(f"{NAMES.get(name, name).split(' (')[0]}  EER {e * 100:.1f}%", (x[i], yv[i]),
-                        xytext=(8, 6 if is_ours else -16), textcoords="offset points", fontsize=12.5,
+            ax.scatter([x[i]], [yv[i]], s=46, color=ORANGE if is_ours else SLATE, zorder=5, edgecolor=PAPER, linewidth=1.5)
+            ax.annotate(f"{e * 100:.1f}%", (x[i], yv[i]), xytext=(7, -14), textcoords="offset points", fontsize=13,
                         color=INK, fontweight="bold" if is_ours else "normal")
-            ax.scatter([x[i]], [yv[i]], s=40, color=ORANGE if is_ours else SLATE, zorder=5, edgecolor=PAPER, linewidth=1.5)
         ax.plot(norm.ppf([1e-3, 0.6]), norm.ppf([1e-3, 0.6]), color="#cfc8b8", lw=1, ls=":")
         ax.set_xticks(norm.ppf(ticks), [f"{t * 100:g}%" for t in ticks])
         ax.set_yticks(norm.ppf(ticks), [f"{t * 100:g}%" for t in ticks])
@@ -74,11 +83,12 @@ def fig_det(sc, metrics, out, baselines):
         ax.set_ylim(norm.ppf(0.005), norm.ppf(0.6))
         ax.set_title(title, loc="left", fontweight="bold")
         ax.set_xlabel("Missed clones (FAR)")
+        ax.legend(handles=handles, loc="lower left", frameon=False, fontsize=12.5)
     axes[0].set_ylabel("Real callers flagged (FRR)")
-    fig.suptitle("DET curves on Indian-language test audio, all simulated channels pooled", x=0.01, ha="left", fontsize=17)
+    fig.suptitle("DET curves on Indian-language test audio (5 simulated channels pooled, one threshold). Lower-left is better.",
+                 x=0.01, ha="left", fontsize=15.5)
     fig.tight_layout()
-    fig.savefig(os.path.join(out, "det_baseline_vs_ours.svg"))
-    plt.close(fig)
+    save(fig, out, "det_baseline_vs_ours")
 
 
 def fig_heatmap(metrics, out, det_names):
@@ -104,37 +114,50 @@ def fig_heatmap(metrics, out, det_names):
         ax.set_title(NAMES.get(name, name), loc="left", fontweight="bold", fontsize=15)
     fig.suptitle("EER (%) by generator × channel   († = held-out generator, never seen in training)", x=0.01, ha="left", fontsize=16)
     fig.tight_layout()
-    fig.savefig(os.path.join(out, "eer_heatmap_generator_channel.svg"))
-    plt.close(fig)
+    save(fig, out, "eer_heatmap_generator_channel")
 
 
 def fig_gap(metrics, out, base):
     chans = ["clean", "pstn", "amr", "opus", "replay"]
-    fig, ax = plt.subplots(figsize=(12.8, 5.4))
-    w = 0.2
-    groups = [(base, "seen_by_channel", SLATE, None), (base, "heldout_by_channel", SLATE, "///"),
-              ("ours", "seen_by_channel", ORANGE, None), ("ours", "heldout_by_channel", ORANGE, "///")]
-    for k, (name, key, col, hatch) in enumerate(groups):
-        v = [metrics["detectors"][name]["test"][key].get(c, {}).get("eer", np.nan) for c in chans]
-        xs = np.arange(len(chans)) + (k - 1.5) * w
-        bars = ax.bar(xs, np.array(v) * 100, width=w - 0.02, color=col if hatch is None else PAPER, edgecolor=col,
-                      hatch=hatch, linewidth=1.6)
+    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(12.8, 5.6), gridspec_kw={"width_ratios": [1.15, 1]})
+    w = 0.27
+    o = metrics["detectors"]["ours"]["test"]
+    bt = metrics["detectors"][base]["test"]
+    series = [(bt["by_channel"], SLATE, None, f"{NAMES[base].split(' (')[0]} (all generators)"),
+              (o["seen_by_channel"], ORANGE, None, "Ours: seen generators"),
+              (o["heldout_by_channel"], ORANGE, "///", "Ours: held-out generators")]
+    from matplotlib.patches import Patch
+    for k, (src, col, hatch, lab) in enumerate(series):
+        v = np.array([src.get(c, {}).get("eer", np.nan) for c in chans]) * 100
+        xs = np.arange(len(chans)) + (k - 1) * w
+        ax.bar(xs, v, width=w - 0.03, color=col if hatch is None else PAPER, edgecolor=col, hatch=hatch, linewidth=1.6)
         for x, val in zip(xs, v):
             if np.isfinite(val):
-                ax.text(x, val * 100 + 0.8, f"{val * 100:.0f}", ha="center", va="bottom", fontsize=11.5, color=INK)
-    ax.set_xticks(range(len(chans)), [CH_NAMES[c] for c in chans])
-    ax.set_ylabel("EER (%)  - lower is better")
-    from matplotlib.patches import Patch
-    ax.legend(handles=[Patch(facecolor=SLATE, edgecolor=SLATE, label=f"{NAMES[base].split(' (')[0]} - seen generators"),
-                       Patch(facecolor=PAPER, edgecolor=SLATE, hatch="///", label="… held-out generators"),
-                       Patch(facecolor=ORANGE, edgecolor=ORANGE, label="Pehchaan fine-tuned - seen generators"),
-                       Patch(facecolor=PAPER, edgecolor=ORANGE, hatch="///", label="… held-out generators")],
-              frameon=False, ncol=2, loc="upper left", fontsize=12.5)
-    ax.set_ylim(0, max(55, ax.get_ylim()[1]))
-    ax.set_title("The held-out-generator gap: unseen cloners are much harder, on every channel", loc="left", fontweight="bold")
+                ax.text(x, val + 0.6, f"{val:.0f}", ha="center", va="bottom", fontsize=12, color=INK)
+    ax.set_xticks(range(len(chans)), [SHORT_CH[c] for c in chans])
+    ax.set_ylabel("EER (%), lower is better")
+    ax.legend(handles=[Patch(facecolor=c if h is None else PAPER, edgecolor=c, hatch=h, label=l) for _, c, h, l in series],
+              frameon=False, loc="upper left", fontsize=12)
+    ax.set_ylim(0, max(45, np.nanmax([s[0].get(c, {}).get("eer", 0) or 0 for s in series for c in chans]) * 100 + 8))
+    ax.set_title("By channel", loc="left", fontweight="bold")
+    # right: each held-out generator, pooled channels
+    gens = [g for g in ["seedvc", "chatterbox", "parler", "indicf5", "deepgram", "sarvam", "openai"] if g in o["by_generator"]]
+    vb = [bt["by_generator"].get(g, {}).get("eer", np.nan) * 100 for g in gens]
+    vo = [o["by_generator"][g]["eer"] * 100 for g in gens]
+    y = np.arange(len(gens))
+    ax2.barh(y + 0.18, vb, height=0.34, color=SLATE)
+    ax2.barh(y - 0.18, vo, height=0.34, color=PAPER, edgecolor=ORANGE, hatch="///", linewidth=1.6)
+    for yy, a_, b_ in zip(y, vb, vo):
+        ax2.text(a_ + 0.6, yy + 0.18, f"{a_:.0f}", va="center", fontsize=12, color=INK)
+        ax2.text(b_ + 0.6, yy - 0.18, f"{b_:.0f}", va="center", fontsize=12, color=INK, fontweight="bold")
+    ax2.set_yticks(y, [GEN_NAMES.get(g, g).replace(" †", "") for g in gens])
+    ax2.invert_yaxis()
+    ax2.set_xlabel("EER (%), all channels pooled")
+    ax2.set_title("Per held-out generator (grey: baseline, hatched: ours)", loc="left", fontweight="bold", fontsize=13.5)
+    ax2.grid(axis="y", visible=False)
+    fig.suptitle("The held-out-generator gap: unseen cloners are harder, on every channel", x=0.01, ha="left", fontsize=16)
     fig.tight_layout()
-    fig.savefig(os.path.join(out, "heldout_gap_bars.svg"))
-    plt.close(fig)
+    save(fig, out, "heldout_gap_bars")
 
 
 def main():

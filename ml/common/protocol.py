@@ -5,6 +5,8 @@ Held-out generators: never used for training, calibration or threshold choice.
   chatterbox  LLM-based zero-shot TTS (also carries a Perth watermark, so keeping it out of training
               prevents the detector from learning the watermark instead of synthesis cues)
   sarvam, openai, deepgram   commercial stock-voice TTS (unseen engines)
+Extra held-out generators added after the first runs (so trivially never trained on): Indic Parler-TTS
+(stock Indic speakers) and IndicF5 (if its gated weights become downloadable).
 Held-out speaker: S02 (all of S02's real and cloned audio is test-only).
 Seen team speaker S01: lines 01-08 -> train, 09-10 -> dev, 11-15 -> test (real and clone of a line
 always share a split, so comparisons stay content-matched). Free speech (D) and real calls (E) are test.
@@ -12,7 +14,9 @@ Public data keeps its own split (FLEURS train/dev/test; ASVspoof19 train/dev/eva
 the FLEURS split of the sentence they read.
 """
 
-HELDOUT_GENERATORS = {"seedvc", "chatterbox", "sarvam", "openai", "deepgram"}
+HELDOUT_GENERATORS = {"seedvc", "chatterbox", "sarvam", "openai", "deepgram",
+                      # added later as EXTRA held-out generators (never in any training run):
+                      "parler", "indicf5"}
 HELDOUT_SPEAKERS = {"S02"}
 CHANNELS = ["clean", "pstn", "amr", "opus", "replay"]
 
@@ -21,6 +25,7 @@ GEN_FAMILY = {
     "xtts": "zero-shot TTS (GPT + HiFiGAN)", "cosyvoice2": "zero-shot TTS (LLM + flow)", "chatterbox": "zero-shot TTS (LLM + flow)",
     "seedvc": "voice conversion", "mms": "stock TTS (VITS)", "kokoro": "stock TTS (StyleTTS2-like)",
     "sarvam": "commercial TTS", "openai": "commercial TTS", "deepgram": "commercial TTS",
+    "parler": "stock TTS (Parler, description-controlled)",
 }
 
 

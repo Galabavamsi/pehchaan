@@ -289,7 +289,70 @@ def clean(x, rng):
     return x.astype(np.float32)
 
 
-FUNCS = {"clean": clean, "pstn": pstn, "amr": amr, "opus": opus, "replay": replay}
+# ---------------------------------------------------------------- training-only telephony variety (v2)
+# Real cellular calls showed artefacts our five evaluation channels lack: adaptive low AMR modes,
+# codec tandems across networks, handset noise suppression and AGC. These are used ONLY as training
+# augmentation; the evaluation channels above are unchanged.
+def amr_lowrate(x, rng):
+    """AMR-NB at a random mode 4.75-12.2 kbps (networks adapt the mode to radio conditions)."""
+    x8 = _telephone_band(resample(_pre_level(x, rng), SR, 8000), rng)
+    mode = int(rng.integers(0, 8))
+    try:
+        y8 = _amr_ctypes(x8, mode=mode, frame_loss=float(rng.choice([0.0, 0.01, 0.03])), rng=rng)
+    except OSError:
+        y8 = _amr_sox(x8)
+    return resample(y8, 8000, SR)
+
+
+def phone_dsp(x, rng):
+    """Handset/network speech enhancement: mild noise, spectral-subtraction noise suppression
+    (creates the 'musical' residue typical of phone NS) and a slow AGC/compressor."""
+    from scipy.signal import stft, istft
+    y = x + _coloured_noise(len(x), rng) * np.sqrt(np.mean(x ** 2) / (10 ** (float(rng.uniform(15, 30)) / 10)))
+    f, t, Z = stft(y, fs=SR, nperseg=512, noverlap=384)
+    mag, ph = np.abs(Z), np.angle(Z)
+    noise = np.percentile(mag, float(rng.uniform(5, 20)), axis=1, keepdims=True)
+    g = np.maximum(1 - float(rng.uniform(1.0, 2.5)) * noise / (mag + 1e-9), float(rng.uniform(0.02, 0.15)))
+    _, y = istft(mag * g * np.exp(1j * ph), fs=SR, nperseg=512, noverlap=384)
+    y = y[: len(x)].astype(np.float32)
+    # AGC: frame gain toward a target level, smoothed
+    fr = 320
+    n = len(y) // fr
+    if n > 2:
+        e = np.sqrt((y[: n * fr].reshape(n, fr) ** 2).mean(1) + 1e-8)
+        tgt = np.sqrt(np.mean(e ** 2))
+        gain = np.clip(tgt / e, 0.5, 4.0) ** float(rng.uniform(0.3, 0.7))
+        a = float(rng.uniform(0.85, 0.97))
+        for i in range(1, n):
+            gain[i] = a * gain[i - 1] + (1 - a) * gain[i]
+        y[: n * fr] = (y[: n * fr].reshape(n, fr) * gain[:, None]).reshape(-1)
+    return np.tanh(1.5 * y / (np.max(np.abs(y)) + 1e-9)).astype(np.float32)
+
+
+def tandem(x, rng):
+    """Two codecs in a row (e.g. WhatsApp/Opus leg then a cellular AMR/G.711 leg) + optional handset DSP."""
+    first = rng.choice(["opus", "amr_lowrate", "pstn"])
+    y = FUNCS[first](x, rng)
+    second = rng.choice([c for c in ["pstn", "amr_lowrate", "opus"] if c != first])
+    y = FUNCS[second](y, rng)
+    if rng.random() < 0.5:
+        y = phone_dsp(y, rng)
+    return y
+
+
+def narrowband_dsp(x, rng):
+    base = rng.choice(["pstn", "amr", "amr_lowrate"])
+    return phone_dsp(FUNCS[base](x, rng), rng)
+
+
+def codec_replay(x, rng):
+    """What the product actually hears: call audio (codec) played on the speakerphone and re-captured."""
+    y = FUNCS[rng.choice(["pstn", "amr_lowrate", "opus"])](x, rng)
+    return replay(y, rng)
+
+
+FUNCS = {"clean": clean, "pstn": pstn, "amr": amr, "opus": opus, "replay": replay,
+         "amr_lowrate": amr_lowrate, "tandem": tandem, "narrowband_dsp": narrowband_dsp, "codec_replay": codec_replay}
 
 
 def apply(x, channel, rng, target_db=-26.0):
