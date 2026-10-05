@@ -1,0 +1,115 @@
+# Pehchaan fusion config (SPEC section 4). Single source for every number the
+# engine uses. Each entry is tagged:
+#   basis: assumed  -> initial expert value (team judgement), to be re-fit from labelled cases
+#   basis: measured -> computed from data (cite the file / run)
+# LR = P(signal | scam) / P(signal | genuine), *given the trigger already fired*.
+version: "0.1.0"
+
+prior:
+  value: 0.0025            # pi0 = P(scam | trigger fired) = 1/400
+  basis: assumed
+  rationale: >-
+    SPEC default 1/400. The simulator sweeps 1/2000..1/100; a public-base-rate
+    derivation (engine/sim_assumptions.yaml) lands near 1/1300, so 1/400 is a
+    deliberately cautious (risk-leaning) default.
+
+tiers:
+  green_below: 0.10        # p < 0.10 -> Green (proceed silently)
+  red_at_or_above: 0.60    # p >= 0.60 AND guardrail-qualified -> Red (cooling-off hold)
+  ask_claim_at_or_above: 0.01
+  basis: assumed
+  rationale: >-
+    Green/Red thresholds from SPEC; tuned against the alert budget by
+    engine/pehchaan/sim.py. ask_claim_at_or_above is a prototype addition (see
+    app/NOTES.md): the one-tap "who asked you?" question is skipped when
+    context alone is clearly benign (saved domestic caller, nothing unusual).
+
+families:
+  C: {cap_lr: 60,  basis: assumed, rationale: "Claim is a single tap; capped at the authority LR."}
+  K: {cap_lr: 30,  basis: assumed, rationale: "Call metadata signals are correlated (unknown+international+FRI); cap stops double counting."}
+  P: {cap_lr: 30,  basis: assumed, rationale: "Payment context is correlated with the trigger itself; capped."}
+  V: {cap_lr: 8,   basis: assumed, rationale: "G2: detectors miss unseen generators and codecs; voice is supporting evidence only."}
+  S: {cap_lr: 30,  basis: assumed, rationale: "Script cues from ASR or a tap checklist; coached victims may under-report."}
+  O: {cap_lr: 300, basis: assumed, rationale: "Out-of-band answer from the real person's device is the strongest evidence; a clone cannot reach it."}
+
+signals:
+  # ---- C: Claim -----------------------------------------------------------
+  claim_family:    {lr: 1.5, basis: assumed, rationale: "Genuine relatives also ask for money; alone this is weak."}
+  claim_bank:      {lr: 6,   basis: assumed, rationale: "Banks rarely ask customers to push money during a call; common in KYC/'safe account' scripts."}
+  claim_authority: {lr: 60,  basis: assumed, rationale: "Police/CBI/courts never collect money over a call; near-certain scam when tied to a payment."}
+  claim_other:     {lr: 1.0, basis: assumed, rationale: "Uninformative."}
+  claim_none:      {lr: 0.8, basis: assumed, rationale: "Slightly reassuring, but coached victims also answer 'no one' (SPEC 6: keeps context risk)."}
+  # ---- K: Call context ----------------------------------------------------
+  caller_unknown:       {lr: 4,  basis: assumed, rationale: "Caller not in contacts (on-device hash match). Most genuine money requests come from saved contacts."}
+  caller_international: {lr: 6,  basis: assumed, rationale: "Overseas/WhatsApp '+44/+1' calls dominate cloned-relative reports; NRI families make this only moderate."}
+  caller_voip_unknown:  {lr: 3,  basis: assumed, rationale: "OTT/VoIP call from an unsaved number; bypasses CNAP and spoof filters."}
+  bank_claim_not_1600:  {lr: 20, basis: assumed, rationale: "TRAI mandates 1600-series for BFSI service calls (banks from 1 Jan 2026); a 'bank' on a 10-digit mobile is a strong flag."}
+  fri_medium:           {lr: 3,  basis: assumed, rationale: "DoT Financial Fraud Risk Indicator, Medium (mocked)."}
+  fri_high:             {lr: 10, basis: assumed, rationale: "DoT FRI High (mocked)."}
+  fri_very_high:        {lr: 30, basis: assumed, rationale: "DoT FRI Very High; PhonePe declines on this tier (mocked)."}
+  call_ongoing_long:    {lr: 3,  basis: assumed, rationale: "> 15 min calls are typical of digital-arrest coercion."}
+  # ---- P: Payment context -------------------------------------------------
+  payee_new:            {lr: 2.5, basis: assumed, rationale: "Scam payments go to first-time payees (mules); many genuine triggered payments do too."}
+  amount_gt_p95:        {lr: 1.8, basis: assumed, rationale: "Above the user's 95th percentile."}
+  amount_gt_p99:        {lr: 3,   basis: assumed, rationale: "Above the user's 99th percentile (supersedes p95)."}
+  payee_flagged_medium: {lr: 4,   basis: assumed, rationale: "PSP mule score medium (mocked MuleHunter-style)."}
+  payee_flagged_high:   {lr: 25,  basis: assumed, rationale: "I4C Suspect Registry hit or high mule score (mocked)."}
+  payee_name_mismatch:  {lr: 5,   basis: assumed, rationale: "Claimed a family member, but the VPA name is an unrelated person/business."}
+  burst_new_payees:     {lr: 4,   basis: assumed, rationale: ">= 2 new payees in 30 min: payee hopping after a decline."}
+  # ---- V: Voice provenance (replaced by measured values: see voice.lr_source)
+  voice_likely_synthetic:   {lr: 8,   basis: assumed, rationale: "Placeholder until ml/results/metrics.json gives calibrated band rates."}
+  voice_inconclusive:       {lr: 1.0, basis: assumed, rationale: "Uninformative by construction (G3 routes low-quality audio here)."}
+  voice_no_strong_evidence: {lr: 0.7, basis: assumed, rationale: "Weak: detectors miss unseen generators; 'sounds real' is not proof (G2)."}
+  watermark_detected:       {lr: 50,  basis: assumed, rationale: "Positive-only provenance hit (e.g. Perth/AudioSeal); capped to 8 by the V family cap."}
+  # ---- S: Script cues -----------------------------------------------------
+  cue_secrecy:             {lr: 4,  basis: assumed, rationale: "'Mummy ko mat batana' secrecy requests."}
+  cue_urgency:             {lr: 2,  basis: assumed, rationale: "Urgency is common in genuine emergencies too."}
+  cue_otp_pin:             {lr: 8,  basis: assumed, rationale: "No genuine caller needs an OTP/PIN."}
+  cue_arrest_threat:       {lr: 10, basis: assumed, rationale: "Arrest/custody threats; no 'digital arrest' exists in Indian law."}
+  cue_remote_app:          {lr: 6,  basis: assumed, rationale: "AnyDesk/screen-share requests."}
+  cue_refund_verification: {lr: 5,  basis: assumed, rationale: "'Pay to verify / receive refund' scripts."}
+  # ---- O: Out-of-band verification ----------------------------------------
+  fv_denied:             {lr: 300,  basis: assumed, rationale: "The real relative, on their own device-bound app, says 'Not me'."}
+  fv_confirmed:          {lr: 0.02, basis: assumed, rationale: "Signed 'Yes, it's me' from the real relative's device."}
+  fv_timeout:            {lr: 1.0,  basis: assumed, rationale: "No answer in 3 min; uninformative, falls back to callback/safe word."}
+  callback_denied:       {lr: 300,  basis: assumed, rationale: "User called the saved number; the person says they did not ask."}
+  callback_confirmed:    {lr: 0.02, basis: assumed, rationale: "User called the saved number; the person confirms."}
+  safeword_failed:       {lr: 30,   basis: assumed, rationale: "Caller did not know the family safe word (panic can cause false fails)."}
+  safeword_passed:       {lr: 0.1,  basis: assumed, rationale: "Safe words can leak; not decisive."}
+  bank_no_active_call:   {lr: 50,   basis: assumed, rationale: "Bank's outbound dialer registry has no live call to this customer."}
+  bank_active_call_1600: {lr: 0.1,  basis: assumed, rationale: "Registry confirms a live 1600-series call from the bank."}
+
+guardrails:
+  g1_min_families: 2           # G1(a): Red needs >= 2 families ...
+  g1_min_family_lr: 3          # ... each contributing LR >= 3 (after clipping)
+  g1_excluded_families: [V]    # G2: voice cannot be one of the corroborating families
+  g3_min_speech_sec: 4.0       # G3 quality gate
+  g3_min_snr_db: 10.0
+  g4_flag_exception: payee_flagged_high  # G4: confirmed + this flag -> Amber, not Green
+  g5_min_prior_payments: 3     # G5 trusted bypass
+  g5_max_amount_ratio: 1.5
+  basis: assumed
+  rationale: "Hard rules from SPEC section 4; numbers are policy, not fitted."
+
+trigger:                       # SPEC section 2 (no audio)
+  call_window_min: 10
+  amount_abs_inr: 10000
+  long_call_min: 15
+  burst_window_min: 30
+  burst_min_new_payees: 2
+
+actions:
+  amber_min_read_sec: 5
+  hold_minutes: 30
+  analyst_review_at_or_above_inr: 50000
+  family_verify_timeout_sec: 180
+
+voice:
+  # One-line swap: set lr_source to the ML results file to replace the three
+  # voice-band LRs with measured values (basis flips to 'measured').
+  #   lr_source: ../../ml/results/metrics.json
+  lr_source: assumed
+  # Safety floor for the reassuring band: measured LR on in-distribution
+  # generators overstates reassurance on unseen ones (G2). See app/NOTES.md.
+  no_strong_evidence_lr_floor: 0.7   # = SPEC value: measured data can only make "sounds real" weaker, never stronger
+  band_thresholds: {likely_synthetic_at_or_above: 0.70, no_strong_evidence_below: 0.30}

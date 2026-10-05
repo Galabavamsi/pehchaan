@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pehchaan"
+version = "0.1.0"
+description = "Pehchaan fusion engine: verify the person, not the voice (RAKSHAM Track 01)"
+requires-python = ">=3.11"
+dependencies = ["numpy", "pydantic>=2", "pyyaml", "cryptography"]
+
+[project.optional-dependencies]
+sim = ["matplotlib"]
+pdf = ["playwright"]
+
+[tool.setuptools]
+packages = ["pehchaan"]
+
+[tool.setuptools.package-data]
+pehchaan = ["config.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
