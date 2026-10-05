@@ -59,6 +59,8 @@ class GuardrailCfg(BaseModel):
     g1_min_families: int = 2
     g1_min_family_lr: float = 3.0
     g1_excluded_families: list[str] = ["V"]
+    g1_trigger_implied: list[str] = ["payee_new", "amount_gt_p95", "amount_gt_p99"]
+    g2_strict: bool = True
     g3_min_speech_sec: float = 4.0
     g3_min_snr_db: float = 10.0
     g4_flag_exception: str = "payee_flagged_high"

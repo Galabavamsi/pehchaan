@@ -46,6 +46,7 @@ export interface Scenario {
   call: { state: string; number: string; channel: string; duration_sec: number };
   payment: { payee_vpa: string; payee_name: string; amount_inr: number };
   expected: Record<string, any>; bank: { name: string; name_hi: string };
+  banks?: { id: string; name: string; name_hi: string; label?: string; label_hi?: string; integrated: boolean; yours: boolean }[];
 }
 
 const qs = new URLSearchParams(location.search || location.hash.split("?")[1] || "");

@@ -29,6 +29,7 @@ SIGNAL_FAMILY: dict[str, str] = {
     "claim_family": "C",
     "claim_bank": "C",
     "claim_authority": "C",
+    "claim_upi_or_shop": "C",
     "claim_other": "C",
     "claim_none": "C",
     # K: Call context (metadata only, never audio)
@@ -70,6 +71,7 @@ SIGNAL_FAMILY: dict[str, str] = {
     "safeword_passed": "O",
     "bank_no_active_call": "O",
     "bank_active_call_1600": "O",
+    "bank_registry_unknown": "O",
 }
 
 ALL_SIGNALS: tuple[str, ...] = tuple(SIGNAL_FAMILY)
@@ -77,6 +79,7 @@ ALL_SIGNALS: tuple[str, ...] = tuple(SIGNAL_FAMILY)
 CLAIMS: dict[str, str] = {
     "family": "claim_family",
     "bank": "claim_bank",
+    "upi_or_shop": "claim_upi_or_shop",
     "authority": "claim_authority",
     "other": "claim_other",
     "none": "claim_none",
@@ -86,7 +89,7 @@ CLAIMS: dict[str, str] = {
 # one in the tuple wins (ordered most-severe first) and the rest are dropped
 # with a note. This keeps "fri_high + fri_very_high" from double counting.
 EXCLUSIVE_GROUPS: dict[str, tuple[str, ...]] = {
-    "claim": ("claim_authority", "claim_bank", "claim_family", "claim_other", "claim_none"),
+    "claim": ("claim_authority", "claim_bank", "claim_family", "claim_upi_or_shop", "claim_other", "claim_none"),
     "fri": ("fri_very_high", "fri_high", "fri_medium"),
     "amount": ("amount_gt_p99", "amount_gt_p95"),
     "payee_flag": ("payee_flagged_high", "payee_flagged_medium"),
@@ -94,18 +97,21 @@ EXCLUSIVE_GROUPS: dict[str, tuple[str, ...]] = {
     "family_verify": ("fv_denied", "fv_confirmed", "fv_timeout"),
     "callback": ("callback_denied", "callback_confirmed"),
     "safeword": ("safeword_failed", "safeword_passed"),
-    "bank_registry": ("bank_no_active_call", "bank_active_call_1600"),
+    "bank_registry": ("bank_no_active_call", "bank_active_call_1600", "bank_registry_unknown"),
 }
 
 VOICE_BANDS: tuple[str, ...] = ("likely_synthetic", "inconclusive", "no_strong_evidence")
 VOICE_BAND_SIGNAL: dict[str, str] = {b: f"voice_{b}" for b in VOICE_BANDS}
 
-# G1(b): decisive negatives from family O
-DECISIVE_NEGATIVE: frozenset[str] = frozenset(
-    {"fv_denied", "callback_denied", "bank_no_active_call", "safeword_failed"}
-)
+# G1(b) / G7: decisive negatives from a channel outside the user's own taps (SPEC v0.2):
+# the relative's device-signed "not me", and the named, integrated bank's registry.
+DECISIVE_NEGATIVE: frozenset[str] = frozenset({"fv_denied", "bank_no_active_call"})
+# Strong (LR 30) but NOT decisive: the user reports them, so mis-taps and panic are possible.
+USER_REPORTED_NEGATIVE: frozenset[str] = frozenset({"callback_denied", "safeword_failed"})
 # G4: decisive positives
-DECISIVE_POSITIVE: frozenset[str] = frozenset({"fv_confirmed", "callback_confirmed"})
+DECISIVE_POSITIVE: frozenset[str] = frozenset({"fv_confirmed", "callback_confirmed", "bank_active_call_1600"})
+# G1(a): evidence implied by the trigger itself never counts as a corroborating family.
+TRIGGER_IMPLIED: frozenset[str] = frozenset({"payee_new", "amount_gt_p95", "amount_gt_p99"})
 
 
 def family_of(code: str) -> str:

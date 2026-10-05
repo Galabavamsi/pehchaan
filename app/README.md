@@ -38,10 +38,10 @@ python app/screenshots/shoot.py         # needs both servers running; writes the
 
 | ID | Story | What happens |
 |---|---|---|
-| T1 | A cloned "Rahul" calls Sunita from an unknown +44 WhatsApp number and asks for ₹50,000 to "Arif Traders". | One-tap question, then Amber with the top reasons (name mismatch, international caller). She taps Family Verify. The real Rahul's phone says "No, that's not me", and the payment goes into a Red 30-minute hold. She cancels and the report is pre-filled. |
+| T1 | A cloned "Rahul" calls Sunita from an unknown +44 WhatsApp number and asks for ₹50,000 to "Arif Traders". | One-tap question, then Amber with the top reasons (name mismatch, international caller). She taps Family Verify. The real Rahul's phone says "No, that's not me", so G7 (decisive floor) puts it in a Red 30-minute hold. She cancels and the report is pre-filled. |
 | L2 | The real Rahul, on his new +44 number, asks for ₹50,000 to "Rahul Sharma". | Same Amber context as T1. Family Verify gets "Yes, it's me", the result goes Green and she pays. One tap of friction. |
 | L1 | Sunita pays her friend Meena ₹2,000 while on a call with her. | The trigger fires (new payee, active call), but the context is clearly benign. She goes straight to the PIN screen with no Pehchaan screen. |
-| T2 | A "fraud department" caller on a 10-digit mobile (not 1600) asks Ramesh to move ₹35,000. | Bank claim gives Amber with "Check with Bharat Demo Bank". The registry shows no active call, so the payment is held. |
+| T2 | A "fraud department" caller on a 10-digit mobile (not 1600) asks Ramesh to move ₹35,000. | He picks **My bank**, then **Bharat Demo Bank**, which gives Amber with "Check with Bharat Demo Bank". The integrated registry shows no active call, so G7 holds the payment. If he names **Another bank** instead, the lookup returns `bank_registry_unknown` (LR 1): it stays Amber with "hang up and call the official number". |
 | T3 | A fake CBI officer on a 47-minute WhatsApp call demands a ₹1,80,000 "settlement". | Authority claim goes straight to a Red hold with the fact card "There is no 'digital arrest' in Indian law". |
 
 ## Finale demo script (about 4 minutes)
@@ -61,9 +61,10 @@ python app/screenshots/shoot.py         # needs both servers running; writes the
    - Show the quality gate and the "one clue, not proof" copy.
    - Mention G2: voice alone can never cause a hold.
 7. **Bank and police (40 s).**
-   - Click **T2** and pick **Bank or UPI app**, then **Check with Bharat Demo Bank**. Result: "Bharat Demo Bank is not calling you right now."
+   - Click **T2** and pick **My bank**, then **Bharat Demo Bank**, then **Check with Bharat Demo Bank**. Result: "Bharat Demo Bank is not calling you right now."
    - Click **T3** and pick **Police, CBI or Govt** to show the "no digital arrest" fact card.
-8. **Analyst (20 s).** In the console, open the T1 case.
+8. **Coached "no one" (20 s, optional).** On T1, answer **No one**. The three-question checklist appears (secrecy, OTP/PIN, arrest threat); ticking "keep it secret" raises the risk.
+9. **Analyst (20 s).** In the console, open the T1 case.
    - Show the guardrail notes and the access-logged banner.
    - Click **Confirm scam and report**, which flags the payee VPA to the PSP.
 

@@ -119,11 +119,29 @@ class mock_i4c:  # noqa: N801
         return r["level"] if r else None
 
 
+# Banks whose outbound-call registry is connected to Pehchaan (mock). SPEC v0.2: a lookup against
+# any other bank returns 'unknown' (LR 1), never 'no active call'.
+BANKS = {
+    "bdb": {"id": "bdb", "name": "Bharat Demo Bank", "name_hi": "भारत डेमो बैंक", "integrated": True,
+            "label": "Bharat Demo Bank", "label_hi": "भारत डेमो बैंक"},
+    "other": {"id": "other", "name": "that bank", "name_hi": "वो बैंक", "integrated": False,
+              "label": "Another bank", "label_hi": "कोई दूसरा बैंक"},
+}
+
+
 class mock_bank_registry:  # noqa: N801
     """Bank outbound-call registry (mock): is the bank calling this customer right now, from a 1600 number?"""
 
     def __init__(self, store: Store):
         self.s = store
+
+    @staticmethod
+    def bank(bank_id: str | None) -> dict | None:
+        return BANKS.get(bank_id or "")
+
+    def integrated(self, bank_id: str | None) -> bool:
+        b = BANKS.get(bank_id or "")
+        return bool(b and b["integrated"])
 
     def start_call(self, customer_id: str, number: str, started_at: str) -> None:
         self.s.x("INSERT INTO mock_bank_calls(customer_id, number, active, started_at) VALUES(?,?,1,?)",

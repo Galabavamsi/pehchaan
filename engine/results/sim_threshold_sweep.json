@@ -1,0 +1,552 @@
+{
+  "assumption_driven_projection": true,
+  "disclaimer": "Assumption-driven projection. These numbers come from a synthetic session simulator whose every distribution is listed in engine/sim_assumptions.yaml (public base rates where cited, team assumptions otherwise). They show how the Pehchaan decision logic behaves under those assumptions; they are not measured outcomes on real customers.",
+  "prior": 0.0025,
+  "voice_uptake": 0.3,
+  "budget": {
+    "genuine_red_max_pct": 0.25,
+    "genuine_pause_verify_max_pct": 6.0,
+    "src": "SPEC v0.2 (lead's alert budget)"
+  },
+  "theta_red_in_config": 0.75,
+  "best_theta_meeting_red_budget": 0.75,
+  "selection_rule": "meets the Red budget; within 1 pp of the best scam-Red catch; most headroom; ties -> higher theta",
+  "config_meets_red_budget": true,
+  "config_meets_pause_verify_budget": false,
+  "note": "theta_red moves Red only; Pause & Verify is set by green_below (kept at 0.10, SPEC) and by the claim mix. green_rows show the P&V trade-off if green_below were raised.",
+  "theta_rows": [
+    {
+      "theta_red": 0.5,
+      "green_below": 0.1,
+      "genuine_red_pct": 0.654,
+      "genuine_saw_pause_and_verify_pct": 9.214,
+      "genuine_final_amber_pct": 4.493,
+      "scam_amber_plus_pct": 96.305,
+      "scam_red_pct": 81.797,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.247,
+          "red_pct": 74.38
+        },
+        "T2": {
+          "amber_plus_pct": 94.12,
+          "red_pct": 80.573
+        },
+        "T3": {
+          "amber_plus_pct": 99.147,
+          "red_pct": 87.61
+        }
+      },
+      "genuine_holds_per_scam_held": 3.19
+    },
+    {
+      "theta_red": 0.6,
+      "green_below": 0.1,
+      "genuine_red_pct": 0.344,
+      "genuine_saw_pause_and_verify_pct": 9.214,
+      "genuine_final_amber_pct": 4.803,
+      "scam_amber_plus_pct": 96.305,
+      "scam_red_pct": 76.421,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.247,
+          "red_pct": 63.143
+        },
+        "T2": {
+          "amber_plus_pct": 94.12,
+          "red_pct": 76.367
+        },
+        "T3": {
+          "amber_plus_pct": 99.147,
+          "red_pct": 84.077
+        }
+      },
+      "genuine_holds_per_scam_held": 1.8
+    },
+    {
+      "theta_red": 0.65,
+      "green_below": 0.1,
+      "genuine_red_pct": 0.315,
+      "genuine_saw_pause_and_verify_pct": 9.214,
+      "genuine_final_amber_pct": 4.832,
+      "scam_amber_plus_pct": 96.305,
+      "scam_red_pct": 72.099,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.247,
+          "red_pct": 60.257
+        },
+        "T2": {
+          "amber_plus_pct": 94.12,
+          "red_pct": 73.69
+        },
+        "T3": {
+          "amber_plus_pct": 99.147,
+          "red_pct": 76.82
+        }
+      },
+      "genuine_holds_per_scam_held": 1.74
+    },
+    {
+      "theta_red": 0.7,
+      "green_below": 0.1,
+      "genuine_red_pct": 0.261,
+      "genuine_saw_pause_and_verify_pct": 9.214,
+      "genuine_final_amber_pct": 4.886,
+      "scam_amber_plus_pct": 96.305,
+      "scam_red_pct": 69.468,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.247,
+          "red_pct": 58.507
+        },
+        "T2": {
+          "amber_plus_pct": 94.12,
+          "red_pct": 70.227
+        },
+        "T3": {
+          "amber_plus_pct": 99.147,
+          "red_pct": 74.757
+        }
+      },
+      "genuine_holds_per_scam_held": 1.5
+    },
+    {
+      "theta_red": 0.72,
+      "green_below": 0.1,
+      "genuine_red_pct": 0.246,
+      "genuine_saw_pause_and_verify_pct": 9.214,
+      "genuine_final_amber_pct": 4.901,
+      "scam_amber_plus_pct": 96.305,
+      "scam_red_pct": 68.667,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.247,
+          "red_pct": 56.54
+        },
+        "T2": {
+          "amber_plus_pct": 94.12,
+          "red_pct": 69.803
+        },
+        "T3": {
+          "amber_plus_pct": 99.147,
+          "red_pct": 74.137
+        }
+      },
+      "genuine_holds_per_scam_held": 1.43
+    },
+    {
+      "theta_red": 0.74,
+      "green_below": 0.1,
+      "genuine_red_pct": 0.241,
+      "genuine_saw_pause_and_verify_pct": 9.214,
+      "genuine_final_amber_pct": 4.906,
+      "scam_amber_plus_pct": 96.305,
+      "scam_red_pct": 67.833,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.247,
+          "red_pct": 53.057
+        },
+        "T2": {
+          "amber_plus_pct": 94.12,
+          "red_pct": 69.667
+        },
+        "T3": {
+          "amber_plus_pct": 99.147,
+          "red_pct": 73.92
+        }
+      },
+      "genuine_holds_per_scam_held": 1.42
+    },
+    {
+      "theta_red": 0.75,
+      "green_below": 0.1,
+      "genuine_red_pct": 0.241,
+      "genuine_saw_pause_and_verify_pct": 9.214,
+      "genuine_final_amber_pct": 4.906,
+      "scam_amber_plus_pct": 96.305,
+      "scam_red_pct": 67.797,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.247,
+          "red_pct": 52.987
+        },
+        "T2": {
+          "amber_plus_pct": 94.12,
+          "red_pct": 69.623
+        },
+        "T3": {
+          "amber_plus_pct": 99.147,
+          "red_pct": 73.913
+        }
+      },
+      "genuine_holds_per_scam_held": 1.42
+    },
+    {
+      "theta_red": 0.76,
+      "green_below": 0.1,
+      "genuine_red_pct": 0.237,
+      "genuine_saw_pause_and_verify_pct": 9.214,
+      "genuine_final_amber_pct": 4.91,
+      "scam_amber_plus_pct": 96.305,
+      "scam_red_pct": 67.643,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.247,
+          "red_pct": 52.93
+        },
+        "T2": {
+          "amber_plus_pct": 94.12,
+          "red_pct": 69.427
+        },
+        "T3": {
+          "amber_plus_pct": 99.147,
+          "red_pct": 73.757
+        }
+      },
+      "genuine_holds_per_scam_held": 1.4
+    },
+    {
+      "theta_red": 0.78,
+      "green_below": 0.1,
+      "genuine_red_pct": 0.175,
+      "genuine_saw_pause_and_verify_pct": 9.214,
+      "genuine_final_amber_pct": 4.972,
+      "scam_amber_plus_pct": 96.305,
+      "scam_red_pct": 57.505,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.247,
+          "red_pct": 38.01
+        },
+        "T2": {
+          "amber_plus_pct": 94.12,
+          "red_pct": 60.903
+        },
+        "T3": {
+          "amber_plus_pct": 99.147,
+          "red_pct": 64.277
+        }
+      },
+      "genuine_holds_per_scam_held": 1.21
+    },
+    {
+      "theta_red": 0.8,
+      "green_below": 0.1,
+      "genuine_red_pct": 0.174,
+      "genuine_saw_pause_and_verify_pct": 9.214,
+      "genuine_final_amber_pct": 4.973,
+      "scam_amber_plus_pct": 96.305,
+      "scam_red_pct": 57.143,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.247,
+          "red_pct": 37.493
+        },
+        "T2": {
+          "amber_plus_pct": 94.12,
+          "red_pct": 60.613
+        },
+        "T3": {
+          "amber_plus_pct": 99.147,
+          "red_pct": 63.91
+        }
+      },
+      "genuine_holds_per_scam_held": 1.21
+    },
+    {
+      "theta_red": 0.85,
+      "green_below": 0.1,
+      "genuine_red_pct": 0.154,
+      "genuine_saw_pause_and_verify_pct": 9.214,
+      "genuine_final_amber_pct": 4.993,
+      "scam_amber_plus_pct": 96.305,
+      "scam_red_pct": 55.256,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.247,
+          "red_pct": 36.27
+        },
+        "T2": {
+          "amber_plus_pct": 94.12,
+          "red_pct": 57.907
+        },
+        "T3": {
+          "amber_plus_pct": 99.147,
+          "red_pct": 62.697
+        }
+      },
+      "genuine_holds_per_scam_held": 1.11
+    },
+    {
+      "theta_red": 0.9,
+      "green_below": 0.1,
+      "genuine_red_pct": 0.142,
+      "genuine_saw_pause_and_verify_pct": 9.214,
+      "genuine_final_amber_pct": 5.005,
+      "scam_amber_plus_pct": 96.305,
+      "scam_red_pct": 53.424,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.247,
+          "red_pct": 34.717
+        },
+        "T2": {
+          "amber_plus_pct": 94.12,
+          "red_pct": 55.323
+        },
+        "T3": {
+          "amber_plus_pct": 99.147,
+          "red_pct": 61.673
+        }
+      },
+      "genuine_holds_per_scam_held": 1.06
+    },
+    {
+      "theta_red": 0.95,
+      "green_below": 0.1,
+      "genuine_red_pct": 0.135,
+      "genuine_saw_pause_and_verify_pct": 9.214,
+      "genuine_final_amber_pct": 5.012,
+      "scam_amber_plus_pct": 96.305,
+      "scam_red_pct": 44.019,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.247,
+          "red_pct": 31.117
+        },
+        "T2": {
+          "amber_plus_pct": 94.12,
+          "red_pct": 40.893
+        },
+        "T3": {
+          "amber_plus_pct": 99.147,
+          "red_pct": 55.41
+        }
+      },
+      "genuine_holds_per_scam_held": 1.22
+    }
+  ],
+  "green_rows": [
+    {
+      "theta_red": 0.75,
+      "green_below": 0.05,
+      "genuine_red_pct": 0.26,
+      "genuine_saw_pause_and_verify_pct": 17.726,
+      "genuine_final_amber_pct": 11.749,
+      "scam_amber_plus_pct": 98.726,
+      "scam_red_pct": 67.82,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 98.633,
+          "red_pct": 53.06
+        },
+        "T2": {
+          "amber_plus_pct": 98.007,
+          "red_pct": 69.637
+        },
+        "T3": {
+          "amber_plus_pct": 99.703,
+          "red_pct": 73.92
+        }
+      },
+      "genuine_holds_per_scam_held": 1.53
+    },
+    {
+      "theta_red": 0.75,
+      "green_below": 0.08,
+      "genuine_red_pct": 0.25,
+      "genuine_saw_pause_and_verify_pct": 10.272,
+      "genuine_final_amber_pct": 5.652,
+      "scam_amber_plus_pct": 96.821,
+      "scam_red_pct": 67.808,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.96,
+          "red_pct": 53.007
+        },
+        "T2": {
+          "amber_plus_pct": 94.85,
+          "red_pct": 69.637
+        },
+        "T3": {
+          "amber_plus_pct": 99.277,
+          "red_pct": 73.913
+        }
+      },
+      "genuine_holds_per_scam_held": 1.47
+    },
+    {
+      "theta_red": 0.75,
+      "green_below": 0.1,
+      "genuine_red_pct": 0.241,
+      "genuine_saw_pause_and_verify_pct": 9.214,
+      "genuine_final_amber_pct": 4.906,
+      "scam_amber_plus_pct": 96.305,
+      "scam_red_pct": 67.797,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.247,
+          "red_pct": 52.987
+        },
+        "T2": {
+          "amber_plus_pct": 94.12,
+          "red_pct": 69.623
+        },
+        "T3": {
+          "amber_plus_pct": 99.147,
+          "red_pct": 73.913
+        }
+      },
+      "genuine_holds_per_scam_held": 1.42
+    },
+    {
+      "theta_red": 0.75,
+      "green_below": 0.12,
+      "genuine_red_pct": 0.228,
+      "genuine_saw_pause_and_verify_pct": 7.631,
+      "genuine_final_amber_pct": 3.973,
+      "scam_amber_plus_pct": 95.59,
+      "scam_red_pct": 67.604,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 93.593,
+          "red_pct": 52.097
+        },
+        "T2": {
+          "amber_plus_pct": 93.87,
+          "red_pct": 69.617
+        },
+        "T3": {
+          "amber_plus_pct": 98.943,
+          "red_pct": 73.877
+        }
+      },
+      "genuine_holds_per_scam_held": 1.35
+    },
+    {
+      "theta_red": 0.75,
+      "green_below": 0.15,
+      "genuine_red_pct": 0.205,
+      "genuine_saw_pause_and_verify_pct": 5.465,
+      "genuine_final_amber_pct": 2.768,
+      "scam_amber_plus_pct": 94.887,
+      "scam_red_pct": 67.564,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 92.813,
+          "red_pct": 51.99
+        },
+        "T2": {
+          "amber_plus_pct": 92.813,
+          "red_pct": 69.583
+        },
+        "T3": {
+          "amber_plus_pct": 98.737,
+          "red_pct": 73.867
+        }
+      },
+      "genuine_holds_per_scam_held": 1.21
+    },
+    {
+      "theta_red": 0.75,
+      "green_below": 0.2,
+      "genuine_red_pct": 0.19,
+      "genuine_saw_pause_and_verify_pct": 4.206,
+      "genuine_final_amber_pct": 1.951,
+      "scam_amber_plus_pct": 90.928,
+      "scam_red_pct": 67.274,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 88.983,
+          "red_pct": 51.503
+        },
+        "T2": {
+          "amber_plus_pct": 87.553,
+          "red_pct": 69.33
+        },
+        "T3": {
+          "amber_plus_pct": 96.377,
+          "red_pct": 73.643
+        }
+      },
+      "genuine_holds_per_scam_held": 1.13
+    },
+    {
+      "theta_red": 0.75,
+      "green_below": 0.25,
+      "genuine_red_pct": 0.171,
+      "genuine_saw_pause_and_verify_pct": 3.14,
+      "genuine_final_amber_pct": 1.432,
+      "scam_amber_plus_pct": 89.746,
+      "scam_red_pct": 67.151,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 87.283,
+          "red_pct": 51.207
+        },
+        "T2": {
+          "amber_plus_pct": 86.197,
+          "red_pct": 69.253
+        },
+        "T3": {
+          "amber_plus_pct": 95.717,
+          "red_pct": 73.56
+        }
+      },
+      "genuine_holds_per_scam_held": 1.02
+    }
+  ],
+  "what_if": {
+    "label": "What-if (not SPEC v0.2): run the registry lookup automatically once the user says 'My bank' and names an integrated bank, instead of waiting for the 'Check with my bank' tap",
+    "spec_flow": {
+      "theta_red": 0.75,
+      "green_below": 0.1,
+      "genuine_red_pct": 0.241,
+      "genuine_saw_pause_and_verify_pct": 9.214,
+      "genuine_final_amber_pct": 4.906,
+      "scam_amber_plus_pct": 96.305,
+      "scam_red_pct": 67.797,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.247,
+          "red_pct": 52.987
+        },
+        "T2": {
+          "amber_plus_pct": 94.12,
+          "red_pct": 69.623
+        },
+        "T3": {
+          "amber_plus_pct": 99.147,
+          "red_pct": 73.913
+        }
+      },
+      "genuine_holds_per_scam_held": 1.42
+    },
+    "auto_registry": {
+      "theta_red": 0.75,
+      "green_below": 0.1,
+      "genuine_red_pct": 0.263,
+      "genuine_saw_pause_and_verify_pct": 6.974,
+      "genuine_final_amber_pct": 4.316,
+      "scam_amber_plus_pct": 96.255,
+      "scam_red_pct": 69.225,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.247,
+          "red_pct": 52.987
+        },
+        "T2": {
+          "amber_plus_pct": 94.01,
+          "red_pct": 72.797
+        },
+        "T3": {
+          "amber_plus_pct": 99.147,
+          "red_pct": 73.913
+        }
+      },
+      "genuine_holds_per_scam_held": 1.52
+    }
+  }
+}

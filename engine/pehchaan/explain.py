@@ -28,6 +28,10 @@ REASON_TEXT: dict[str, tuple[str, str]] = {
         "You told us police or a government officer asked for this payment. Police and officers never ask for money on a call.",
         "आपने बताया कि पुलिस या किसी सरकारी अफ़सर ने ये पेमेंट माँगा है। पुलिस या अफ़सर कभी फ़ोन पर पैसे नहीं माँगते।",
     ),
+    "claim_upi_or_shop": (
+        "You told us a UPI app, shop or delivery person asked for this payment.",
+        "आपने बताया कि किसी UPI ऐप, दुकान या डिलीवरी वाले ने ये पेमेंट माँगा।",
+    ),
     "claim_other": (
         "You told us someone else asked for this payment.",
         "आपने बताया कि किसी और ने ये पेमेंट करने को कहा।",
@@ -172,6 +176,10 @@ REASON_TEXT: dict[str, tuple[str, str]] = {
     "bank_no_active_call": (
         "{bank} is not calling you right now.",
         "{bank} अभी आपको कॉल नहीं कर रहा है।",
+    ),
+    "bank_registry_unknown": (
+        "We could not check with {bank} because it is not connected to Pehchaan yet. Hang up and call the bank's official number.",
+        "{bank} अभी पहचान से जुड़ा नहीं है, इसलिए हम जाँच नहीं कर पाए। फ़ोन काटें और बैंक के आधिकारिक नंबर पर कॉल करें।",
     ),
     "bank_active_call_1600": (
         "{bank} confirms it is calling you right now from its official 1600 number.",

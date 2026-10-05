@@ -1,0 +1,97 @@
+{
+  "assumption_driven_projection": true,
+  "source": "git ac7620f (SPEC v0.1 engine + simulator), re-run unchanged",
+  "voice_uptake": 0.3,
+  "rows": [
+    {
+      "prior": 0.0005,
+      "prior_fraction": "1/2000",
+      "genuine_holds_per_scam_held": 3.99,
+      "share_of_red_holds_that_are_scams": 0.2005,
+      "genuine_red_pct": 0.105,
+      "scam_red_pct": 52.649
+    },
+    {
+      "prior": 0.0006666666666666666,
+      "prior_fraction": "1/1500",
+      "genuine_holds_per_scam_held": 4.27,
+      "share_of_red_holds_that_are_scams": 0.1899,
+      "genuine_red_pct": 0.155,
+      "scam_red_pct": 54.48
+    },
+    {
+      "prior": 0.0007669510485433244,
+      "prior_fraction": "1/1304",
+      "genuine_holds_per_scam_held": 3.73,
+      "share_of_red_holds_that_are_scams": 0.2113,
+      "genuine_red_pct": 0.157,
+      "scam_red_pct": 54.805
+    },
+    {
+      "prior": 0.001,
+      "prior_fraction": "1/1000",
+      "genuine_holds_per_scam_held": 3.43,
+      "share_of_red_holds_that_are_scams": 0.2257,
+      "genuine_red_pct": 0.195,
+      "scam_red_pct": 56.779
+    },
+    {
+      "prior": 0.0014285714285714286,
+      "prior_fraction": "1/700",
+      "genuine_holds_per_scam_held": 7.35,
+      "share_of_red_holds_that_are_scams": 0.1198,
+      "genuine_red_pct": 0.724,
+      "scam_red_pct": 68.899
+    },
+    {
+      "prior": 0.0025,
+      "prior_fraction": "1/400",
+      "genuine_holds_per_scam_held": 4.76,
+      "share_of_red_holds_that_are_scams": 0.1735,
+      "genuine_red_pct": 0.919,
+      "scam_red_pct": 76.996
+    },
+    {
+      "prior": 0.005,
+      "prior_fraction": "1/200",
+      "genuine_holds_per_scam_held": 4.63,
+      "share_of_red_holds_that_are_scams": 0.1776,
+      "genuine_red_pct": 1.958,
+      "scam_red_pct": 84.148
+    },
+    {
+      "prior": 0.01,
+      "prior_fraction": "1/100",
+      "genuine_holds_per_scam_held": 3.04,
+      "share_of_red_holds_that_are_scams": 0.2478,
+      "genuine_red_pct": 2.79,
+      "scam_red_pct": 91.0
+    }
+  ],
+  "headline_v01": {
+    "genuine_silent_pct": 42.046,
+    "genuine_one_tap_pct": 47.823,
+    "genuine_pause_and_verify_pct": 10.131,
+    "genuine_final_amber_pct": 5.654,
+    "genuine_final_red_pct": 0.919,
+    "scam_T1_amber_plus_pct": 96.377,
+    "scam_T2_amber_plus_pct": 94.423,
+    "scam_T3_amber_plus_pct": 99.123,
+    "scam_T1_red_pct": 64.53,
+    "scam_T2_red_pct": 76.667,
+    "scam_T3_red_pct": 84.543,
+    "scam_weighted_amber_plus_pct": 96.459,
+    "scam_weighted_red_pct": 76.996,
+    "protected_per_rupee_delayed": 1.19,
+    "zero_voice_scam_red_pct_1_400": 73.552,
+    "zero_voice_scam_amber_plus_pct_1_400": 96.476,
+    "ablation_context_only_scam_red_pct": 27.009,
+    "ablation_plus_claim_scam_red_pct": 68.246,
+    "ablation_plus_out_of_band_scam_red_pct": 73.552,
+    "ablation_plus_voice_scam_red_pct": 76.996,
+    "ablation_context_only_genuine_pause_verify_pct": 3.761,
+    "ablation_plus_claim_genuine_pause_verify_pct": 10.131,
+    "ablation_plus_out_of_band_genuine_pause_verify_pct": 10.131,
+    "ablation_plus_voice_genuine_pause_verify_pct": 10.131
+  }
+}

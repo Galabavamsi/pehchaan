@@ -3,7 +3,7 @@
 #   basis: assumed  -> initial expert value (team judgement), to be re-fit from labelled cases
 #   basis: measured -> computed from data (cite the file / run)
 # LR = P(signal | scam) / P(signal | genuine), *given the trigger already fired*.
-version: "0.1.0"
+version: "0.2.0"   # SPEC v0.2: G7 decisive floor, strict G2, G1 trigger-exclusion, claim split, registry-unknown
 
 prior:
   value: 0.0025            # pi0 = P(scam | trigger fired) = 1/400
@@ -15,12 +15,13 @@ prior:
 
 tiers:
   green_below: 0.10        # p < 0.10 -> Green (proceed silently)
-  red_at_or_above: 0.60    # p >= 0.60 AND guardrail-qualified -> Red (cooling-off hold)
+  red_at_or_above: 0.75    # theta_red (sim-tuned, SPEC v0.2 default 0.80): p >= theta_red AND guardrail-qualified -> Red (or any G7 decisive negative)
   ask_claim_at_or_above: 0.01
   basis: assumed
   rationale: >-
-    Green/Red thresholds from SPEC; tuned against the alert budget by
-    engine/pehchaan/sim.py. ask_claim_at_or_above is a prototype addition (see
+    Green threshold from SPEC; theta_red (SPEC v0.2 default 0.80) is tuned by
+    engine/pehchaan/sim.py against the alert budget (pi0 = 1/400: <= 0.25% of
+    genuine triggered sessions end Red, <= 6% see Pause & Verify). ask_claim_at_or_above is a prototype addition (see
     app/NOTES.md): the one-tap "who asked you?" question is skipped when
     context alone is clearly benign (saved domestic caller, nothing unusual).
 
@@ -35,7 +36,8 @@ families:
 signals:
   # ---- C: Claim -----------------------------------------------------------
   claim_family:    {lr: 1.5, basis: assumed, rationale: "Genuine relatives also ask for money; alone this is weak."}
-  claim_bank:      {lr: 6,   basis: assumed, rationale: "Banks rarely ask customers to push money during a call; common in KYC/'safe account' scripts."}
+  claim_bank:      {lr: 6,   basis: assumed, rationale: "'My bank' (names the bank). Banks rarely ask customers to push money during a call; common in KYC/'safe account' scripts."}
+  claim_upi_or_shop: {lr: 0.8, basis: assumed, rationale: "UPI app, shop or delivery: mostly genuine merchant/collection calls; split from 'bank' so they don't pick up bank checks (SPEC v0.2)."}
   claim_authority: {lr: 60,  basis: assumed, rationale: "Police/CBI/courts never collect money over a call; near-certain scam when tied to a payment."}
   claim_other:     {lr: 1.0, basis: assumed, rationale: "Uninformative."}
   claim_none:      {lr: 0.8, basis: assumed, rationale: "Slightly reassuring, but coached victims also answer 'no one' (SPEC 6: keeps context risk)."}
@@ -72,17 +74,20 @@ signals:
   fv_denied:             {lr: 300,  basis: assumed, rationale: "The real relative, on their own device-bound app, says 'Not me'."}
   fv_confirmed:          {lr: 0.02, basis: assumed, rationale: "Signed 'Yes, it's me' from the real relative's device."}
   fv_timeout:            {lr: 1.0,  basis: assumed, rationale: "No answer in 3 min; uninformative, falls back to callback/safe word."}
-  callback_denied:       {lr: 300,  basis: assumed, rationale: "User called the saved number; the person says they did not ask."}
+  callback_denied:       {lr: 30,   basis: assumed, rationale: "User-reported (their own tap): strong but not decisive, mis-taps and panic happen (SPEC v0.2)."}
   callback_confirmed:    {lr: 0.02, basis: assumed, rationale: "User called the saved number; the person confirms."}
-  safeword_failed:       {lr: 30,   basis: assumed, rationale: "Caller did not know the family safe word (panic can cause false fails)."}
+  safeword_failed:       {lr: 30,   basis: assumed, rationale: "User-reported; caller did not know the family safe word (panic can cause false fails). Not decisive."}
   safeword_passed:       {lr: 0.1,  basis: assumed, rationale: "Safe words can leak; not decisive."}
-  bank_no_active_call:   {lr: 50,   basis: assumed, rationale: "Bank's outbound dialer registry has no live call to this customer."}
-  bank_active_call_1600: {lr: 0.1,  basis: assumed, rationale: "Registry confirms a live 1600-series call from the bank."}
+  bank_no_active_call:   {lr: 50,   basis: assumed, rationale: "Integrated bank the user named has no live outbound call to this customer. Decisive (G7)."}
+  bank_active_call_1600: {lr: 0.05, basis: assumed, rationale: "The bank's own registry confirms a live 1600-series call. Decisive positive (G4)."}
+  bank_registry_unknown: {lr: 1.0,  basis: assumed, rationale: "Named bank is not integrated with Pehchaan: no information (never read as 'no call')."}
 
 guardrails:
   g1_min_families: 2           # G1(a): Red needs >= 2 families ...
   g1_min_family_lr: 3          # ... each contributing LR >= 3 (after clipping)
   g1_excluded_families: [V]    # G2: voice cannot be one of the corroborating families
+  g1_trigger_implied: [payee_new, amount_gt_p95, amount_gt_p99]  # never count toward G1(a)
+  g2_strict: true              # if removing V would drop below Red, cap at Amber
   g3_min_speech_sec: 4.0       # G3 quality gate
   g3_min_snr_db: 10.0
   g4_flag_exception: payee_flagged_high  # G4: confirmed + this flag -> Amber, not Green

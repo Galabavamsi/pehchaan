@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -39,6 +40,7 @@ from .signals import (
     EXCLUSIVE_GROUPS,
     FAMILIES,
     SIGNAL_FAMILY,
+    USER_REPORTED_NEGATIVE,
     VOICE_BANDS,
 )
 
@@ -50,7 +52,9 @@ IST = timezone(timedelta(hours=5, minutes=30))
 SIG = list(ALL_SIGNALS)
 IDX = {s: i for i, s in enumerate(SIG)}
 FAM = list(FAMILIES)  # C K P V S O
-CLAIM_KEYS = ["family", "bank", "authority", "other", "none"]
+CLAIM_KEYS = ["family", "bank", "upi_or_shop", "authority", "other", "none"]   # SPEC v0.2 claim split
+C_FAMILY, C_BANK, C_UPI, C_AUTH, C_OTHER, C_NONE = range(6)
+CHECKLIST_CUES = ["cue_secrecy", "cue_otp_pin", "cue_arrest_threat"]           # SPEC v0.2 3-tap checklist
 TIER_NAMES = ["green", "amber", "red"]
 CUES = ["cue_secrecy", "cue_urgency", "cue_otp_pin", "cue_arrest_threat", "cue_remote_app", "cue_refund_verification"]
 
@@ -77,9 +81,18 @@ class BatchResult:
     g1_capped: np.ndarray
     g4: np.ndarray
     g5: np.ndarray
+    g7: np.ndarray
+    g2: np.ndarray
+
+
+def _sigmoid(lo: np.ndarray) -> np.ndarray:
+    e = np.exp(-np.abs(lo))
+    return np.where(lo >= 0, 1 / (1 + e), e / (1 + e))
 
 
 class BatchEngine:
+    """Numpy mirror of pehchaan.fusion.assess (SPEC v0.2: G3, G7, G5, G4, G1 trigger-exclusion, strict G2)."""
+
     def __init__(self, cfg: Config):
         self.cfg = cfg
         n_s, n_f = len(SIG), len(FAM)
@@ -88,14 +101,18 @@ class BatchEngine:
             self.W[i, FAM.index(SIGNAL_FAMILY[s])] = cfg.ln_lr(s)
         self.caps = np.array([cfg.ln_cap(f) for f in FAM])
         self.v_cols = np.array([IDX[s] for s in SIG if SIGNAL_FAMILY[s] == "V"])
+        self.v_fam = FAM.index("V")
         self.inconclusive = IDX["voice_inconclusive"]
         self.excl = [np.array([IDX[m] for m in members]) for members in EXCLUSIVE_GROUPS.values()]
         self.neg_cols = np.array([IDX[s] for s in sorted(DECISIVE_NEGATIVE)])
+        self.uneg_cols = np.array([IDX[s] for s in sorted(USER_REPORTED_NEGATIVE)])
         self.pos_cols = np.array([IDX[s] for s in sorted(DECISIVE_POSITIVE)])
         g = cfg.guardrails
+        self.trig_mask = np.array([s in set(g.g1_trigger_implied) for s in SIG])
         self.min_ln = math.log(g.g1_min_family_lr)
         self.counted = np.array([f not in g.g1_excluded_families for f in FAM])
         self.min_fams = g.g1_min_families
+        self.g2_strict = bool(g.g2_strict)
         self.flag_col = IDX[g.g4_flag_exception]
         self.green, self.red = cfg.tiers.green_below, cfg.tiers.red_at_or_above
         self.ask_thr = cfg.tiers.ask_claim_at_or_above
@@ -115,24 +132,38 @@ class BatchEngine:
             if bad.any():
                 X[np.ix_(bad, self.v_cols)] = False
                 X[bad, self.inconclusive] = True
-        fam = X.astype(np.float64) @ self.W
-        fam = np.clip(fam, -self.caps, self.caps)
+        Xf = X.astype(np.float64)
+        fam = np.clip(Xf @ self.W, -self.caps, self.caps)
         lo = math.log(prior / (1 - prior)) + fam.sum(axis=1)
-        p = np.where(lo >= 0, 1 / (1 + np.exp(-np.abs(lo))), np.exp(-np.abs(lo)) / (1 + np.exp(-np.abs(lo))))
+        p = _sigmoid(lo)
         raw = np.where(p >= self.red, 2, np.where(p >= self.green, 1, 0))
         tier = raw.copy()
-        n_counted = ((fam >= self.min_ln - 1e-12) & self.counted).sum(axis=1)
+        # G1(a): trigger-implied evidence excluded, then clipped; V never counted
+        fam_g1 = np.clip((Xf * ~self.trig_mask) @ self.W, -self.caps, self.caps)
+        n_counted = ((fam_g1 >= self.min_ln - 1e-12) & self.counted).sum(axis=1)
         neg = X[:, self.neg_cols].any(axis=1)
+        uneg = X[:, self.uneg_cols].any(axis=1)
         pos = X[:, self.pos_cols].any(axis=1)
-        g5 = (trusted if trusted is not None else np.zeros(n, dtype=bool)) & ~neg
-        g4 = ~g5 & pos & ~neg
+        trusted = trusted if trusted is not None else np.zeros(n, dtype=bool)
+        g7 = neg
+        g5 = trusted & ~neg
+        g4 = ~neg & ~g5 & pos & ~uneg
+        rest = ~g7 & ~g5 & ~g4
+        tier[g7] = 2
         tier[g5] = 0
         tier[g4] = np.where(X[g4, self.flag_col], 1, 0)
-        g1 = ~g5 & ~g4 & (tier == 2) & ~neg & (n_counted < self.min_fams)
+        conflict = rest & pos & uneg
+        tier[conflict & (tier == 0)] = 1
+        g1 = rest & (tier == 2) & (n_counted < self.min_fams)
         tier[g1] = 1
+        v_ln = fam[:, self.v_fam]
+        g2 = np.zeros(n, dtype=bool)
+        if self.g2_strict:
+            g2 = rest & ~g1 & (tier == 2) & (np.abs(v_ln) > 1e-12) & (_sigmoid(lo - v_ln) < self.red)
+            tier[g2] = 1
         ask = ~g5 & ((tier != 0) | (p >= self.ask_thr))
         return BatchResult(p=p, log_odds=lo, raw_tier=raw, tier=tier, ask=ask, X=X, fam_ln=fam,
-                           g1_capped=g1, g4=g4, g5=g5)
+                           g1_capped=g1, g4=g4, g5=g5, g7=g7, g2=g2)
 
 
 # ---------------------------------------------------------------------------
@@ -249,7 +280,7 @@ def generate(A: dict, n_by_scn: dict[str, int], rng: np.random.Generator, band_r
         put("call_long", u() < S["call_long"])
         put("payee_flag", rng.choice(3, size=n, p=_probs(S["payee_flag"], ["none", "medium", "high"])))
         put("burst", u() < S["burst"])
-        put("claim", rng.choice(5, size=n, p=_probs(S["claim"], CLAIM_KEYS)))
+        put("claim", rng.choice(len(CLAIM_KEYS), size=n, p=_probs(S["claim"], CLAIM_KEYS)))
         put("name_mismatch", u() < S["name_mismatch_if_family"])
         # voice capture (only used if the user runs the voice check)
         synth = u() < S["synthetic_audio"]
@@ -281,11 +312,21 @@ def generate(A: dict, n_by_scn: dict[str, int], rng: np.random.Generator, band_r
         put("u_sw", u())
         put("sw_uptake", np.full(n, sw["uptake"]))
         put("sw_pass", u() < sw["pass"])
+        # bank registry (SPEC v0.2): only an integrated bank that the user named can say "no active call"
         rg = S["registry"]
-        put("reg_covered", u() < rg["coverage"])
+        RG = A["registry"]
+        own = u() < rg["named_own_bank"]
+        integ_p = np.where(own, float(RG["integrated_if_own_bank"]["value"]), float(RG["integrated_if_other_bank"]["value"]))
+        put("bank_named_own", own)
+        put("reg_integrated", u() < integ_p)
         put("u_reg", u())
         put("reg_uptake", np.full(n, rg["uptake"]))
         put("reg_active", u() < rg["active_call"])
+        # coached-victim 3-tap checklist (shown for claim none/other at Amber)
+        ck = S["checklist"]
+        put("u_ck", u())
+        for cue in CHECKLIST_CUES:
+            put(f"ck_{cue}", u() < ck[cue])
         put("amber_cancel", np.full(n, S["amber_cancel"]))
         beh = A["behaviour"]
         rco = S.get("red_completes_override", {})
@@ -321,7 +362,11 @@ def _context_matrix(S: Sessions) -> np.ndarray:
 
 
 def run_flow(S: Sessions, eng: BatchEngine, prior: float, voice_uptake: float, level: int = 3,
-             review_at: float = 50000, amber_cancel_neg: float = 0.85, red_genuine_completes: float = 0.95) -> dict:
+             review_at: float = 50000, amber_cancel_neg: float = 0.85, red_genuine_completes: float = 0.95,
+             checklist_uptake: float = 0.6, amber_cancel_user_neg: float = 0.75,
+             auto_registry: bool = False) -> dict:
+    """auto_registry is a what-if (not SPEC v0.2): run the bank-registry lookup as soon as the user says
+    'My bank' and names it, instead of waiting for the "Check with my bank" tap."""
     n = S.n
     X1 = _context_matrix(S)
     a1 = eng.assess(X1, prior, trusted=S["trusted"])
@@ -337,18 +382,30 @@ def run_flow(S: Sessions, eng: BatchEngine, prior: float, voice_uptake: float, l
         X2 = X1.copy()
         for ci, key in enumerate(CLAIM_KEYS):
             X2[:, IDX[f"claim_{key}"]] = claim == ci
-        X2[:, IDX["bank_claim_not_1600"]] = (claim == 1) & ~S["from_1600"]
-        X2[:, IDX["payee_name_mismatch"]] = (claim == 0) & S["name_mismatch"]
+        X2[:, IDX["bank_claim_not_1600"]] = (claim == C_BANK) & ~S["from_1600"]
+        X2[:, IDX["payee_name_mismatch"]] = (claim == C_FAMILY) & S["name_mismatch"]
+        integ = S["reg_integrated"]
+        auto_reg = asked & (claim == C_BANK) if auto_registry else np.zeros(n, dtype=bool)
+        if auto_registry:
+            X2[:, IDX["bank_active_call_1600"]] = auto_reg & integ & S["reg_active"]
+            X2[:, IDX["bank_no_active_call"]] = auto_reg & integ & ~S["reg_active"]
+            X2[:, IDX["bank_registry_unknown"]] = auto_reg & ~integ
         a2 = eng.assess(X2, prior, trusted=S["trusted"])
-        a2_tier = np.where(asked, a2.tier, a1.tier)
         shown = asked & (a2.tier >= 1)
+        # 3-tap checklist for coached "no one" / "someone else" at Amber (counted with the claim layer)
+        ck_taken = shown & (a2.tier == 1) & ((claim == C_NONE) | (claim == C_OTHER)) & (S["u_ck"] < checklist_uptake)
+        if ck_taken.any():
+            for cue in CHECKLIST_CUES:
+                X2[:, IDX[cue]] |= ck_taken & S[f"ck_{cue}"]
+            a2 = eng.assess(X2, prior, trusted=S["trusted"])
+        a2_tier = np.where(asked, a2.tier, a1.tier)
         final = a2_tier.copy()
         final_X = np.where(asked[:, None], a2.X, a1.X)
         p_final = np.where(asked, a2.p, a1.p)
-        checks = {}
+        checks = {"checklist": ck_taken}
         if level >= 2:
             X3 = X2.copy()
-            fam = shown & (claim == 0)
+            fam = shown & (claim == C_FAMILY)
             fv_taken = fam & S["fv_enrolled"] & (S["u_fv"] < S["fv_uptake"])
             fo = S["fv_out"]
             X3[:, IDX["fv_confirmed"]] = fv_taken & (fo == 0)
@@ -363,10 +420,11 @@ def run_flow(S: Sessions, eng: BatchEngine, prior: float, voice_uptake: float, l
             sw_taken = fam & nodec2 & S["sw_has"] & (S["u_sw"] < S["sw_uptake"])
             X3[:, IDX["safeword_passed"]] = sw_taken & S["sw_pass"]
             X3[:, IDX["safeword_failed"]] = sw_taken & ~S["sw_pass"]
-            bank = shown & (claim == 1)
-            reg_taken = bank & S["reg_covered"] & (S["u_reg"] < S["reg_uptake"])
-            X3[:, IDX["bank_active_call_1600"]] = reg_taken & S["reg_active"]
-            X3[:, IDX["bank_no_active_call"]] = reg_taken & ~S["reg_active"]
+            bank = shown & (claim == C_BANK)
+            reg_taken = (bank & (S["u_reg"] < S["reg_uptake"])) | auto_reg
+            X3[:, IDX["bank_active_call_1600"]] = reg_taken & integ & S["reg_active"]
+            X3[:, IDX["bank_no_active_call"]] = reg_taken & integ & ~S["reg_active"]
+            X3[:, IDX["bank_registry_unknown"]] = reg_taken & ~integ
             quality = np.ones(n, dtype=bool)
             voice_done = np.zeros(n, dtype=bool)
             if level >= 3 and voice_uptake > 0:
@@ -382,17 +440,18 @@ def run_flow(S: Sessions, eng: BatchEngine, prior: float, voice_uptake: float, l
             final = np.where(shown, a3.tier, a2_tier)
             final_X = np.where(shown[:, None], a3.X, final_X)
             p_final = np.where(shown, a3.p, p_final)
-            checks = {"fv": fv_taken, "callback": cb_taken, "safeword": sw_taken, "registry": reg_taken,
-                      "voice": voice_done}
+            checks = {"checklist": ck_taken, "fv": fv_taken, "callback": cb_taken, "safeword": sw_taken,
+                      "registry": reg_taken, "registry_unknown": reg_taken & ~integ, "voice": voice_done}
 
     amount = S["amount"]
     neg = final_X[:, eng.neg_cols].any(axis=1)
-    amber_cancel = np.where(neg, amber_cancel_neg, S["amber_cancel"])
+    uneg = final_X[:, eng.uneg_cols].any(axis=1)
+    amber_cancel = np.where(neg, amber_cancel_neg, np.where(uneg, amber_cancel_user_neg, S["amber_cancel"]))
     red_complete = np.where(amount >= review_at, S["red_complete_hi"], S["red_complete_lo"])
     stopped = np.where(final == 2, 1 - red_complete, np.where(final == 1, amber_cancel, 0.0))
     return {
         "stage1": a1.tier, "stage2": a2_tier, "final": final, "p": p_final,
-        "asked": asked, "shown": shown, "checks": checks,
+        "asked": asked, "shown": shown, "checks": checks, "final_X": final_X,
         "stopped": stopped,
         "abandoned": np.where(final == 1, S["amber_cancel"], 0.0),
         "held": final == 2,
@@ -508,6 +567,211 @@ def _frac(p: float) -> str:
 
 
 # ---------------------------------------------------------------------------
+# alert budget: theta_red / green_below sweeps, Red precision vs prior, v0.1 baseline
+# ---------------------------------------------------------------------------
+THETA_GRID = [0.50, 0.60, 0.65, 0.70, 0.72, 0.74, 0.75, 0.76, 0.78, 0.80, 0.85, 0.90, 0.95]
+GREEN_GRID = [0.05, 0.08, 0.10, 0.12, 0.15, 0.20, 0.25]
+
+
+def _cfg_with(cfg: Config, red: float | None = None, green: float | None = None) -> Config:
+    c = cfg.model_copy(deep=True)
+    if red is not None:
+        c.tiers.red_at_or_above = red
+    if green is not None:
+        c.tiers.green_below = green
+    return c
+
+
+def _budget_row(S: Sessions, A: dict, cfg: Config, prior: float, uptake: float, kw: dict, **extra) -> dict:
+    R = run_flow(S, BatchEngine(cfg), prior, uptake, 3, **kw, **extra)
+    h = summarise(S, R, A, prior)
+    return {
+        "theta_red": cfg.tiers.red_at_or_above, "green_below": cfg.tiers.green_below,
+        "genuine_red_pct": _pct(h["genuine"]["final_red"]),
+        "genuine_saw_pause_and_verify_pct": _pct(h["genuine"]["saw_pause_and_verify"]),
+        "genuine_final_amber_pct": _pct(h["genuine"]["final_amber"]),
+        "scam_amber_plus_pct": _pct(h["scam"]["amber_plus"]), "scam_red_pct": _pct(h["scam"]["final_red"]),
+        "per_pattern": {k: {"amber_plus_pct": _pct(h["per_scenario"][k]["amber_plus"]),
+                            "red_pct": _pct(h["per_scenario"][k]["final_red"])} for k in S.names if k.startswith("T")},
+        "genuine_holds_per_scam_held": h["per_100k"]["genuine_holds_per_scam_held"],
+    }
+
+
+def threshold_sweep(S: Sessions, A: dict, cfg: Config, prior: float, uptake: float, kw: dict) -> dict:
+    budget = A["alert_budget"]
+    red_max, pv_max = float(budget["genuine_red_max_pct"]), float(budget["genuine_pause_verify_max_pct"])
+    theta_rows = [_budget_row(S, A, _cfg_with(cfg, red=t), prior, uptake, kw) for t in THETA_GRID]
+    meets = [r for r in theta_rows if r["genuine_red_pct"] <= red_max]
+    # selection rule: among thresholds meeting the Red budget, keep those within 1 pp of the best scam-Red
+    # catch, then take the one with the most budget headroom (ties -> the higher, more conservative theta)
+    best = None
+    if meets:
+        top = max(r["scam_red_pct"] for r in meets)
+        near = [r for r in meets if r["scam_red_pct"] >= top - 1.0]
+        best = min(near, key=lambda r: (r["genuine_red_pct"], -r["theta_red"]))
+    green_rows = [_budget_row(S, A, _cfg_with(cfg, green=g), prior, uptake, kw) for g in GREEN_GRID]
+    what_if = {
+        "label": "What-if (not SPEC v0.2): run the registry lookup automatically once the user says 'My bank' "
+                 "and names an integrated bank, instead of waiting for the 'Check with my bank' tap",
+        "spec_flow": _budget_row(S, A, cfg, prior, uptake, kw),
+        "auto_registry": _budget_row(S, A, cfg, prior, uptake, kw, auto_registry=True),
+    }
+    cur = next(r for r in theta_rows if abs(r["theta_red"] - cfg.tiers.red_at_or_above) < 1e-9) \
+        if any(abs(r["theta_red"] - cfg.tiers.red_at_or_above) < 1e-9 for r in theta_rows) else what_if["spec_flow"]
+    return {
+        "assumption_driven_projection": True, "disclaimer": DISCLAIMER, "prior": prior, "voice_uptake": uptake,
+        "budget": {"genuine_red_max_pct": red_max, "genuine_pause_verify_max_pct": pv_max, "src": budget["src"]},
+        "theta_red_in_config": cfg.tiers.red_at_or_above,
+        "best_theta_meeting_red_budget": best["theta_red"] if best else None,
+        "selection_rule": "meets the Red budget; within 1 pp of the best scam-Red catch; most headroom; ties -> higher theta",
+        "config_meets_red_budget": cur["genuine_red_pct"] <= red_max,
+        "config_meets_pause_verify_budget": cur["genuine_saw_pause_and_verify_pct"] <= pv_max,
+        "note": ("theta_red moves Red only; Pause & Verify is set by green_below (kept at 0.10, SPEC) and by "
+                 "the claim mix. green_rows show the P&V trade-off if green_below were raised."),
+        "theta_rows": theta_rows, "green_rows": green_rows, "what_if": what_if,
+    }
+
+
+def precision_priors(A: dict) -> list[float]:
+    anchor = base_rate_prior(A)["prior_derived"]
+    return sorted({1 / 2000, 1 / 1500, anchor, 1 / 1000, 1 / 700, 1 / 400, 1 / 200, 1 / 100})
+
+
+def red_precision_curve(S: Sessions, A: dict, eng: BatchEngine, priors: list[float], uptake: float, kw: dict) -> list[dict]:
+    rows = []
+    for pr in priors:
+        h = summarise(S, run_flow(S, eng, pr, uptake, 3, **kw), A, pr)
+        rows.append({"prior": pr, "prior_fraction": _frac(pr),
+                     "genuine_holds_per_scam_held": h["per_100k"]["genuine_holds_per_scam_held"],
+                     "share_of_red_holds_that_are_scams": h["per_100k"]["share_of_red_holds_that_are_scams"],
+                     "genuine_red_pct": _pct(h["genuine"]["final_red"]), "scam_red_pct": _pct(h["scam"]["final_red"])})
+    return rows
+
+
+V01_COMMIT = "ac7620f"
+
+
+def build_v01_baseline(out_dir: Path = RESULTS_DIR) -> dict:
+    """Re-run the v0.1 engine + simulator from git (commit ac7620f) in a temp dir, at the same priors.
+    Nothing in the working tree is touched."""
+    import subprocess
+    import tempfile
+
+    A = load_assumptions()
+    priors = precision_priors(A)
+    repo = ENGINE_DIR.parent
+    with tempfile.TemporaryDirectory() as tmp:
+        tar = subprocess.run(["git", "-C", str(repo), "archive", V01_COMMIT, "engine"], check=True, capture_output=True).stdout
+        import io
+        import tarfile
+        tarfile.open(fileobj=io.BytesIO(tar)).extractall(tmp)
+        code = (
+            "import json, sys; sys.path.insert(0, '.')\n"
+            "from pehchaan.sim import simulate, load_assumptions\n"
+            "A = load_assumptions()\n"
+            f"A['prior']['sweep'] = {priors!r}\n"
+            "A['behaviour']['voice_uptake']['sweep'] = [0.3]\n"
+            "out = simulate(assumptions=A, out_dir=None, charts=False, verbose=False)\n"
+            "rows = [{'prior': r['prior'], 'share': r['share_of_red_holds_that_are_scams'], 'genuine_red_pct': r['genuine_red_pct'],"
+            " 'scam_red_pct': r['scam_red_pct']} for r in out['sensitivity']['rows']]\n"
+            "s = json.load(open('results/sim_summary.json', encoding='utf-8'))\n"
+            "a = json.load(open('results/sim_ablation.json', encoding='utf-8'))\n"
+            "sens = json.load(open('results/sim_sensitivity.json', encoding='utf-8'))\n"
+            "print(json.dumps({'rows': rows, 'summary': s, 'ablation': a, 'sensitivity': sens}))\n"
+        )
+        res = subprocess.run([sys.executable, "-c", code], cwd=str(Path(tmp) / "engine"), check=True,
+                             capture_output=True, text=True, encoding="utf-8")
+        data = json.loads(res.stdout.strip().splitlines()[-1])
+    rows = []
+    for r in data["rows"]:
+        sh = r["share"]
+        rows.append({"prior": r["prior"], "prior_fraction": _frac(r["prior"]),
+                     "genuine_holds_per_scam_held": round((1 - sh) / sh, 2) if sh else None,
+                     "share_of_red_holds_that_are_scams": sh, "genuine_red_pct": r["genuine_red_pct"],
+                     "scam_red_pct": r["scam_red_pct"]})
+    s, a, sens = data["summary"], data["ablation"], data["sensitivity"]
+    f, c = s["friction_budget_genuine_pct"], s["catch_rates_pct"]
+    zero = next(r for r in sens["rows"] if r["voice_uptake"] == 0.0 and abs(r["prior"] - 0.0025) < 1e-9)
+    headline = {
+        "genuine_silent_pct": f["silent_green"], "genuine_one_tap_pct": f["one_tap_question_then_green"],
+        "genuine_pause_and_verify_pct": f["saw_pause_and_verify"], "genuine_final_amber_pct": f["final_amber"],
+        "genuine_final_red_pct": f["final_red_hold"],
+        **{f"scam_{k}_amber_plus_pct": c[k]["amber_plus"] for k in ("T1", "T2", "T3")},
+        **{f"scam_{k}_red_pct": c[k]["red_hold"] for k in ("T1", "T2", "T3")},
+        "scam_weighted_amber_plus_pct": c["all_scams_weighted"]["amber_plus"],
+        "scam_weighted_red_pct": c["all_scams_weighted"]["red_hold"],
+        "protected_per_rupee_delayed": s["per_100k_triggered_sessions"]["protected_per_rupee_delayed"],
+        "zero_voice_scam_red_pct_1_400": zero["scam_red_pct"], "zero_voice_scam_amber_plus_pct_1_400": zero["scam_amber_plus_pct"],
+        **{f"ablation_{r['level']}_scam_red_pct": r["scam_red_pct"] for r in a["rows"]},
+        **{f"ablation_{r['level']}_genuine_pause_verify_pct": r["genuine_saw_pause_and_verify_pct"] for r in a["rows"]},
+    }
+    base = {"assumption_driven_projection": True, "source": f"git {V01_COMMIT} (SPEC v0.1 engine + simulator), re-run unchanged",
+            "voice_uptake": 0.3, "rows": rows, "headline_v01": headline}
+    if out_dir is not None:
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+        (Path(out_dir) / "sim_v01_baseline.json").write_text(json.dumps(base, indent=2), encoding="utf-8")
+    return base
+
+
+def _nearest(rows: list[dict], prior: float, key: str):
+    r = min(rows, key=lambda r: abs(math.log(r["prior"]) - math.log(prior)))
+    return r[key]
+
+
+def deck_numbers(summary: dict, ablation: dict, sensitivity: dict, sweep: dict, precision: list[dict],
+                 baseline: dict | None, cfg: Config) -> dict:
+    f, c, p = summary["friction_budget_genuine_pct"], summary["catch_rates_pct"], summary["per_100k_triggered_sessions"]
+    anchor = summary["prior"]["base_rate_anchor"]["prior_derived"]
+    zero = next(r for r in sensitivity["rows"] if r["voice_uptake"] == 0.0 and abs(r["prior"] - summary["prior"]["value"]) < 1e-12)
+    d: dict = {
+        "label": "Assumption-driven projection (engine/sim_assumptions.yaml); not measured outcomes",
+        "spec_version": "0.2", "engine_config_version": cfg.version, "seed": summary["seed"],
+        "prior": summary["prior"]["as_fraction"], "prior_base_rate_anchor": summary["prior"]["base_rate_anchor"]["prior_derived_as_fraction"],
+        "theta_red": cfg.tiers.red_at_or_above, "green_below": cfg.tiers.green_below,
+        "voice_check_uptake": summary["voice"]["check_uptake"],
+        "voice_band_rates_source": summary["voice"]["band_rates_source"],
+        "genuine_silent_pct": f["silent_green"], "genuine_one_tap_pct": f["one_tap_question_then_green"],
+        "genuine_pause_and_verify_pct": f["saw_pause_and_verify"], "genuine_final_amber_pct": f["final_amber"],
+        "genuine_final_red_pct": f["final_red_hold"], "genuine_resolved_green_by_a_check_pct": f["resolved_to_green_by_a_check"],
+        "budget_genuine_red_max_pct": sweep["budget"]["genuine_red_max_pct"],
+        "budget_genuine_pause_verify_max_pct": sweep["budget"]["genuine_pause_verify_max_pct"],
+        "budget_red_met": sweep["config_meets_red_budget"], "budget_pause_verify_met": sweep["config_meets_pause_verify_budget"],
+    }
+    for k in ("T1", "T2", "T3"):
+        d[f"scam_{k}_amber_plus_pct"] = c[k]["amber_plus"]
+        d[f"scam_{k}_red_pct"] = c[k]["red_hold"]
+    d["scam_weighted_amber_plus_pct"] = c["all_scams_weighted"]["amber_plus"]
+    d["scam_weighted_red_pct"] = c["all_scams_weighted"]["red_hold"]
+    d["scam_weighted_stopped_pct"] = c["all_scams_weighted"]["stopped_expected"]
+    for r in ablation["rows"]:
+        d[f"ablation_{r['level']}_scam_amber_plus_pct"] = r["scam_amber_plus_pct"]
+        d[f"ablation_{r['level']}_scam_red_pct"] = r["scam_red_pct"]
+        d[f"ablation_{r['level']}_genuine_pause_verify_pct"] = r["genuine_saw_pause_and_verify_pct"]
+        d[f"ablation_{r['level']}_genuine_red_pct"] = r["genuine_red_pct"]
+    d["zero_voice_scam_red_pct_1_400"] = zero["scam_red_pct"]
+    d["zero_voice_scam_amber_plus_pct_1_400"] = zero["scam_amber_plus_pct"]
+    d["zero_voice_genuine_red_pct_1_400"] = zero["genuine_red_pct"]
+    d["holds_per_scam_held_1_400"] = p["genuine_holds_per_scam_held"]
+    d["holds_per_scam_held_1_1300"] = _nearest(precision, anchor, "genuine_holds_per_scam_held")
+    d["share_of_red_holds_that_are_scams_1_400"] = p["share_of_red_holds_that_are_scams"]
+    d["inr_protected_per_inr_delayed"] = p["protected_per_rupee_delayed"]
+    d["inr_protected_per_100k_sessions"] = p["inr_protected_expected"]
+    d["inr_delayed_per_100k_sessions"] = p["inr_genuine_delayed_by_hold"]
+    if baseline:
+        d["v01_holds_per_scam_held_1_400"] = _nearest(baseline["rows"], 1 / 400, "genuine_holds_per_scam_held")
+        d["v01_holds_per_scam_held_1_1300"] = _nearest(baseline["rows"], anchor, "genuine_holds_per_scam_held")
+        for k, v in baseline["headline_v01"].items():
+            d[f"v01_{k}"] = v
+    lat_path = ENGINE_DIR.parent / "app" / "server" / "latency.json"
+    if lat_path.exists():
+        lat = json.loads(lat_path.read_text(encoding="utf-8"))
+        d["risk_assess_p50_ms"] = lat["new_case_ms"]["p50"]
+        d["risk_assess_p95_ms"] = lat["new_case_ms"]["p95"]
+        d["risk_assess_latency_source"] = "app/server/latency.json (in-process TestClient, n=300)"
+    return d
+
+
+# ---------------------------------------------------------------------------
 # main entry
 # ---------------------------------------------------------------------------
 def simulate(n_genuine: int | None = None, n_scam: int | None = None, seed: int | None = None,
@@ -528,7 +792,9 @@ def simulate(n_genuine: int | None = None, n_scam: int | None = None, seed: int 
     prior_sweep = [float(x) for x in A["prior"]["sweep"]]
     review_at = cfg.actions.analyst_review_at_or_above_inr
     kw = dict(review_at=review_at, amber_cancel_neg=beh["amber_cancel_if_decisive_negative"]["value"],
-              red_genuine_completes=beh["red_genuine_completes"]["value"])
+              red_genuine_completes=beh["red_genuine_completes"]["value"],
+              checklist_uptake=beh["checklist_uptake"]["value"],
+              amber_cancel_user_neg=beh["amber_cancel_if_user_reported_negative"]["value"])
 
     measured, band_src = measured_band_rates()
     band_rates = measured or A["detector"]["band_rates"]
@@ -651,7 +917,8 @@ def simulate(n_genuine: int | None = None, n_scam: int | None = None, seed: int 
         h = summarise(S, Ra, A, prior)
         abl_rows.append({
             "level": name,
-            "label": {"context_only": "Context only (call + payment)", "plus_claim": "+ one-tap claim",
+            "label": {"context_only": "Context only (call + payment)",
+                      "plus_claim": "+ one-tap claim (incl. the 3-tap cue checklist for 'no one' / 'someone else')",
                       "plus_out_of_band": "+ out-of-band checks", "plus_voice": f"+ voice check ({uptake:.0%} uptake)"}[name],
             "genuine_saw_pause_and_verify_pct": gp(h["genuine"], "saw_pause_and_verify"),
             "genuine_final_amber_pct": gp(h["genuine"], "final_amber"),
@@ -667,6 +934,18 @@ def simulate(n_genuine: int | None = None, n_scam: int | None = None, seed: int 
     ablation = {"assumption_driven_projection": True, "disclaimer": DISCLAIMER, "seed": seed,
                 "prior": prior, "voice_uptake": uptake, "rows": abl_rows}
 
+    # alert budget: theta_red / green_below sweeps; Red precision vs prior (v0.2 and the v0.1 baseline)
+    sweep = threshold_sweep(S, A, cfg, prior, uptake, kw)
+    precision = red_precision_curve(S, A, eng, precision_priors(A), uptake, kw)
+    baseline = None
+    base_path = (Path(out_dir) if out_dir is not None else RESULTS_DIR) / "sim_v01_baseline.json"
+    if base_path.exists():
+        baseline = json.loads(base_path.read_text(encoding="utf-8"))
+    summary["alert_budget"] = {k: sweep[k] for k in ("budget", "theta_red_in_config", "best_theta_meeting_red_budget",
+                                                    "config_meets_red_budget", "config_meets_pause_verify_budget")}
+    summary["red_precision_vs_prior"] = precision
+    deck = deck_numbers(summary, ablation, sensitivity, sweep, precision, baseline, cfg)
+
     summary["elapsed_sec"] = round(time.time() - t0, 2)
     if out_dir is not None:
         out_dir = Path(out_dir)
@@ -674,12 +953,18 @@ def simulate(n_genuine: int | None = None, n_scam: int | None = None, seed: int 
         (out_dir / "sim_summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
         (out_dir / "sim_sensitivity.json").write_text(json.dumps(sensitivity, indent=2), encoding="utf-8")
         (out_dir / "sim_ablation.json").write_text(json.dumps(ablation, indent=2), encoding="utf-8")
+        (out_dir / "sim_threshold_sweep.json").write_text(json.dumps(sweep, indent=2), encoding="utf-8")
+        (out_dir / "deck_numbers.json").write_text(json.dumps(deck, indent=2, ensure_ascii=False), encoding="utf-8")
         if charts:
             from .sim_charts import render_all
-            render_all(summary, sensitivity, ablation, out_dir)
+            render_all(summary, sensitivity, ablation, out_dir, sweep=sweep, precision=precision, baseline=baseline)
     if verbose:
         _print_headline(summary, ablation, sensitivity)
-    return {"summary": summary, "sensitivity": sensitivity, "ablation": ablation}
+        print(f"  theta_red {cfg.tiers.red_at_or_above}  red budget met: {sweep['config_meets_red_budget']}  "
+              f"P&V budget met: {sweep['config_meets_pause_verify_budget']}  best theta meeting red budget: "
+              f"{sweep['best_theta_meeting_red_budget']}")
+    return {"summary": summary, "sensitivity": sensitivity, "ablation": ablation, "sweep": sweep,
+            "precision": precision, "deck_numbers": deck}
 
 
 def _print_headline(summary: dict, ablation: dict, sensitivity: dict) -> None:
@@ -713,10 +998,19 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--out", type=Path, default=RESULTS_DIR)
     ap.add_argument("--no-charts", action="store_true")
     ap.add_argument("--quick", action="store_true", help="small N smoke run")
+    ap.add_argument("--rebuild-v01-baseline", action="store_true",
+                    help="re-run the v0.1 engine+sim from git (ac7620f) for the before/after comparison")
     a = ap.parse_args(argv)
     if a.quick:
         a.n_genuine = a.n_genuine or 20000
         a.n_scam = a.n_scam or 5000
+    base = Path(a.out) / "sim_v01_baseline.json"
+    if a.rebuild_v01_baseline or not base.exists():
+        try:
+            build_v01_baseline(a.out)
+            print("[pehchaan.sim] v0.1 baseline written to", base)
+        except Exception as exc:  # git not available etc.
+            print("[pehchaan.sim] v0.1 baseline skipped:", exc)
     simulate(n_genuine=a.n_genuine, n_scam=a.n_scam, seed=a.seed, prior=a.prior, voice_uptake=a.voice_uptake,
              out_dir=a.out, charts=not a.no_charts)
 

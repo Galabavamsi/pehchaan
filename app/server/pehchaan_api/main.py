@@ -87,9 +87,10 @@ class AssessIn(BaseModel):
     payer_id: str | None = None
     payment: PaymentIn | None = None
     call: CallIn | None = None
-    claim: Literal["family", "bank", "authority", "other", "none"] | None = None
-    claim_target: str | None = None
+    claim: Literal["family", "bank", "upi_or_shop", "authority", "other", "none"] | None = None
+    claim_target: str | None = Field(None, description="relative id for family; bank id for bank (e.g. 'bdb')")
     cues: list[str] = []
+    checklist_done: bool = False
     voice: dict | None = None
     scenario: str | None = None
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import glob
 import logging
+import math
 from pathlib import Path
 
 import matplotlib
@@ -126,6 +127,8 @@ def _pxbar(ax, x, y, w, h, color, r=4.0, z=3):
 
 
 def _fmt_pct(v: float) -> str:
+    if v == 0:
+        return "0%"
     if v >= 10:
         return f"{v:.0f}%"
     if v >= 1:
@@ -172,7 +175,7 @@ def chart_friction_funnel(summary: dict, out: Path):
         ax.text(x0 + wmax + 10, y + 21, _fmt_pct(v), family=MONO, size=16, color=INK, va="center")
         ax.text(x0, y + 52, note, family=BODY, size=12.5, color=SLATE, va="baseline")
         y += 84
-    _footer(fig, f"seed {summary['seed']}")
+    _footer(fig, f"θ_red {summary['alert_budget']['theta_red_in_config']:g} · seed {summary['seed']}")
     _save(fig, out, "chart_friction_funnel")
 
 
@@ -217,7 +220,7 @@ def chart_catch_by_pattern(summary: dict, out: Path):
 
 def chart_ablation(ablation: dict, summary: dict, out: Path):
     rows = ablation["rows"]
-    labels = ["Context only\n(call + payment)", "+ one-tap\nclaim", "+ out-of-band\nchecks",
+    labels = ["Context only\n(call + payment)", "+ claim &\nchecklist", "+ out-of-band\nchecks",
               f"+ voice check\n({ablation['voice_uptake']:.0%} uptake)"]
     series = [("scam_amber_plus_pct", AMBER, "Scams paused (Amber+)"),
               ("scam_red_pct", RED, "Scams held (Red)"),
@@ -325,9 +328,116 @@ def chart_sensitivity(sensitivity: dict, summary: dict, out: Path):
     _save(fig, out, "chart_sensitivity")
 
 
-def render_all(summary: dict, sensitivity: dict, ablation: dict, out: Path):
+def _prior_ticks(priors):
+    return [("1/2k" if round(1 / p) == 2000 else "1/1k" if round(1 / p) == 1000 else f"1/{round(1 / p)}") for p in priors]
+
+
+def chart_red_precision(precision: list[dict], baseline: dict | None, summary: dict, out: Path):
+    """Genuine holds per scam held vs prior, v0.1 vs v0.2 (lower is better)."""
+    H = 420
+    fig = _fig(H)
+    _header(fig, "Fewer genuine holds per scam held",
+            "Genuine payments held for every scam payment held · v0.1 vs v0.2 guardrails")
+    lx, ly = 20, 78
+    series = []
+    if baseline:
+        series.append(("v0.1 (SPEC v0.1)", SLATE, baseline["rows"]))
+    series.append((f"v0.2 (G7, G1 trigger-exclusion, strict G2, θ_red {summary['alert_budget']['theta_red_in_config']:g})",
+                   ORANGE, precision))
+    for lab, col, _ in series:
+        fig.add_artist(plt.Line2D([lx / 600, (lx + 18) / 600], [1 - ly / H] * 2, color=col, linewidth=2.5,
+                                  transform=fig.transFigure))
+        fig.text(*_px(fig, lx + 24, ly), lab, family=BODY, size=13, color=INK, va="center")
+        lx += 170
+    ax = fig.add_axes([56 / 600, 104 / H, 520 / 600, (H - 104 - 92) / H])
+    priors = [r["prior"] for r in precision]
+    ys_all = [r["genuine_holds_per_scam_held"] for _, _, rows in series for r in rows if r["genuine_holds_per_scam_held"]]
+    ymax = max(2.0, math.ceil(max(ys_all) + 0.8))
+    ax.set_xscale("log")
+    ax.set_xlim(min(priors) / 1.2, max(priors) * 1.2)
+    ax.set_ylim(0, ymax)
+    _clean(ax, "y")
+    ticks = [1 / 2000, 1 / 1000, 1 / 400, 1 / 200, 1 / 100]
+    ax.set_xticks(ticks)
+    ax.set_xticklabels(_prior_ticks(ticks), family=MONO, size=12)
+    ax.minorticks_off()
+    yt = list(range(0, ymax + 1, 1 if ymax <= 6 else 2))
+    ax.set_yticks(yt)
+    ax.set_yticklabels([f"{t:g}" for t in yt], family=MONO, size=12)
+    ax.axhline(1.0, color="#cfc5b0", linewidth=1, linestyle=(0, (3, 3)), zorder=1)
+    ax.text(max(priors) * 1.15, 1.0 - ymax * 0.025, "1 genuine hold per scam held", family=BODY, size=12, color=SLATE,
+            va="top", ha="right")
+    anchor = summary["prior"]["base_rate_anchor"]["prior_derived"]
+    for _, col, rows in series:
+        xs = [r["prior"] for r in rows if r["genuine_holds_per_scam_held"] is not None]
+        ys = [r["genuine_holds_per_scam_held"] for r in rows if r["genuine_holds_per_scam_held"] is not None]
+        ax.plot(xs, ys, color=col, linewidth=2.2, solid_capstyle="round", zorder=3)
+        for mark in (1 / 400, anchor):
+            r = min(rows, key=lambda r: abs(math.log(r["prior"]) - math.log(mark)))
+            v = r["genuine_holds_per_scam_held"]
+            ax.plot([r["prior"]], [v], "o", color=col, markersize=8, markeredgecolor=PAPER, markeredgewidth=2, zorder=5)
+            ax.text(r["prior"] * 1.07, v + ymax * 0.02, f"{v:.1f}", family=MONO, size=13, color=INK, va="bottom",
+                    ha="left", zorder=6)
+    for xv, lab in ((1 / 400, "SPEC default 1/400"), (anchor, f"base-rate anchor {summary['prior']['base_rate_anchor']['prior_derived_as_fraction']}")):
+        ax.axvline(xv, color="#cfc5b0", linewidth=1, zorder=1)
+        ax.text(xv * 1.05, ymax * 0.985, lab, family=BODY, size=12, color=SLATE, va="top", ha="left")
+    fig.text(*_px(fig, 56, H - 40), "x: prior P(scam | trigger fired), log scale · lower is better · 30% voice-check uptake",
+             family=BODY, size=12.5, color=SLATE)
+    _footer(fig, f"seed {summary['seed']}")
+    _save(fig, out, "chart_red_precision")
+
+
+def chart_threshold_tradeoff(sweep: dict, summary: dict, out: Path):
+    rows = sweep["theta_rows"]
+    th = [r["theta_red"] for r in rows]
+    H = 420
+    fig = _fig(H)
+    _header(fig, "Choosing the Red threshold against the alert budget",
+            f"Prior {summary['prior']['as_fraction']} · budget: ≤ {sweep['budget']['genuine_red_max_pct']:g}% of genuine "
+            f"payments held")
+    chosen = sweep["theta_red_in_config"]
+
+    def panel(x_px, w_px, key, title, col, budget=None, ymax=None):
+        ax = fig.add_axes([x_px / 600, 96 / H, w_px / 600, (H - 96 - 96) / H])
+        ys = [r[key] for r in rows]
+        top = ymax or max(ys) * 1.15
+        ax.set_xlim(min(th) - 0.02, max(th) + 0.02)
+        ax.set_ylim(0, top)
+        _clean(ax, "y")
+        ax.set_xticks([0.5, 0.6, 0.7, 0.8, 0.9])
+        ax.set_xticklabels(["0.5", "0.6", "0.7", "0.8", "0.9"], family=MONO, size=12)
+        ax.tick_params(axis="y", labelsize=12)
+        for t in ax.get_yticklabels():
+            t.set_family(MONO)
+        ax.set_title(title, family=BODY, size=14, weight="semibold", color=INK, loc="left", pad=8)
+        if budget is not None:
+            ax.axhline(budget, color=RED, linewidth=1.2, linestyle=(0, (4, 3)), zorder=2)
+            ax.text(min(th), budget + top * 0.02, f"budget {budget:g}%", family=BODY, size=12, color=RED, va="bottom")
+        ax.axvline(chosen, color="#cfc5b0", linewidth=1, zorder=1)
+        ax.plot(th, ys, color=col, linewidth=2.2, zorder=3)
+        ax.plot(th, ys, "o", color=col, markersize=5, markeredgecolor=PAPER, markeredgewidth=1.5, zorder=4)
+        v = next(r[key] for r in rows if abs(r["theta_red"] - chosen) < 1e-9)
+        ax.plot([chosen], [v], "o", color=col, markersize=9, markeredgecolor=PAPER, markeredgewidth=2, zorder=5)
+        ax.text(chosen + 0.015, v + top * 0.03, f"{v:.2f}%" if v < 10 else f"{v:.0f}%", family=MONO, size=13,
+                color=INK, va="bottom")
+        return ax
+
+    panel(46, 240, "genuine_red_pct", "Genuine payments held", RED, budget=sweep["budget"]["genuine_red_max_pct"])
+    panel(346, 234, "scam_red_pct", "Scam payments held", ORANGE, ymax=100)
+    fig.text(*_px(fig, 46, H - 40), f"x: θ_red (Red threshold on p) · chosen θ_red = {chosen:g} (vertical line)",
+             family=BODY, size=12.5, color=SLATE)
+    _footer(fig, f"seed {summary['seed']}")
+    _save(fig, out, "chart_threshold_tradeoff")
+
+
+def render_all(summary: dict, sensitivity: dict, ablation: dict, out: Path, sweep: dict | None = None,
+               precision: list[dict] | None = None, baseline: dict | None = None):
     out = Path(out)
     chart_friction_funnel(summary, out)
     chart_catch_by_pattern(summary, out)
     chart_ablation(ablation, summary, out)
     chart_sensitivity(sensitivity, summary, out)
+    if precision:
+        chart_red_precision(precision, baseline, summary, out)
+    if sweep:
+        chart_threshold_tradeoff(sweep, summary, out)

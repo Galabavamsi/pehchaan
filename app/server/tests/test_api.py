@@ -75,7 +75,7 @@ def test_t2_bank_claim_registry_says_no_call(client):
     sc, a1 = start(client, "T2")
     assert a1["ask_claim"]
     cid = a1["case_id"]
-    a2 = client.post("/v1/risk/assess", json={"case_id": cid, "claim": "bank"}).json()
+    a2 = client.post("/v1/risk/assess", json={"case_id": cid, "claim": "bank", "claim_target": "bdb"}).json()
     assert "bank_claim_not_1600" in a2["signals"] and a2["tier"] == "amber"
     assert a2["actions"][0]["id"] == "bank_registry"
     a3 = client.post(f"/v1/cases/{cid}/checks/bank_registry").json()

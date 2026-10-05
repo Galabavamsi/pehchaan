@@ -6,7 +6,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-10-06T01:39:44.640476</dc:date>
+    <dc:date>2026-10-06T03:40:42.338143</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -50,8 +50,8 @@ z
     <g id="xtick_2">
      <g id="line2d_2"/>
      <g id="text_2">
-      <text style="fill: #1b1f24; font: 13px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(223.502028 335.4575)">+ one-tap</text>
-      <text style="fill: #1b1f24; font: 13px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(237.699449 348.986437)">claim</text>
+      <text style="fill: #1b1f24; font: 13px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(225.556637 335.4575)">+ claim &amp;</text>
+      <text style="fill: #1b1f24; font: 13px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(226.572262 348.986437)">checklist</text>
      </g>
     </g>
     <g id="xtick_3">
@@ -74,7 +74,7 @@ z
      <g id="line2d_5">
       <path d="M 52 318 
 L 582 318 
-" clip-path="url(#pe022ebbb85)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+" clip-path="url(#p993bc12f38)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
      </g>
      <g id="line2d_6"/>
      <g id="text_5">
@@ -85,7 +85,7 @@ L 582 318
      <g id="line2d_7">
       <path d="M 52 268 
 L 582 268 
-" clip-path="url(#pe022ebbb85)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+" clip-path="url(#p993bc12f38)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
      </g>
      <g id="line2d_8"/>
      <g id="text_6">
@@ -96,7 +96,7 @@ L 582 268
      <g id="line2d_9">
       <path d="M 52 218 
 L 582 218 
-" clip-path="url(#pe022ebbb85)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+" clip-path="url(#p993bc12f38)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
      </g>
      <g id="line2d_10"/>
      <g id="text_7">
@@ -107,7 +107,7 @@ L 582 218
      <g id="line2d_11">
       <path d="M 52 168 
 L 582 168 
-" clip-path="url(#pe022ebbb85)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+" clip-path="url(#p993bc12f38)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
      </g>
      <g id="line2d_12"/>
      <g id="text_8">
@@ -118,7 +118,7 @@ L 582 168
      <g id="line2d_13">
       <path d="M 52 118 
 L 582 118 
-" clip-path="url(#pe022ebbb85)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+" clip-path="url(#p993bc12f38)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
      </g>
      <g id="line2d_14"/>
      <g id="text_9">
@@ -130,304 +130,283 @@ L 582 118
     <path d="M 81.869048 318 
 L 104.154762 318 
 Q 108.154762 318 108.154762 314 
-L 108.154762 145.452 
-Q 108.154762 141.452 104.154762 141.452 
-L 81.869048 141.452 
-Q 77.869048 141.452 77.869048 145.452 
+L 108.154762 145.946 
+Q 108.154762 141.946 104.154762 141.946 
+L 81.869048 141.946 
+Q 77.869048 141.946 77.869048 145.946 
 L 77.869048 314 
 Q 77.869048 318 81.869048 318 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #e0a526"/>
+" clip-path="url(#p993bc12f38)" style="fill: #e0a526"/>
    </g>
    <g id="patch_4">
     <path d="M 77.869048 318 
 L 108.154762 318 
-L 108.154762 145.452 
-L 77.869048 145.452 
+L 108.154762 145.946 
+L 77.869048 145.946 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #e0a526"/>
+" clip-path="url(#p993bc12f38)" style="fill: #e0a526"/>
    </g>
    <g id="text_10">
-    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="93.011905" y="136.092" transform="rotate(-0 93.011905 136.092)">88%</text>
-   </g>
-   <g id="patch_5">
-    <path d="M 116.571429 318 
-L 138.857143 318 
-Q 142.857143 318 142.857143 314 
-L 142.857143 267.982 
-Q 142.857143 263.982 138.857143 263.982 
-L 116.571429 263.982 
-Q 112.571429 263.982 112.571429 267.982 
-L 112.571429 314 
-Q 112.571429 318 116.571429 318 
-z
-" clip-path="url(#pe022ebbb85)" style="fill: #c8372d"/>
-   </g>
-   <g id="patch_6">
-    <path d="M 112.571429 318 
-L 142.857143 318 
-L 142.857143 267.982 
-L 112.571429 267.982 
-z
-" clip-path="url(#pe022ebbb85)" style="fill: #c8372d"/>
+    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="93.011905" y="136.586" transform="rotate(-0 93.011905 136.586)">88%</text>
    </g>
    <g id="text_11">
-    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="127.714286" y="258.622" transform="rotate(-0 127.714286 258.622)">27%</text>
+    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="127.714286" y="312.64" transform="rotate(-0 127.714286 312.64)">0%</text>
    </g>
-   <g id="patch_7">
-    <path d="M 151.03481 318 
-L 173.798524 318 
-Q 177.559524 318 177.559524 314.239 
-L 177.559524 314.239 
-Q 177.559524 310.478 173.798524 310.478 
-L 151.03481 310.478 
-Q 147.27381 310.478 147.27381 314.239 
-L 147.27381 314.239 
-Q 147.27381 318 151.03481 318 
+   <g id="patch_5">
+    <path d="M 150.95781 318 
+L 173.875524 318 
+Q 177.559524 318 177.559524 314.316 
+L 177.559524 314.316 
+Q 177.559524 310.632 173.875524 310.632 
+L 150.95781 310.632 
+Q 147.27381 310.632 147.27381 314.316 
+L 147.27381 314.316 
+Q 147.27381 318 150.95781 318 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #6b7280"/>
+" clip-path="url(#p993bc12f38)" style="fill: #6b7280"/>
    </g>
-   <g id="patch_8">
+   <g id="patch_6">
     <path d="M 147.27381 318 
 L 177.559524 318 
-L 177.559524 314.239 
-L 147.27381 314.239 
+L 177.559524 314.316 
+L 147.27381 314.316 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #6b7280"/>
+" clip-path="url(#p993bc12f38)" style="fill: #6b7280"/>
    </g>
    <g id="text_12">
-    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="162.416667" y="305.118" transform="rotate(-0 162.416667 305.118)">3.8%</text>
+    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="162.416667" y="305.272" transform="rotate(-0 162.416667 305.272)">3.7%</text>
    </g>
    <g id="text_13">
-    <text style="fill: #6b7280; font: 12px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="127.714286" y="399.016875" transform="rotate(-0 127.714286 399.016875)">genuine held 0.01%</text>
+    <text style="fill: #6b7280; font: 12px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="127.714286" y="399.016875" transform="rotate(-0 127.714286 399.016875)">genuine held 0%</text>
    </g>
-   <g id="patch_9">
+   <g id="patch_7">
     <path d="M 208.059524 318 
 L 230.345238 318 
 Q 234.345238 318 234.345238 314 
-L 234.345238 128.988 
-Q 234.345238 124.988 230.345238 124.988 
-L 208.059524 124.988 
-Q 204.059524 124.988 204.059524 128.988 
+L 234.345238 129.068 
+Q 234.345238 125.068 230.345238 125.068 
+L 208.059524 125.068 
+Q 204.059524 125.068 204.059524 129.068 
 L 204.059524 314 
 Q 204.059524 318 208.059524 318 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #e0a526"/>
+" clip-path="url(#p993bc12f38)" style="fill: #e0a526"/>
    </g>
-   <g id="patch_10">
+   <g id="patch_8">
     <path d="M 204.059524 318 
 L 234.345238 318 
-L 234.345238 128.988 
-L 204.059524 128.988 
+L 234.345238 129.068 
+L 204.059524 129.068 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #e0a526"/>
+" clip-path="url(#p993bc12f38)" style="fill: #e0a526"/>
    </g>
    <g id="text_14">
-    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="219.202381" y="119.628" transform="rotate(-0 219.202381 119.628)">97%</text>
+    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="219.202381" y="119.708" transform="rotate(-0 219.202381 119.708)">96%</text>
    </g>
-   <g id="patch_11">
+   <g id="patch_9">
     <path d="M 242.761905 318 
 L 265.047619 318 
 Q 269.047619 318 269.047619 314 
-L 269.047619 185.508 
-Q 269.047619 181.508 265.047619 181.508 
-L 242.761905 181.508 
-Q 238.761905 181.508 238.761905 185.508 
+L 269.047619 201.11 
+Q 269.047619 197.11 265.047619 197.11 
+L 242.761905 197.11 
+Q 238.761905 197.11 238.761905 201.11 
 L 238.761905 314 
 Q 238.761905 318 242.761905 318 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #c8372d"/>
+" clip-path="url(#p993bc12f38)" style="fill: #c8372d"/>
    </g>
-   <g id="patch_12">
+   <g id="patch_10">
     <path d="M 238.761905 318 
 L 269.047619 318 
-L 269.047619 185.508 
-L 238.761905 185.508 
+L 269.047619 201.11 
+L 238.761905 201.11 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #c8372d"/>
+" clip-path="url(#p993bc12f38)" style="fill: #c8372d"/>
    </g>
    <g id="text_15">
-    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="253.904762" y="176.148" transform="rotate(-0 253.904762 176.148)">68%</text>
+    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="253.904762" y="191.75" transform="rotate(-0 253.904762 191.75)">60%</text>
    </g>
-   <g id="patch_13">
+   <g id="patch_11">
     <path d="M 277.464286 318 
 L 299.75 318 
 Q 303.75 318 303.75 314 
-L 303.75 301.738 
-Q 303.75 297.738 299.75 297.738 
-L 277.464286 297.738 
-Q 273.464286 297.738 273.464286 301.738 
+L 303.75 303.572 
+Q 303.75 299.572 299.75 299.572 
+L 277.464286 299.572 
+Q 273.464286 299.572 273.464286 303.572 
 L 273.464286 314 
 Q 273.464286 318 277.464286 318 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #6b7280"/>
+" clip-path="url(#p993bc12f38)" style="fill: #6b7280"/>
    </g>
-   <g id="patch_14">
+   <g id="patch_12">
     <path d="M 273.464286 318 
 L 303.75 318 
-L 303.75 301.738 
-L 273.464286 301.738 
+L 303.75 303.572 
+L 273.464286 303.572 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #6b7280"/>
+" clip-path="url(#p993bc12f38)" style="fill: #6b7280"/>
    </g>
    <g id="text_16">
-    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="288.607143" y="292.378" transform="rotate(-0 288.607143 292.378)">10%</text>
+    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="288.607143" y="294.212" transform="rotate(-0 288.607143 294.212)">9.2%</text>
    </g>
    <g id="text_17">
-    <text style="fill: #6b7280; font: 12px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="253.904762" y="399.016875" transform="rotate(-0 253.904762 399.016875)">genuine held 0.42%</text>
+    <text style="fill: #6b7280; font: 12px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="253.904762" y="399.016875" transform="rotate(-0 253.904762 399.016875)">genuine held 0.13%</text>
    </g>
-   <g id="patch_15">
+   <g id="patch_13">
     <path d="M 334.25 318 
 L 356.535714 318 
 Q 360.535714 318 360.535714 314 
-L 360.535714 129.048 
-Q 360.535714 125.048 356.535714 125.048 
-L 334.25 125.048 
-Q 330.25 125.048 330.25 129.048 
+L 360.535714 129.354 
+Q 360.535714 125.354 356.535714 125.354 
+L 334.25 125.354 
+Q 330.25 125.354 330.25 129.354 
 L 330.25 314 
 Q 330.25 318 334.25 318 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #e0a526"/>
+" clip-path="url(#p993bc12f38)" style="fill: #e0a526"/>
    </g>
-   <g id="patch_16">
+   <g id="patch_14">
     <path d="M 330.25 318 
 L 360.535714 318 
-L 360.535714 129.048 
-L 330.25 129.048 
+L 360.535714 129.354 
+L 330.25 129.354 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #e0a526"/>
+" clip-path="url(#p993bc12f38)" style="fill: #e0a526"/>
    </g>
    <g id="text_18">
-    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="345.392857" y="119.688" transform="rotate(-0 345.392857 119.688)">96%</text>
+    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="345.392857" y="119.994" transform="rotate(-0 345.392857 119.994)">96%</text>
    </g>
-   <g id="patch_17">
+   <g id="patch_15">
     <path d="M 368.952381 318 
 L 391.238095 318 
 Q 395.238095 318 395.238095 314 
-L 395.238095 174.896 
-Q 395.238095 170.896 391.238095 170.896 
-L 368.952381 170.896 
-Q 364.952381 170.896 364.952381 174.896 
+L 395.238095 185.346 
+Q 395.238095 181.346 391.238095 181.346 
+L 368.952381 181.346 
+Q 364.952381 181.346 364.952381 185.346 
 L 364.952381 314 
 Q 364.952381 318 368.952381 318 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #c8372d"/>
+" clip-path="url(#p993bc12f38)" style="fill: #c8372d"/>
    </g>
-   <g id="patch_18">
+   <g id="patch_16">
     <path d="M 364.952381 318 
 L 395.238095 318 
-L 395.238095 174.896 
-L 364.952381 174.896 
+L 395.238095 185.346 
+L 364.952381 185.346 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #c8372d"/>
+" clip-path="url(#p993bc12f38)" style="fill: #c8372d"/>
    </g>
    <g id="text_19">
-    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="380.095238" y="165.536" transform="rotate(-0 380.095238 165.536)">74%</text>
+    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="380.095238" y="175.986" transform="rotate(-0 380.095238 175.986)">68%</text>
    </g>
-   <g id="patch_19">
+   <g id="patch_17">
     <path d="M 403.654762 318 
 L 425.940476 318 
 Q 429.940476 318 429.940476 314 
-L 429.940476 301.738 
-Q 429.940476 297.738 425.940476 297.738 
-L 403.654762 297.738 
-Q 399.654762 297.738 399.654762 301.738 
+L 429.940476 303.572 
+Q 429.940476 299.572 425.940476 299.572 
+L 403.654762 299.572 
+Q 399.654762 299.572 399.654762 303.572 
 L 399.654762 314 
 Q 399.654762 318 403.654762 318 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #6b7280"/>
+" clip-path="url(#p993bc12f38)" style="fill: #6b7280"/>
    </g>
-   <g id="patch_20">
+   <g id="patch_18">
     <path d="M 399.654762 318 
 L 429.940476 318 
-L 429.940476 301.738 
-L 399.654762 301.738 
+L 429.940476 303.572 
+L 399.654762 303.572 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #6b7280"/>
+" clip-path="url(#p993bc12f38)" style="fill: #6b7280"/>
    </g>
    <g id="text_20">
-    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="414.797619" y="292.378" transform="rotate(-0 414.797619 292.378)">10%</text>
+    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="414.797619" y="294.212" transform="rotate(-0 414.797619 294.212)">9.2%</text>
    </g>
    <g id="text_21">
-    <text style="fill: #6b7280; font: 12px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="380.095238" y="399.016875" transform="rotate(-0 380.095238 399.016875)">genuine held 0.85%</text>
+    <text style="fill: #6b7280; font: 12px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="380.095238" y="399.016875" transform="rotate(-0 380.095238 399.016875)">genuine held 0.23%</text>
    </g>
-   <g id="patch_21">
+   <g id="patch_19">
     <path d="M 460.440476 318 
 L 482.72619 318 
 Q 486.72619 318 486.72619 314 
-L 486.72619 129.082 
-Q 486.72619 125.082 482.72619 125.082 
-L 460.440476 125.082 
-Q 456.440476 125.082 456.440476 129.082 
+L 486.72619 129.39 
+Q 486.72619 125.39 482.72619 125.39 
+L 460.440476 125.39 
+Q 456.440476 125.39 456.440476 129.39 
 L 456.440476 314 
 Q 456.440476 318 460.440476 318 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #e0a526"/>
+" clip-path="url(#p993bc12f38)" style="fill: #e0a526"/>
    </g>
-   <g id="patch_22">
+   <g id="patch_20">
     <path d="M 456.440476 318 
 L 486.72619 318 
-L 486.72619 129.082 
-L 456.440476 129.082 
+L 486.72619 129.39 
+L 456.440476 129.39 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #e0a526"/>
+" clip-path="url(#p993bc12f38)" style="fill: #e0a526"/>
    </g>
    <g id="text_22">
-    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="471.583333" y="119.722" transform="rotate(-0 471.583333 119.722)">96%</text>
+    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="471.583333" y="120.03" transform="rotate(-0 471.583333 120.03)">96%</text>
    </g>
-   <g id="patch_23">
+   <g id="patch_21">
     <path d="M 495.142857 318 
 L 517.428571 318 
 Q 521.428571 318 521.428571 314 
-L 521.428571 168.008 
-Q 521.428571 164.008 517.428571 164.008 
-L 495.142857 164.008 
-Q 491.142857 164.008 491.142857 168.008 
+L 521.428571 186.406 
+Q 521.428571 182.406 517.428571 182.406 
+L 495.142857 182.406 
+Q 491.142857 182.406 491.142857 186.406 
 L 491.142857 314 
 Q 491.142857 318 495.142857 318 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #c8372d"/>
+" clip-path="url(#p993bc12f38)" style="fill: #c8372d"/>
    </g>
-   <g id="patch_24">
+   <g id="patch_22">
     <path d="M 491.142857 318 
 L 521.428571 318 
-L 521.428571 168.008 
-L 491.142857 168.008 
+L 521.428571 186.406 
+L 491.142857 186.406 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #c8372d"/>
+" clip-path="url(#p993bc12f38)" style="fill: #c8372d"/>
    </g>
    <g id="text_23">
-    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="506.285714" y="158.648" transform="rotate(-0 506.285714 158.648)">77%</text>
+    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="506.285714" y="177.046" transform="rotate(-0 506.285714 177.046)">68%</text>
    </g>
-   <g id="patch_25">
+   <g id="patch_23">
     <path d="M 529.845238 318 
 L 552.130952 318 
 Q 556.130952 318 556.130952 314 
-L 556.130952 301.738 
-Q 556.130952 297.738 552.130952 297.738 
-L 529.845238 297.738 
-Q 525.845238 297.738 525.845238 301.738 
+L 556.130952 303.572 
+Q 556.130952 299.572 552.130952 299.572 
+L 529.845238 299.572 
+Q 525.845238 299.572 525.845238 303.572 
 L 525.845238 314 
 Q 525.845238 318 529.845238 318 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #6b7280"/>
+" clip-path="url(#p993bc12f38)" style="fill: #6b7280"/>
    </g>
-   <g id="patch_26">
+   <g id="patch_24">
     <path d="M 525.845238 318 
 L 556.130952 318 
-L 556.130952 301.738 
-L 525.845238 301.738 
+L 556.130952 303.572 
+L 525.845238 303.572 
 z
-" clip-path="url(#pe022ebbb85)" style="fill: #6b7280"/>
+" clip-path="url(#p993bc12f38)" style="fill: #6b7280"/>
    </g>
    <g id="text_24">
-    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="540.988095" y="292.378" transform="rotate(-0 540.988095 292.378)">10%</text>
+    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="540.988095" y="294.212" transform="rotate(-0 540.988095 294.212)">9.2%</text>
    </g>
    <g id="text_25">
-    <text style="fill: #6b7280; font: 12px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="506.285714" y="399.016875" transform="rotate(-0 506.285714 399.016875)">genuine held 0.92%</text>
+    <text style="fill: #6b7280; font: 12px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="506.285714" y="399.016875" transform="rotate(-0 506.285714 399.016875)">genuine held 0.24%</text>
    </g>
   </g>
-  <g id="patch_27">
+  <g id="patch_25">
    <path d="M 20 80 
 L 34 80 
 L 34 66 
@@ -435,7 +414,7 @@ L 20 66
 z
 " style="fill: #e0a526"/>
   </g>
-  <g id="patch_28">
+  <g id="patch_26">
    <path d="M 216 80 
 L 230 80 
 L 230 66 
@@ -443,7 +422,7 @@ L 216 66
 z
 " style="fill: #c8372d"/>
   </g>
-  <g id="patch_29">
+  <g id="patch_27">
    <path d="M 376 80 
 L 390 80 
 L 390 66 
@@ -471,7 +450,7 @@ z
   </g>
  </g>
  <defs>
-  <clipPath id="pe022ebbb85">
+  <clipPath id="p993bc12f38">
    <rect x="52" y="118" width="530" height="200"/>
   </clipPath>
  </defs>

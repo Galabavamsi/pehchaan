@@ -1,5 +1,9 @@
 # Implementation notes and SPEC proposals
 
+**Status (SPEC v0.2):** the coordinator adopted proposals B1, B2, B3, B4, B6 and B7 below into SPEC v0.2; the engine, server, web and simulator now implement them (config v0.2.0).
+- B5 (precision of Red) is addressed by tuning θ_red with the simulator. See `engine/results/sim_threshold_sweep.json` and `deck_numbers.json`.
+- Section A2 is superseded by strict G2, A3 by the v0.2 rules in A13, and A4 by G7.
+
 The SPEC is implemented as written. The prototype has to make some choices the SPEC leaves open; they are listed in section A. Section B lists changes we recommend the SPEC adopt. Section C covers the contract with the ML teammate. None of these edits SPEC.md.
 
 ## A. Interpretations made in the prototype
@@ -20,7 +24,19 @@ The SPEC is implemented as written. The prototype has to make some choices the S
     - The NCRP field labels follow the public NCRP user manual and acknowledgement slips. Verify them against the live form before production.
 12. **Demo clock.** `PEHCHAAN_DEMO_TIME=HH:MM` shifts the server clock for screenshots. Clients count down against the `X-Server-Now` header, so the timers stay correct.
 
-## B. Proposed SPEC changes (product-logic weak spots)
+13. **v0.2 rule ordering in `fusion.assess`.** G3, then G7, then G5, then G4, then G1, then strict G2.
+    - G7 (`fv_denied`, `bank_no_active_call`) beats a trusted payee and a decisive positive.
+    - A decisive positive together with a user-reported negative (`callback_denied`, `safeword_failed`) gets no Green override. The result is at least Amber, with the note "G4 not applied".
+14. **How G1(a) counts families.** Each family's ln-LR is recomputed without the trigger-implied codes (`payee_new`, `amount_gt_*`) and clipped to the cap. V never counts.
+    - User-reported negatives (LR 30) can still be the O family in G1(a). They are strong evidence, just not a floor.
+15. **The named bank.**
+    - "My bank" opens a bank picker. The demo has Bharat Demo Bank (integrated) and "Another bank" (not integrated).
+    - If no bank is named, or the named bank is not integrated, the registry lookup returns `bank_registry_unknown` (LR 1). The UI then shows that reason with "hang up and call the official number".
+16. **Cue checklist.** It is offered for `claim_none` / `claim_other` when the tier is Amber.
+    - It is sent as `cues[]` plus `checklist_done`. "None of these" closes it without adding signals.
+17. **Cancel-primary.** After a user-reported negative, the Amber screen shows Cancel as the saffron primary button with "Cancel is the safer choice", and the claim checks lose their primary styling.
+
+## B. Proposed SPEC changes (product-logic weak spots). B1–B4, B6 and B7 were adopted in v0.2
 
 From the simulator (`engine/results/`, assumption-driven) and from building the flows:
 

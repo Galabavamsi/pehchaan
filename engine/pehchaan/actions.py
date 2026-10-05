@@ -31,6 +31,8 @@ class Action(BaseModel):
     requires: str | None = None   # e.g. "analyst_review"
 
 
+CUE_CODES = {"cue_secrecy", "cue_urgency", "cue_otp_pin", "cue_arrest_threat", "cue_remote_app", "cue_refund_verification"}
+
 _P_EN = {"relative": "your family member", "bank": "your bank", "their": "their"}
 _P_HI = {"relative": "परिवार के सदस्य", "bank": "अपने बैंक"}
 
@@ -46,11 +48,14 @@ def actions_for(
     amount_inr: float = 0,
     params: dict | None = None,
     done: set[str] | None = None,
+    signals: list[str] | set[str] | None = None,
     cfg: Config | None = None,
 ) -> list[Action]:
     cfg = cfg or default_config()
     params = dict(params or {})
     done = done or set()
+    sig = set(signals or [])
+    user_negative = bool(sig & {"callback_denied", "safeword_failed"})
     wait = cfg.actions.amber_min_read_sec
     out: list[Action] = []
 
@@ -88,13 +93,20 @@ def actions_for(
                 Action(id="call_1930", kind="human", label={"en": "Call 1930 helpline", "hi": "1930 हेल्पलाइन पर कॉल करें"}),
             ]
         else:
+            if claim in ("none", "other") and tier == "amber" and not (sig & CUE_CODES):
+                c.append(Action(
+                    id="cue_checklist", kind="check", primary=True,
+                    produces=["cue_secrecy", "cue_otp_pin", "cue_arrest_threat"],
+                    label={"en": "Three quick questions about the call", "hi": "कॉल के बारे में तीन छोटे सवाल"},
+                    detail={"en": "Did they ask for secrecy, an OTP or PIN, or say someone could be arrested?",
+                            "hi": "क्या उन्होंने बात छिपाने, OTP या PIN, या किसी की गिरफ़्तारी की बात कही?"}))
             c += [
                 Action(id="coached_warning", kind="info", label=copy_text("coached_warning")),
-                Action(id="callback_known", kind="check", primary=True,
+                Action(id="callback_known", kind="check", primary=not any(a.primary for a in c),
                        label={"en": "Hang up and call them back on a number you trust",
                               "hi": "फ़ोन काटें और भरोसे वाले नंबर पर वापस कॉल करें"}),
             ]
-        if claim in ("family", "bank", "other", "none", None):
+        if claim in ("family", "bank", "upi_or_shop", "other", "none", None):
             c.append(Action(id="voice_check", kind="check", produces=["voice_likely_synthetic", "voice_inconclusive", "voice_no_strong_evidence"],
                             label={"en": "Check the caller's voice (optional)", "hi": "कॉल करने वाले की आवाज़ जाँचें (अगर चाहें)"},
                             detail={"en": "Put the call on speaker for 10 seconds. Audio is checked and deleted.",
@@ -102,11 +114,18 @@ def actions_for(
         return [a for a in c if a.id not in done]
 
     if tier == "amber":
-        out += checks()
+        cs = checks()
+        if user_negative:  # SPEC v0.2: after a user-reported 'not them', Cancel is the primary action
+            for a in cs:
+                a.primary = False
+        out += cs
         out += [
             Action(id="continue_anyway", kind="continue", enabled_after_sec=wait,
                    label={"en": "Continue anyway", "hi": "फिर भी आगे बढ़ें"}),
-            Action(id="cancel_payment", kind="cancel", label={"en": "Cancel payment", "hi": "पेमेंट रद्द करें"}),
+            Action(id="cancel_payment", kind="cancel", primary=user_negative,
+                   label={"en": "Cancel payment", "hi": "पेमेंट रद्द करें"},
+                   detail=({"en": "This is the safer choice: what you heard on the call did not match.",
+                            "hi": "यही सुरक्षित है: कॉल पर जो सुना, वो मेल नहीं खाता।"} if user_negative else None)),
         ]
     elif tier == "red":
         needs_review = amount_inr >= cfg.actions.analyst_review_at_or_above_inr

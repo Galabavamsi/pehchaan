@@ -105,7 +105,8 @@ export function Console({ compact = false, follow = false }: { compact?: boolean
 const tierWord = (t: Tier, status: string) =>
   ({ red: status === "held" ? "Red · on hold" : "Red", amber: "Amber", green: "Green" }[t]);
 const tierColor = (t: Tier) => ({ red: "#c8372d", amber: "#e0a526", green: "#13796f" }[t] ?? "#6b7280");
-const claimLabel = (c: string | null) => ({ family: "Claimed family", bank: "Claimed bank", authority: "Claimed police / govt",
+const claimLabel = (c: string | null) => ({ family: "Claimed family", bank: "Claimed bank", upi_or_shop: "UPI app / shop",
+  authority: "Claimed police / govt",
   other: "Someone else", none: "No one asked" } as any)[c ?? ""] ?? "No claim yet";
 const statusLabel = (s: string) => ({ held: "On hold", paused: "Paused", awaiting_verification: "Waiting for relative",
   cleared: "Cleared", sent: "Sent", cancelled: "Cancelled by customer", reported: "Reported by customer",
@@ -158,7 +159,8 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
           <section className="panel">
             <h3>Why this decision</h3>
             <div className="ph-sub">Each bar is one signal's ln-LR contribution after family caps, from the prior to the final score. Guardrails then decide the tier.</div>
-            <Waterfall reasons={reasons} priorLogOdds={d.prior_log_odds} logOdds={d.log_odds} p={d.p} prior={d.prior} compact={compact} width={compact ? 640 : 760} />
+            <Waterfall reasons={reasons} priorLogOdds={d.prior_log_odds} logOdds={d.log_odds} p={d.p} prior={d.prior} compact={compact}
+              width={compact ? 640 : 760} redAt={d.thresholds?.red_at_or_above ?? 0.8} greenBelow={d.thresholds?.green_below ?? 0.1} />
           </section>
           {!compact && (
             <section className="panel">
@@ -205,7 +207,7 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
             <h3>Checks</h3>
             <dl className="kv">
               <dt>Family Verify</dt><dd>{fvr ? <>{fvr.result ?? fvr.status}{fvr.sig_ok && <> · <SealCheck size={13} weight="fill" style={{ color: "var(--teal)", verticalAlign: -2 }} /> device signature</>}</> : "–"}</dd>
-              <dt>Bank registry</dt><dd>{d.checks?.bank_registry ? d.checks.bank_registry.result.replaceAll("_", " ") : "–"}</dd>
+              <dt>Bank registry</dt><dd>{d.checks?.bank_registry ? `${d.checks.bank_registry.result.replaceAll("_", " ")}${d.claimed_bank ? ` (${d.claimed_bank.name}${d.claimed_bank.integrated ? ", integrated" : ", not integrated"})` : ""}` : "–"}</dd>
               <dt>Callback</dt><dd>{d.checks?.callback?.result ?? "–"}</dd>
               <dt>Voice</dt><dd>{voice ? <>{voice.band.replaceAll("_", " ")} · p <span className="mono">{voice.p_synthetic.toFixed(2)}</span> · speech <span className="mono">{voice.quality.speech_sec}s</span> · SNR <span className="mono">{voice.quality.snr_db} dB</span>{voice.quality.ok ? "" : " (below gate)"}<div className="mono" style={{ fontSize: 11.5, color: "var(--slate)" }}>{voice.model_version}</div></> : "not performed"}</dd>
             </dl>

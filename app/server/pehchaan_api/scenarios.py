@@ -6,7 +6,7 @@ the UK regulator's reserved drama range; 'Bharat Demo Bank' and '@okdemo' /
 """
 from __future__ import annotations
 
-from .adapters import contact_hash  # noqa: F401  (kept for callers/tests)
+from .adapters import BANKS, contact_hash  # noqa: F401  (contact_hash kept for callers/tests)
 from .risk import CaseService
 
 BANK = "Bharat Demo Bank"
@@ -90,7 +90,7 @@ SCENARIOS = {
         "call": {"state": "active", "number": "+918765432109", "channel": "pstn", "duration_sec": 540},
         "payment": {"payee_vpa": "kavya.ent.secure@okdemo", "payee_name": "Kavya Enterprises", "amount_inr": 35000},
         "script": "\"Sir, fraud department se bol raha hoon. Account block ho jayega, abhi safe account mein transfer kariye.\"",
-        "expected": {"claim": "bank", "registry": "no_active_call", "final_tier": "red"},
+        "expected": {"claim": "bank", "claim_target": "bdb", "registry": "no_active_call", "final_tier": "red"},
         "fri": {"+918765432109": "medium"},
     },
     "T3": {
@@ -110,7 +110,7 @@ SCENARIOS = {
 BACKGROUND = [
     {"payer": "u_ramesh", "call": {"number": "+919123456780", "channel": "pstn", "duration_sec": 700},
      "payment": {"payee_vpa": "rbi.kyc.update@okdemo", "payee_name": "Suresh Kumar", "amount_inr": 75000},
-     "claim": "bank", "checks": [("bank_registry", None)], "after": "release", "ago_min": 41},
+     "claim": "bank", "claim_target": "bdb", "checks": [("bank_registry", None)], "after": "release", "ago_min": 41},
     {"payer": "u_kamala", "call": {"number": "+919988776655", "channel": "pstn", "duration_sec": 200},
      "payment": {"payee_vpa": "fresh.mart@okdemo", "payee_name": "Fresh Mart", "amount_inr": 12000},
      "claim": "other", "after": "continue", "ago_min": 128},
@@ -197,5 +197,6 @@ def load_scenario(svc: CaseService, name: str, with_background: bool = True) -> 
         "scenario": name, "title": sc["title"], "pattern": sc["pattern"], "script": sc["script"],
         "payer": payer, "relative": rel, "call": sc["call"], "payment": sc["payment"], "expected": sc["expected"],
         "bank": {"name": BANK, "name_hi": BANK_HI},
+        "banks": [{**b, "yours": b["id"] == "bdb"} for b in BANKS.values()],
         "note": "All people, numbers, banks and UPI IDs are fictional. Context adapters are mocks.",
     }

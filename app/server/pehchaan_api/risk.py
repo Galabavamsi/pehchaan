@@ -40,12 +40,13 @@ from .adapters import (
 from .db import Store
 
 CFG = default_config()
-CLAIM_CODES = {"family", "bank", "authority", "other", "none"}
+CLAIM_CODES = {"family", "bank", "upi_or_shop", "authority", "other", "none"}
 CHECK_SIGNALS = {
     "family_verify": {"confirmed": "fv_confirmed", "denied": "fv_denied", "timeout": "fv_timeout"},
     "callback": {"confirmed": "callback_confirmed", "denied": "callback_denied"},
     "safeword": {"passed": "safeword_passed", "failed": "safeword_failed"},
-    "bank_registry": {"no_active_call": "bank_no_active_call", "active_call_1600": "bank_active_call_1600"},
+    "bank_registry": {"no_active_call": "bank_no_active_call", "active_call_1600": "bank_active_call_1600",
+                      "unknown": "bank_registry_unknown"},
 }
 ALLOWED_CUES = {"cue_secrecy", "cue_urgency", "cue_otp_pin", "cue_arrest_threat", "cue_remote_app",
                 "cue_refund_verification"}
@@ -185,6 +186,9 @@ class CaseService:
     def _rescore(self, case: dict, reason: str) -> dict:
         t0 = time.perf_counter()
         params = dict(case["params"])
+        if case.get("claimed_bank"):
+            params["bank"] = case["claimed_bank"]["name"]
+            params["bank_hi"] = case["claimed_bank"].get("name_hi")
         if case.get("relative"):
             params["relative"] = case["relative"]["name"]
             params["relative_hi"] = case["relative"].get("name_hi")
@@ -209,12 +213,14 @@ class CaseService:
         done = {k for k in ("family_verify", "callback", "safeword", "bank_registry", "voice_check")
                 if (case["checks"].get(k.replace("_check", "")) or {}).get("result") or
                 (k == "voice_check" and case["checks"].get("voice"))}
+        if case.get("checklist_done"):
+            done.add("cue_checklist")
         if (case["checks"].get("family_verify") or {}).get("status") == "pending":
             done.add("family_verify")
         aparams = {"relative": params.get("relative"), "relative_hi": params.get("relative_hi"),
                    "bank": params.get("bank"), "bank_hi": params.get("bank_hi"), "their": params.get("their")}
         case["actions"] = [x.model_dump() for x in actions_for(a.tier, case.get("claim"), amount_inr=case["amount_inr"],
-                                                                 params=aparams, done=done, cfg=CFG)]
+                                                                 params=aparams, done=done, signals=a.signals, cfg=CFG)]
         case["copy"] = {"title": copy_text(f"tier_{a.tier}_title"), "body": copy_text(f"tier_{a.tier}_body")}
         # status + hold
         if a.tier == "red":
@@ -261,9 +267,15 @@ class CaseService:
                     rel = self._relative(case["payer_id"], req.get("claim_target"))
                     case["relative"] = rel
                     case["relative_name"] = rel["name"] if rel else None
+                if req["claim"] == "bank":
+                    # SPEC v0.2: "My bank" names the bank; only an integrated bank can answer the registry check
+                    case["claimed_bank"] = self.bank.bank(req.get("claim_target")) or {
+                        "id": req.get("claim_target") or "unnamed", "name": "the bank they named",
+                        "name_hi": "उनका बताया बैंक", "integrated": False}
                 self._event(case, "claim", "payer_app", {"claim": req["claim"], "claim_target": req.get("claim_target")})
-            if req.get("cues"):
-                case["cues"] = sorted(set(case.get("cues", [])) | (set(req["cues"]) & ALLOWED_CUES))
+            if req.get("cues") or req.get("checklist_done"):
+                case["cues"] = sorted(set(case.get("cues", [])) | (set(req.get("cues") or []) & ALLOWED_CUES))
+                case["checklist_done"] = case.get("checklist_done") or bool(req.get("checklist_done"))
                 changed.append("cues")
                 self._event(case, "checklist", "payer_app", {"cues": case["cues"]})
             if req.get("voice"):
@@ -320,6 +332,7 @@ class CaseService:
 
     def _response(self, case: dict, t0: float) -> dict:
         keys = ["case_id", "stage", "tier", "raw_tier", "p", "log_odds", "prior", "prior_log_odds", "thresholds",
+                "claimed_bank", "checklist_done", "cues",
                 "reasons", "top_reasons", "actions", "guardrails", "families", "signals", "qualifying_families",
                 "ask_claim", "status", "hold", "copy", "claim", "relative", "checks", "trigger", "amount_display",
                 "payee_name", "payee_vpa", "caller_display", "config_version"]
@@ -346,10 +359,15 @@ class CaseService:
     # ----------------------------------------------------------- checks
     def bank_registry_check(self, cid: str) -> dict:
         case = self.get(cid)
-        call = self.bank.active_call(case["payer_id"])
-        result = "active_call_1600" if (call and call["is_1600"]) else "no_active_call"
+        named = case.get("claimed_bank") or {}
+        call = None
+        if self.bank.integrated(named.get("id")):
+            call = self.bank.active_call(case["payer_id"])
+            result = "active_call_1600" if (call and call["is_1600"]) else "no_active_call"
+        else:
+            result = "unknown"  # SPEC v0.2: a bank that isn't integrated can't say "no call"
         case["checks"]["bank_registry"] = {"result": result, "ts": self.ts(), "registry_call": call,
-                                           "source": "mock_bank_registry"}
+                                           "bank": named.get("id"), "source": "mock_bank_registry"}
         self._event(case, "check_result", "mock_bank_registry", {"kind": "bank_registry", "result": result})
         return self._rescore(case, "bank_registry")
 

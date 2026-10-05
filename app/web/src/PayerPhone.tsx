@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft, Backspace, Bank, CaretRight, Check, CheckCircle, FilePdf, Gavel, HandPalm, Key, Microphone,
+  ArrowLeft, Backspace, Bank, CaretRight, Check, CheckCircle, DeviceMobile, FilePdf, Gavel, HandPalm, Key, Microphone,
   Phone, PhoneDisconnect, PhoneOutgoing, SealCheck, ShieldCheck, Signature, Storefront, UploadSimple, User,
   UserCircle, Users, WhatsappLogo, X,
 } from "@phosphor-icons/react";
@@ -9,8 +9,8 @@ import { Device, ReasonIcon, Ring, Seal, StatusBar, useCountdown } from "./compo
 import { formatINR, UIContext, useT } from "./i18n";
 import { recordWav } from "./wav";
 
-type Screen = "pay" | "who" | "family" | "options" | "fv_wait" | "voice" | "hold" | "green" | "pin" | "sent" | "cancelled" | "report";
-type ClaimCode = "family" | "bank" | "authority" | "other" | "none";
+type Screen = "pay" | "who" | "family" | "bank" | "options" | "fv_wait" | "voice" | "hold" | "green" | "pin" | "sent" | "cancelled" | "report";
+type ClaimCode = "family" | "bank" | "upi_or_shop" | "authority" | "other" | "none";
 
 export function PayerPhone({ scenario, initialLang, initialLarge = false }: { scenario: Scenario; initialLang?: Lang; initialLarge?: boolean }) {
   const [lang, setLang] = useState<Lang>(initialLang ?? "en");
@@ -86,10 +86,15 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
     if (r.ask_claim || r.tier !== "red") setScreen("who"); else route(r);
   }
 
-  async function sendClaim(c: ClaimCode, rel?: Relative | null) {
+  async function sendClaim(c: ClaimCode, rel?: Relative | null, target?: string) {
     setClaim(c);
     if (rel) setRelative(rel);
-    const r = await run(() => api.assess({ case_id: caseId, claim: c, claim_target: rel?.id }));
+    const r = await run(() => api.assess({ case_id: caseId, claim: c, claim_target: rel?.id ?? target }));
+    if (r) route(r);
+  }
+
+  async function sendCues(cues: string[]) {
+    const r = await run(() => api.assess({ case_id: caseId, cues, checklist_done: true }));
     if (r) route(r);
   }
 
@@ -181,9 +186,10 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
             <p className="lede">{t("who_sub", { amount: amountTxt, payee })}</p>
             <div className="options">
               <Opt icon={<Users size={24} weight="duotone" />} t={t("opt_family")} st={t("opt_family_s")} onClick={() => setScreen("family")} testid="claim-family" />
-              <Opt icon={<Bank size={24} weight="duotone" />} t={t("opt_bank")} st={t("opt_bank_s")} onClick={() => sendClaim("bank")} testid="claim-bank" />
+              <Opt icon={<Bank size={24} weight="duotone" />} t={t("opt_bank")} st={t("opt_bank_s")} onClick={() => setScreen("bank")} testid="claim-bank" />
+              <Opt icon={<DeviceMobile size={24} weight="duotone" />} t={t("opt_upi")} st={t("opt_upi_s")} onClick={() => sendClaim("upi_or_shop")} testid="claim-upi_or_shop" />
               <Opt icon={<Gavel size={24} weight="duotone" />} t={t("opt_authority")} st={t("opt_authority_s")} onClick={() => sendClaim("authority")} testid="claim-authority" />
-              <Opt icon={<Storefront size={24} weight="duotone" />} t={t("opt_other")} st={t("opt_other_s")} onClick={() => sendClaim("other")} testid="claim-other" />
+              <Opt icon={<UserCircle size={24} weight="duotone" />} t={t("opt_other")} st={t("opt_other_s")} onClick={() => sendClaim("other")} testid="claim-other" />
               <Opt icon={<HandPalm size={24} weight="duotone" />} t={t("opt_none")} st={t("opt_none_s")} onClick={() => sendClaim("none")} testid="claim-none" />
             </div>
             <div className="warn-line"><PhoneDisconnect size={18} weight="bold" /><span>{t("coached")}</span></div>
@@ -211,9 +217,27 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
         </div>
       )}
 
+      {screen === "bank" && (
+        <div className="sheet" data-testid="screen-bank">
+          <StatusBar />
+          {head("plain")}
+          <div className="sbody">
+            <button className="chipbtn" onClick={() => setScreen("who")} style={{ marginTop: 8 }}><ArrowLeft size={14} /> {lang === "hi" ? "वापस" : "Back"}</button>
+            <h1 className="q" lang={lang}>{t("which_bank")}</h1>
+            <div className="options">
+              {(scenario.banks ?? [{ id: "bdb", name: scenario.bank.name, name_hi: scenario.bank.name_hi, integrated: true, yours: true }]).map((b) => (
+                <Opt key={b.id} testid={`bank-${b.id}`} icon={<Bank size={24} weight={b.yours ? "fill" : "duotone"} />}
+                  t={lang === "hi" ? (b.label_hi ?? b.name_hi) : (b.label ?? b.name)}
+                  st={b.yours ? t("bank_yours") : t("bank_other_s")} onClick={() => sendClaim("bank", null, b.id)} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {screen === "options" && a && (
         <OptionsScreen a={a} head={head("amber")} claim={claim} relName={relName} amountTxt={amountTxt} payee={payee}
-          busy={busy} onAction={doAction} onContinue={() => userAction("continue")} onCancel={() => userAction("cancel")} />
+          busy={busy} onAction={doAction} onCues={sendCues} onContinue={() => userAction("continue")} onCancel={() => userAction("cancel")} />
       )}
 
       {screen === "fv_wait" && fv && (
@@ -366,16 +390,21 @@ function Opt({ icon, t, st, onClick, testid }: { icon: React.ReactNode; t: strin
   );
 }
 
-function OptionsScreen({ a, head, claim, relName, amountTxt, payee, busy, onAction, onContinue, onCancel }: {
+function OptionsScreen({ a, head, claim, relName, amountTxt, payee, busy, onAction, onCues, onContinue, onCancel }: {
   a: Assessment; head: React.ReactNode; claim: ClaimCode | null; relName: string; amountTxt: string; payee: string; busy: boolean;
-  onAction: (x: Action) => void; onContinue: () => void; onCancel: () => void;
+  onAction: (x: Action) => void; onCues: (cues: string[]) => void; onContinue: () => void; onCancel: () => void;
 }) {
   const { t, bi, lang } = useT();
   const [left, setLeft] = useState(5);
   useEffect(() => { const x = setInterval(() => setLeft((s) => Math.max(0, s - 1)), 1000); return () => clearInterval(x); }, []);
   const top = a.top_reasons.slice(0, 2);
-  const checks = a.actions.filter((x) => x.kind === "check");
+  const checklist = a.actions.find((x) => x.id === "cue_checklist");
+  const checks = a.actions.filter((x) => x.kind === "check" && x.id !== "cue_checklist");
   const primary = checks.find((x) => x.primary);
+  const cancelAct = a.actions.find((x) => x.id === "cancel_payment");
+  const cancelFirst = !!cancelAct?.primary;
+  const unknownReg = a.reasons.find((r) => r.code === "bank_registry_unknown");
+  const userNeg = a.reasons.find((r) => r.code === "callback_denied" || r.code === "safeword_failed");
   const others = checks.filter((x) => x !== primary);
   const fact = a.actions.find((x) => x.id === "authority_fact" || x.id === "bank_fact" || x.id === "coached_warning");
   const checkTitle = claim === "family" && relName ? t("check_really", { name: relName }) : claim === "bank" ? t("check_bank") : t("check_generic");
@@ -388,6 +417,11 @@ function OptionsScreen({ a, head, claim, relName, amountTxt, payee, busy, onActi
         <div className="sub">{lang === "hi" ? `${payee} को ${amountTxt} · ${t("amber_sub")}` : `${amountTxt} to ${payee} · ${t("amber_sub")}`}</div>
       </div>
       <div className="sbody">
+        {checklist && <CueChecklist busy={busy} onDone={onCues} />}
+        {(unknownReg || userNeg) && (
+          <div className="warn-line" style={{ marginTop: 14 }}><ShieldCheck size={18} weight="bold" style={{ color: "var(--ink)" }} />
+            <span>{bi((userNeg ?? unknownReg)!.text)}</span></div>
+        )}
         <div className="sec-t">{t("we_noticed")}</div>
         <div className="reasons">
           {top.map((r) => (
@@ -417,12 +451,35 @@ function OptionsScreen({ a, head, claim, relName, amountTxt, payee, busy, onActi
         </div>
       </div>
       <div className="foot">
+        {cancelFirst && <div style={{ fontSize: 13.5, color: "var(--ink-2)", lineHeight: 1.4 }}>{t("cancel_safer")}</div>}
         <div className="btn-row">
-          <button className="btn solid" onClick={onCancel} data-testid="cancel-payment">{t("cancel_payment")}</button>
+          <button className={`btn ${cancelFirst ? "saffron" : "solid"}`} onClick={onCancel} data-testid="cancel-payment">{t("cancel_payment")}</button>
           <button className="btn ghost" disabled={left > 0} onClick={onContinue} data-testid="continue-anyway">
             {left > 0 ? t("continue_in", { s: left }) : t("continue")}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function CueChecklist({ busy, onDone }: { busy: boolean; onDone: (cues: string[]) => void }) {
+  const { t } = useT();
+  const [on, setOn] = useState<Set<string>>(new Set());
+  const items: [string, string][] = [["cue_secrecy", t("cl_secrecy")], ["cue_otp_pin", t("cl_otp")], ["cue_arrest_threat", t("cl_arrest")]];
+  const flip = (c: string) => setOn((s) => { const n = new Set(s); n.has(c) ? n.delete(c) : n.add(c); return n; });
+  return (
+    <div className="checklist" data-testid="cue-checklist" style={{ marginTop: 16 }}>
+      <div className="ct">{t("cl_title")}</div>
+      <div className="cs">{t("cl_sub")}</div>
+      {items.map(([c, label]) => (
+        <button key={c} className="cl-row" aria-pressed={on.has(c)} onClick={() => flip(c)} data-testid={`cl-${c}`}>
+          <span className="box">{on.has(c) && <Check size={15} weight="bold" />}</span>{label}
+        </button>
+      ))}
+      <div className="cl-actions">
+        <button className="btn ghost" disabled={busy} onClick={() => onDone([])} data-testid="cl-none">{t("cl_none")}</button>
+        <button className="btn solid" disabled={busy || on.size === 0} onClick={() => onDone([...on])} data-testid="cl-done">{t("cl_done")}</button>
       </div>
     </div>
   );

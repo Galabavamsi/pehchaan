@@ -57,6 +57,9 @@ def pay_and_claim(page: Page, claim: str, rel: str | None = None) -> None:
     if claim == "family":
         p.get_by_test_id("screen-family").wait_for()
         p.get_by_test_id(f"rel-{rel}").click()
+    if claim == "bank":
+        p.get_by_test_id("screen-bank").wait_for()
+        p.get_by_test_id(f"bank-{rel or 'bdb'}").click()
 
 
 def main() -> None:
@@ -147,6 +150,16 @@ def main() -> None:
             p.get_by_test_id("screen-options").wait_for()
             settle(page)
             shot(page, "11_hindi_amber.png", "payer-device")
+
+        # ---------------------------------------------------------------- coached "no one" checklist (v0.2)
+        if want("13"):
+            load(page, "T1")
+            pay_and_claim(page, "none")
+            p = payer(page)
+            p.get_by_test_id("cue-checklist").wait_for()
+            p.get_by_test_id("cl-cue_secrecy").click()
+            settle(page, 500)
+            shot(page, "13_cue_checklist.png", "payer-device")
 
         # ---------------------------------------------------------------- L2 genuine
         if want("12"):

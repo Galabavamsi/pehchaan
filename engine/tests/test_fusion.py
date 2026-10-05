@@ -44,7 +44,7 @@ def test_family_cap_is_applied_on_ln_lr():
 
 # --------------------------------------------------------------------------- guardrails
 def test_voice_only_cannot_go_red_even_at_high_prior():
-    a = assess(["voice_likely_synthetic", "watermark_detected"], prior=0.3)
+    a = assess(["voice_likely_synthetic", "watermark_detected"], prior=0.5)
     assert a.raw_tier == "red"
     assert a.tier == "amber"
     assert "G1" in GUARDS(a)
@@ -59,22 +59,21 @@ def test_voice_cannot_be_the_second_family_for_red():
 
 
 def test_single_context_signal_cannot_go_red():
-    a = assess(["payee_flagged_high"], prior=0.1)
+    a = assess(["payee_flagged_high"], prior=0.2)
     assert a.raw_tier == "red" and a.tier == "amber" and "G1" in GUARDS(a)
-    b = assess(["fri_very_high"], prior=0.1)
+    b = assess(["fri_very_high"], prior=0.2)
     assert b.raw_tier == "red" and b.tier == "amber"
 
 
 def test_single_family_saturated_cannot_go_red():
-    a = assess(["caller_unknown", "caller_international", "fri_very_high", "call_ongoing_long"], prior=0.1)
+    a = assess(["caller_unknown", "caller_international", "fri_very_high", "call_ongoing_long"], prior=0.2)
     assert a.raw_tier == "red" and a.tier == "amber"
 
 
 def test_fv_denied_plus_new_payee_is_red():
     a = assess(["fv_denied", "payee_new"])
-    assert a.p >= 0.6
     assert a.tier == "red"
-    assert "G1" not in GUARDS(a)
+    assert "G7" in GUARDS(a) and "G1" not in GUARDS(a)
 
 
 def test_t1_cloned_relative_full_flow_is_red():
@@ -99,7 +98,9 @@ def test_callback_confirmed_is_green_but_flagged_payee_stays_amber():
 
 def test_conflicting_out_of_band_does_not_green():
     a = assess(["claim_family", "payee_new", "fv_confirmed", "callback_denied", "caller_unknown"])
-    assert a.tier != "green"
+    assert a.tier == "amber"  # device-signed yes vs user-reported no: at least Amber
+    b = assess(["claim_family", "payee_new", "fv_confirmed", "bank_no_active_call"])
+    assert b.tier == "red" and "G7" in GUARDS(b)
     assert any(g.id == "G4" and g.effect == "not applied" for g in a.guardrails_applied)
 
 
@@ -131,9 +132,9 @@ def test_claim_authority_alone_is_not_red():
     # high prior: raw score is Red, but C is the only family with LR >= 3 (P = 2.5)
     a2 = assess(["claim_authority", "payee_new"], prior=0.05)
     assert a2.raw_tier == "red" and a2.tier == "amber" and "G1" in GUARDS(a2)
-    # note: payee_new x amount_gt_p95 = 4.5 already qualifies P as a second family
+    # v0.2: payee_new x amount_gt_p95 is trigger-implied and no longer qualifies P (G1)
     a3 = assess(["claim_authority", "payee_new", "amount_gt_p95"], prior=0.05)
-    assert a3.tier == "red"
+    assert a3.tier == "amber" and "G1" in GUARDS(a3)
 
 
 def test_claim_authority_red_with_another_qualifying_family():

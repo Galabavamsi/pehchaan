@@ -120,8 +120,9 @@ const FAM_NAME: Record<string, string> = {
 
 /** Horizontal waterfall of ln-LR contributions from the prior to the final log-odds,
  *  drawn over the tier zones (green < 10% < amber < 60% < red). */
-export function Waterfall({ reasons, priorLogOdds, logOdds, p, prior, width = 760, compact = false }: {
+export function Waterfall({ reasons, priorLogOdds, logOdds, p, prior, width = 760, compact = false, redAt = 0.8, greenBelow = 0.1 }: {
   reasons: Reason[]; priorLogOdds: number; logOdds: number; p: number; prior: number; width?: number; compact?: boolean;
+  redAt?: number; greenBelow?: number;
 }) {
   const rows = [...reasons].filter((r) => Math.abs(r.contribution) > 1e-6)
     .sort((a, b) => FAM_ORDER.indexOf(a.family) - FAM_ORDER.indexOf(b.family) || b.contribution - a.contribution);
@@ -139,11 +140,11 @@ export function Waterfall({ reasons, priorLogOdds, logOdds, p, prior, width = 76
   const plotW = width - labelW - valW;
   const x = (v: number) => labelW + ((v - lo) / (hi - lo)) * plotW;
   const lg = (q: number) => Math.log(q / (1 - q));
-  const g = lg(0.1), rd = lg(0.6);
-  const ticks = [0.001, 0.01, 0.1, 0.6, 0.99, 0.999].filter((q) => lg(q) > lo && lg(q) < hi);
+  const g = lg(greenBelow), rd = lg(redAt);
+  const ticks = [0.001, 0.01, greenBelow, redAt, 0.99, 0.999].filter((q) => lg(q) > lo && lg(q) < hi);
   const yOf = (i: number) => top + i * rowH;
   const fmtP = (q: number) => (q < 0.01 ? `${(q * 100).toFixed(1)}%` : q >= 0.995 ? ">99%" : `${Math.round(q * 100)}%`);
-  const finalTier: Tier = p >= 0.6 ? "red" : p >= 0.1 ? "amber" : "green";
+  const finalTier: Tier = p >= redAt ? "red" : p >= greenBelow ? "amber" : "green";
   const tierCol = { red: "#c8372d", amber: "#e0a526", green: "#13796f" }[finalTier];
   return (
     <svg width="100%" viewBox={`0 0 ${width} ${h}`} role="img" aria-label="Contribution waterfall" style={{ display: "block", fontFamily: "Inter" }}>
@@ -153,7 +154,7 @@ export function Waterfall({ reasons, priorLogOdds, logOdds, p, prior, width = 76
       <rect x={x(rd)} y={top - 8} width={x(hi) - x(rd)} height={n * rowH + 8} fill="#f3d5cf" opacity="0.65" />
       <text x={(x(lo) + x(g)) / 2} y={top - 14} textAnchor="middle" fontSize="12" fontWeight="600" fill="#0d5c54">Green</text>
       <text x={(x(g) + x(rd)) / 2} y={top - 14} textAnchor="middle" fontSize="12" fontWeight="600" fill="#7a5a0c">Amber</text>
-      <text x={(x(rd) + x(hi)) / 2} y={top - 14} textAnchor="middle" fontSize="12" fontWeight="600" fill="#a72c23">Red (if G1 allows)</text>
+      <text x={(x(rd) + x(hi)) / 2} y={top - 14} textAnchor="middle" fontSize="12" fontWeight="600" fill="#a72c23">Red (guardrails decide)</text>
       {ticks.map((q) => (
         <g key={q}>
           <line x1={x(lg(q))} x2={x(lg(q))} y1={top - 8} y2={top + n * rowH} stroke="#1b1f24" strokeOpacity="0.12" />
