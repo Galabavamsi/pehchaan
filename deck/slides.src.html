@@ -26,8 +26,8 @@
 .stat4 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .stat4 .card { padding: 11px 13px; }
 /* ---------- slide 3 ---------- */
-.bars { display: flex; flex-direction: column; gap: 9px; }
-.bar { display: grid; grid-template-columns: 170px 1fr; align-items: center; gap: 10px; }
+.bars { display: flex; flex-direction: column; gap: 7px; }
+.bar { display: grid; grid-template-columns: 172px 1fr; align-items: center; gap: 10px; }
 .bar .bl { font-size: 11.5px; line-height: 1.25; color: var(--ink2); text-align: right; }
 .bar .bt { height: 22px; position: relative; }
 .bar .bt i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; }
@@ -101,13 +101,11 @@
     <span class="chip line">{{icon:check-circle}} fine-tuned clone detector on AWS</span>
     <span class="chip line">{{icon:check-circle}} unit-tested guardrails</span>
   </div>
-  <div class="team">
-    <div class="m"><b>[Member 1]</b><span>[Role] · [College]</span></div>
-    <div class="m"><b>[Member 2]</b><span>[Role] · [College]</span></div>
-    <div class="m"><b>[Member 3]</b><span>[Role] · [College]</span></div>
-    <div class="m"><b>[Member 4]</b><span>[Role] · [College]</span></div>
+  <div class="team" style="grid-template-columns:repeat(3,1fr)">
+    <div class="m" style="border-top-color:var(--saff)"><b>Team humanslop</b><span>IIT Bhilai</span></div>
+    <div class="m"><b>Galaba Vamsi</b><span>Student, IIT Bhilai · ML (voice detector) &amp; backend</span></div>
+    <div class="m"><b>Varun Rai</b><span>Student, IIT Bhilai · product, app &amp; user testing</span></div>
   </div>
-  <div class="lbl" style="margin-top:9px">Team [Team name]</div>
 </div>
   <div class="hero">
     <img src="../app/screenshots/03_family_options.png" style="position:absolute;left:168px;top:0;width:276px;height:auto">
@@ -188,18 +186,20 @@
   <div class="body row" style="gap:20px">
     <div class="col" style="width:470px">
       <div class="card">
-        <div class="h3">Same detector, lab vs real world (EER, lower is better)</div>
-        <div class="bars" style="margin-top:12px">
-          <div class="bar"><div class="bl">ASVspoof 5 benchmark<br><span class="xs">best open-condition system<sup class="r">9</sup></span></div><div class="bt"><i style="width:7%;background:var(--teal)"></i><span style="left:8%">2.6%</span></div></div>
-          <div class="bar"><div class="bl">AntiDeepfake MMS-300M<br><span class="xs">on "In-the-Wild" set<sup class="r">8</sup></span></div><div class="bt"><i style="width:8%;background:var(--teal)"></i><span style="left:9%">2.9%</span></div></div>
-          <div class="bar"><div class="bl">same model on real 2024<br>deepfakes<sup class="r">8</sup></div><div class="bt"><i style="width:82%;background:var(--red)"></i><span style="left:84%">32.8%</span></div></div>
-          <div class="bar"><div class="bl"><b>Off-the-shelf model on our Hindi phone-line clones</b></div><div class="bt"><i style="width:0%;background:var(--red)"></i><span style="left:1%;color:var(--faint)">[measuring]</span></div></div>
+        <div class="h3">Lab vs real world: detector error rate (EER, lower is better)</div>
+        <div class="bars" style="margin-top:10px">
+          <div class="bar"><div class="bl">AntiDeepfake MMS-300M<br><span class="xs">"In-the-Wild" set<sup class="r">8</sup></span></div><div class="bt"><i style="width:6%;background:var(--teal)"></i><span style="left:7%">2.9%</span></div></div>
+          <div class="bar"><div class="bl">same model, real 2024<br>deepfakes<sup class="r">8</sup></div><div class="bt"><i style="width:66%;background:var(--red)"></i><span style="left:68%">32.8%</span></div></div>
+          <div class="hr" style="margin:2px 0 1px"></div>
+          <div class="bar"><div class="bl"><b>Ours:</b> XLS-R + AASIST<br><span class="xs">on ASVspoof 2019 (its home turf)</span></div><div class="bt"><i style="width:1%;background:var(--teal)"></i><span style="left:2%">0.27%</span></div></div>
+          <div class="bar"><div class="bl">same model, <b>our Indic<br>phone-line test set</b></div><div class="bt"><i style="width:68%;background:var(--red)"></i><span style="left:70%">33.8%</span></div></div>
+          <div class="bar"><div class="bl">… on Telugu</div><div class="bt"><i style="width:94%;background:var(--red)"></i><span style="left:72%;color:#fff">46.8%</span></div></div>
         </div>
-        <p class="xs" style="margin-top:10px">Open-source detectors lose ~48% AUC on real 2024 deepfakes<sup class="r">7</sup>. Real-time voice conversion now adds only ~0.4 s of delay<sup class="r">19</sup>, so a clone can hold a live conversation.</p>
+        <p class="xs" style="margin-top:7px">Our set: 9 Indian languages, 12 generators (incl. Sarvam, OpenAI, Deepgram), 5 phone channels, 16.5k clips · preliminary, 6 Oct. Open-source detectors lose ~48% AUC on real 2024 deepfakes<sup class="r">7</sup>; real-time voice conversion adds only ~0.4 s<sup class="r">19</sup>, so clones hold live conversations.</p>
       </div>
       <div class="card dark" style="padding:14px 16px">
         <div class="lbl" style="color:#F2B98D">Insight</div>
-        <p class="quote" style="color:#fff;margin-top:6px;font-size:18px">A clone can copy a voice. It <span data-an="underline" data-ac="#E8742A" data-aw="3">cannot answer from your son's phone</span>, call from your bank's 1600 number, or know your family's safe word.</p>
+        <p class="quote" style="color:#fff;margin-top:6px;font-size:17px">A clone can copy a voice. It <span data-an="underline" data-ac="#E8742A" data-aw="3">cannot answer from your son's phone</span>, call from your bank's 1600 number, or know your family's safe word.</p>
         <p class="sm" style="margin-top:8px;color:#D9D3C7">So Pehchaan verifies the <b style="color:#fff">identity claim</b>, and treats voice forensics as one capped signal.</p>
       </div>
     </div>
@@ -283,7 +283,7 @@
       <div class="panel fill"><div class="lbl">Built for elders</div><p class="sm" style="margin-top:3px">Hindi/English, large text, 5-second minimum before "continue"</p></div>
     </div>
   </div>
-<div class="foot"><span class="src">Screens from our working prototype ("DemoPay", a fictional bank app; no real brands). Hindi and large-text elderly modes on every screen. More screens: appendix.</span><span class="pg">05 / 10</span></div>
+<div class="foot"><span class="src">Screens from our working prototype ("DemoPay", a fictional bank app; no real brands). Hindi and large-text elderly modes on every screen. More screens and the live three-surface demo: appendix A1–A2.</span><span class="pg">05 / 10</span></div>
 </section>
 
 <!-- =============================== 6. DETECTION LOGIC =============================== -->
@@ -344,7 +344,7 @@
         <p class="sm"><b>Channels:</b> clean · PSTN 8 kHz G.711 · AMR-NB · Opus (WhatsApp-like) · speaker→mic replay, plus <b>real cellular and WhatsApp calls</b> as genuine phone audio</p>
         <p class="sm"><b>Content-matched:</b> real and cloned voices say the same lines, so the model can't cheat on content</p>
         <p class="sm"><b>Held out:</b> [generators] and 1 speaker, never seen in training</p>
-        <p class="xs">Public data used only as genuine speech or published spoof sets, within licence (appendix A2). We cloned no one without signed consent.</p>
+        <p class="xs">Public data used only as genuine speech or published spoof sets, within licence (appendix A6). We cloned no one without signed consent.</p>
       </div>
     </div>
     <div class="card" style="width:430px">
@@ -365,7 +365,7 @@
       </div>
     </div>
   </div>
-<div class="foot"><span class="src">Simulator outputs are assumption-driven projections, labelled as such; detector numbers are measured. Full tables: appendix A3 · [15] DoT DIP via ET Gov 10 Sep 2026</span><span class="pg">07 / 10</span></div>
+<div class="foot"><span class="src">Simulator outputs are assumption-driven projections, labelled as such; detector numbers are measured. Detector tables: appendix A3 · simulator assumptions: A4 · [15] DoT DIP via ET Gov 10 Sep 2026</span><span class="pg">07 / 10</span></div>
 </section>
 
 <!-- =============================== 8. SAFEGUARDS =============================== -->
@@ -724,16 +724,16 @@
 
 <!-- =============================== APPENDIX: PROTOTYPE =============================== -->
 <section class="slide"><div class="inner">
-  <div class="kicker">Appendix A3 <span class="tag">working prototype · three surfaces, live over WebSocket</span></div>
+  <div class="kicker">Appendix A1 <span class="tag">working prototype · three surfaces, live over WebSocket</span></div>
   <h1 class="t" style="font-size:24px">The demo judges will see: payer phone, the real relative's phone, and the bank's fraud console, updating together.</h1>
   <div class="body" style="display:flex;justify-content:center">
     <img src="../app/screenshots/10_split_demo.png" style="height:100%;width:auto;border-radius:10px;border:1.4px solid var(--line)">
   </div>
-<div class="foot"><span class="src">Scenario T1 (cloned son, +44 WhatsApp). The console's "Why this decision" waterfall is the same ln-LR fusion shown on slide 6. Fictional people, numbers and bank; context adapters are mocks.</span><span class="pg">APPENDIX A3</span></div>
+<div class="foot"><span class="src">Scenario T1 (cloned son, +44 WhatsApp). The console's "Why this decision" waterfall is the same ln-LR fusion shown on slide 6. Fictional people, numbers and bank; context adapters are mocks.</span><span class="pg">APPENDIX A1</span></div>
 </section>
 
 <section class="slide"><div class="inner">
-  <div class="kicker">Appendix A4 <span class="tag">more prototype screens</span></div>
+  <div class="kicker">Appendix A2 <span class="tag">more prototype screens</span></div>
   <h1 class="t" style="font-size:24px">The rest of the flow: the moment of payment, the report pack, Hindi mode, the genuine path, and the analyst's view.</h1>
   <div class="body row" style="gap:14px;align-items:flex-start">
     <div style="width:180px"><img src="../app/screenshots/01_call_and_pay.png" style="width:100%"><p class="cap"><b>Call + pay</b>A +44 call is live while she enters ₹50,000 to a new payee.</p></div>
@@ -742,12 +742,29 @@
     <div style="width:180px"><img src="../app/screenshots/12_green_legit.png" style="width:100%"><p class="cap"><b>Genuine path</b>The real son confirms from his own phone → GO.</p></div>
     <div class="fill"><img src="../app/screenshots/09_console_case.png" style="width:100%;border-radius:8px;border:1.4px solid var(--line)"><p class="cap"><b>Analyst console</b>Every reason with its contribution, guardrails applied, and release / confirm / false-positive actions; access is logged.</p></div>
   </div>
-<div class="foot"><span class="src">Screens captured from the running prototype (React + FastAPI) at 2× device scale.</span><span class="pg">APPENDIX A4</span></div>
+<div class="foot"><span class="src">Screens captured from the running prototype (React + FastAPI) at 2× device scale.</span><span class="pg">APPENDIX A2</span></div>
+</section>
+
+
+<!-- =============================== APPENDIX: DETECTOR RESULTS =============================== -->
+<section class="slide"><div class="inner">
+  <div class="kicker">Appendix A3 <span class="tag">detector evaluation · measured</span></div>
+  <h1 class="t" style="font-size:24px">Detector results: per generator × channel, held-out splits, calibration.</h1>
+  <div class="body"><div class="ph" style="height:100%">ML results pending (ml/results)</div></div>
+<div class="foot"><span class="src">All clones are of consenting team members or are stock synthetic voices; genuine speech from team recordings and FLEURS (CC-BY-4.0).</span><span class="pg">APPENDIX A3</span></div>
+</section>
+
+<!-- =============================== APPENDIX: FUSION + SIM =============================== -->
+<section class="slide"><div class="inner">
+  <div class="kicker">Appendix A4 <span class="tag">fusion likelihood ratios · simulator assumptions</span></div>
+  <h1 class="t" style="font-size:24px">Every number the decision engine uses, and where it comes from.</h1>
+  <div class="body"><div class="ph" style="height:100%">engine config v0.2 + sim assumptions pending</div></div>
+<div class="foot"><span class="src">engine/pehchaan/config.yaml · engine/sim_assumptions.yaml</span><span class="pg">APPENDIX A4</span></div>
 </section>
 
 <!-- =============================== APPENDIX: SOURCES =============================== -->
 <section class="slide"><div class="inner">
-  <div class="kicker">Appendix A1 <span class="tag">sources (accessed Oct 2026)</span></div>
+  <div class="kicker">Appendix A5 <span class="tag">sources (accessed Oct 2026)</span></div>
   <h1 class="t" style="font-size:24px">Sources</h1>
   <div class="body srcs">
     <p><b>[1]</b> PIB / Department of Telecommunications, Rajya Sabha reply on Chakshu report categories, 5 Feb 2026. pib.gov.in/PressReleasePage.aspx?PRID=2223779</p>
@@ -775,12 +792,12 @@
     <p><b>[23]</b> Times of India, interview with Amazon India's trust and safety lead, 4 Aug 2026 ("Behaviour is much harder to fake than documents or images").</p>
     <p><b>[24]</b> Digital Personal Data Protection Act, 2023 (Government of India).</p>
   </div>
-<div class="foot"><span class="src">Full research notes with URLs and verification status are in the project repository (research/).</span><span class="pg">APPENDIX A1</span></div>
+<div class="foot"><span class="src">Full research notes with URLs and verification status are in the project repository (research/).</span><span class="pg">APPENDIX A5</span></div>
 </section>
 
 <!-- =============================== APPENDIX: DISCLOSURES =============================== -->
 <section class="slide"><div class="inner">
-  <div class="kicker">Appendix A2 <span class="tag">AI-generated content · datasets · models · third-party assets</span></div>
+  <div class="kicker">Appendix A6 <span class="tag">AI-generated content · datasets · models · third-party assets</span></div>
   <h1 class="t" style="font-size:24px">Disclosures</h1>
   <div class="body row" style="gap:16px">
     <div class="card fill">
@@ -808,7 +825,7 @@
       <p class="xs" style="margin-top:4px"><b>Brands:</b> the prototype uses a fictional "DemoPay / Bharat Demo Bank"; Amazon, AWS and other names are referenced descriptively; no endorsement implied.</p>
     </div>
   </div>
-<div class="foot"><span class="src">Non-commercial licences (where flagged) are used for research evaluation only; the production path uses commercially licensed or self-trained weights.</span><span class="pg">APPENDIX A2</span></div>
+<div class="foot"><span class="src">Non-commercial licences (where flagged) are used for research evaluation only; the production path uses commercially licensed or self-trained weights.</span><span class="pg">APPENDIX A6</span></div>
 </section>
 
 <script src="vendor/rough.js"></script>

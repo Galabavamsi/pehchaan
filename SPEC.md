@@ -1,4 +1,4 @@
-# Pehchaan — product & detection spec (v0.1, 2026-10-06)
+# Pehchaan — product & detection spec (v0.2, 2026-10-06)
 
 > **Verify the person, not the voice.**
 > A safeguard inside UPI/bank apps that catches voice-clone fraud at the moment money moves. It asks *who* is on the line and checks that claim through channels a cloned voice cannot reach. AI voice forensics is one supporting signal, never the judge.
@@ -37,7 +37,7 @@ Every other payment is untouched, which keeps friction at zero for the large maj
 
 | Family | Signal (code) | Source | Notes |
 |---|---|---|---|
-| **C: Claim** | `claim_family`, `claim_bank`, `claim_authority`, `claim_other`, `claim_none` | User's one-tap answer to "Who asked you to make this payment?" | Asked only when the trigger fires. If `claim_authority` comes with a money request, that is a near-certain scam. |
+| **C: Claim** | `claim_family`, `claim_bank` ("my bank", which names the bank), `claim_upi_or_shop` (UPI app, shop, delivery), `claim_authority`, `claim_other`, `claim_none` | User's one-tap answer to "Who asked you to make this payment?" | Asked only when the trigger fires. If `claim_authority` comes with a money request, that is a near-certain scam. |
 | **K: Call context** | `caller_unknown` (not in contacts, matched on-device by hash), `caller_international`, `caller_voip_unknown`, `bank_claim_not_1600` (claimed bank, but the number isn't in the TRAI 1600 series), `fri_medium/high/very_high` (DoT FRI tier via the bank's DIP integration, mocked), `call_ongoing_long` (> 15 min, typical of digital arrest) | OS call state; bank risk API | Metadata only, never audio. |
 | **P: Payment context** | `payee_new`, `amount_gt_p95`, `amount_gt_p99`, `payee_flagged_high/medium` (suspect registry or mule score, mocked), `payee_name_mismatch` (claimed family, but the VPA name is unrelated), `burst_new_payees` (≥ 2 new payees in 30 min) | Bank/PSP | Server-side. |
 | **V: Voice provenance** (opt-in) | `voice_likely_synthetic`, `voice_inconclusive`, `voice_no_strong_evidence`, `watermark_detected` | 8–12 s speakerphone capture → Voice Provenance Service | Calibrated probability plus a quality gate. Low quality means inconclusive, never "real". |
@@ -58,6 +58,7 @@ Initial LRs (scam vs genuine, given the trigger fired):
 |---|---|---|---|
 | claim_family | 1.5 | claim_bank | 6 |
 | claim_authority | 60 | claim_other / claim_none | 1.0 / 0.8 |
+| claim_upi_or_shop | 0.8 | | |
 | caller_unknown | 4 | caller_international | 6 |
 | caller_voip_unknown | 3 | bank_claim_not_1600 | 20 |
 | fri_medium / high / very_high | 3 / 10 / 30 | call_ongoing_long | 3 |
@@ -68,22 +69,31 @@ Initial LRs (scam vs genuine, given the trigger fired):
 | voice_no_strong_evidence | 0.7 | watermark_detected | 50 → capped at 8 |
 | cue_secrecy / urgency | 4 / 2 | cue_otp_pin / arrest_threat | 8 / 10 |
 | cue_remote_app / refund_verification | 6 / 5 | | |
-| fv_denied / callback_denied | 300 | fv_confirmed / callback_confirmed | 0.02 |
-| safeword_failed / passed | 30 / 0.1 | bank_no_active_call / bank_active_call_1600 | 50 / 0.1 |
+| fv_denied | 300 (decisive, G7) | callback_denied | 30 (user-reported) |
+| fv_confirmed / callback_confirmed | 0.02 | bank_registry_unknown | 1.0 |
+| safeword_failed / passed | 30 / 0.1 | bank_no_active_call / bank_active_call_1600 | 50 (decisive, G7) / 0.05 (decisive, G4) |
 | fv_timeout | 1.0 | | |
 
-**Tiers** (thresholds in config, tuned by the simulator to an alert budget):
+**Tiers** (thresholds in config, tuned by the simulator to an **alert budget**: at π0 = 1/400, ≤ 0.25% of genuine triggered sessions end in Red and ≤ 6% see Pause & Verify):
 - **Green** `p < 0.10`: proceed silently.
-- **Amber** `0.10 ≤ p < 0.60`: Pause & Verify interstitial. The user may continue after reading it (minimum 5 s).
-- **Red** `p ≥ 0.60` **and** a guardrail-qualified condition: cooling-off hold. The payment is not sent.
+- **Amber** `0.10 ≤ p < θ_red`: Pause & Verify interstitial. The user may continue after reading it (minimum 5 s).
+- **Red** `p ≥ θ_red` (default 0.80, tuned) **and** a guardrail-qualified condition, **or** any decisive negative (G7): cooling-off hold. The payment is not sent.
 
 **Guardrails (hard rules, applied after scoring):**
-- **G1 (no single weak signal):** Red requires either (a) ≥ 2 families each contributing LR ≥ 3, or (b) a decisive negative from O (`fv_denied`, `callback_denied`, `bank_no_active_call`, `safeword_failed`). Otherwise the result is capped at Amber.
-- **G2 (voice is supporting evidence):** the V family alone can never push above Amber. `voice_no_strong_evidence` is weak (0.7) because detectors miss unseen generators. "Sounds real" is not proof.
+- **G1 (no single weak signal):** Red requires either:
+  - (a) ≥ 2 families each contributing LR ≥ 3, where **trigger-implied evidence does not count**. P qualifies only through `payee_flagged_*`, `payee_name_mismatch` or `burst_new_payees`, not `payee_new` or `amount_gt_*`. V never counts (G2). Or:
+  - (b) a decisive negative from a channel outside the user's own taps: `fv_denied` (device-signed by the relative) or `bank_no_active_call` (only for an integrated bank that the user named).
+
+  Otherwise the result is capped at Amber.
+- **G2 (voice is supporting evidence):** V never counts toward G1, and if removing V would drop the tier below Red, the result is capped at Amber (strict). `voice_no_strong_evidence` is weak (0.7) because detectors miss unseen generators. "Sounds real" is not proof.
 - **G3 (quality gate):** speech < 4 s or SNR < 10 dB means `voice_inconclusive`.
-- **G4 (decisive positive):** `fv_confirmed` or `callback_confirmed` puts the result at Green, unless `payee_flagged_high` is present (then Amber).
+- **G4 (decisive positive):** `fv_confirmed`, `callback_confirmed` or `bank_active_call_1600` (the bank's own registry confirms a live 1600 call) put the result at Green, unless `payee_flagged_high` is present (then Amber).
 - **G5 (trusted bypass):** see §2.
 - **G6 (no accusation):** user-facing text never says "this is a scam" or "fake voice detected". It says what we noticed and what to check.
+- **G7 (decisive floor):** `fv_denied` or `bank_no_active_call` puts the result at **Red regardless of p**. If the real relative's phone says "not me", "Continue anyway" is not offered.
+  - User-reported negatives (`callback_denied`, `safeword_failed`) are strong evidence (LR 30) but **not** decisive. The UI makes "Cancel" the primary action instead.
+  - A registry lookup against a bank that isn't integrated returns `bank_registry_unknown` (LR 1), never `bank_no_active_call`.
+- **Coached "no one":** when the claim is `claim_none` or `claim_other` and context is Amber, show the 3-tap cue checklist (secrecy · OTP/PIN · arrest threat).
 
 Every decision returns `reasons[]`: code, plain-language text (EN + HI), contribution in ln-LR, and family. The UI shows the top 2–3, while the analyst sees all of them.
 
