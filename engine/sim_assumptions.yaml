@@ -1,0 +1,280 @@
+# Pehchaan alert-budget simulator: every assumption in one place.
+#
+# THIS IS AN ASSUMPTION-DRIVEN PROJECTION, NOT A MEASUREMENT.
+# The simulator draws *triggered* payment sessions (a payment made during, or
+# <= 10 min after, a call AND new payee / > p95 / >= Rs 10,000; SPEC section 2)
+# from the distributions below and runs them through the real pehchaan fusion
+# engine (engine/pehchaan/config.yaml). Change a number here, rerun
+# `cd engine && python -m pehchaan.sim`, and every result and chart updates.
+#
+# Labels:  src: "<research file> #row"  -> anchored to a cited public figure
+#          src: "team assumption"       -> our judgement; the rationale says why
+# Research files live in research/ (india_fraud_stats_and_track02.md = IFS,
+# track01_voice_cloning.md = T01).
+
+meta:
+  version: "0.1.0"
+  seed: 20261006
+  n_genuine: 100000          # stratified: genuine sessions simulated
+  n_scam_per_pattern: 30000  # stratified: sessions per scam pattern (then re-weighted by the prior)
+  report_per_sessions: 100000
+  upi_p2p_cap_inr: 100000    # src: NPCI UPI per-transaction limit for ordinary P2P (Rs 1 lakh); amounts are clipped to it
+  p99_over_p95: 2.0          # src: team assumption; a user's p99 sits ~2x their p95
+
+# ---------------------------------------------------------------------------
+# Base rates -> a public-data anchor for the prior pi0 = P(scam | trigger fired)
+# ---------------------------------------------------------------------------
+base_rates:
+  upi_txns_per_month:        {value: 24068380000, src: "IFS #14 (NPCI, Sep 2026: 24,068.38 mn)"}
+  upi_fraud_per_mn_txns:     {value: 7,       src: "IFS #13a (FY25, derived from MoF replies + NPCI)"}
+  ncrp_complaints_per_year:  {value: 2815000, src: "IFS #2 (NCRP 2025: 28.15 lakh)"}
+  chakshu_relative_2025:     {value: 19564,   src: "T01 #2 (Chakshu 'Impersonation as a relative/friend', 2025)"}
+  chakshu_police_2025:       {value: 54639,   src: "T01 #2 (Chakshu 'Impersonation as Police/CBI/Customs/Aadhaar/RBI', 2025)"}
+  call_driven_share:         {value: 0.35, src: "team assumption", note: "share of NCRP complaints that are call-driven impersonation APP (relative, bank/KYC, police/digital arrest). NCRP 2025: investment 35% and sextortion 19% of cases are mostly not call-at-payment (IFS #3)."}
+  txns_per_scam_case:        {value: 2.5,  src: "team assumption", note: "victims often pay in several instalments (T01 1a: 'demanded Rs 2 lakh more')."}
+  scam_txn_meets_trigger:    {value: 0.9,  src: "team assumption", note: "paid during/after the call to a new payee; IFS #5: 98.5% of value is in txns > Rs 10k."}
+  genuine_trigger_rate:      {value: 0.01, src: "team assumption", note: "1% of all UPI payments happen during/<=10 min after a call AND to a new payee / above p95 / >= Rs 10k."}
+  # derived in code (written to sim_summary.json): scam_triggered_per_month, genuine_triggered_per_month, prior_derived (~1/1300)
+
+prior:
+  default_from_engine_config: true   # 1/400 (SPEC default): a cautious, risk-leaning choice vs the ~1/1300 anchor
+  sweep: [0.0005, 0.001, 0.0025, 0.005, 0.01]   # 1/2000, 1/1000, 1/400, 1/200, 1/100
+
+# ---------------------------------------------------------------------------
+# Population mixes (within triggered sessions)
+# ---------------------------------------------------------------------------
+mix:
+  genuine:
+    src: "team assumption"
+    note: "merchant/delivery and friend payments dominate call-adjacent UPI; family money requests are the hard case."
+    G_merchant: 0.38
+    G_friend: 0.30
+    G_relative: 0.15
+    G_elderly_noisy: 0.12
+    G_bank1600: 0.05
+  scam:
+    src: "team assumption informed by T01 #2 (Chakshu 2025: police/CBI impersonation 54,639 vs relative 19,564) and IFS #3 (digital arrest 6% of NCRP cases)"
+    T1: 0.20
+    T2: 0.45
+    T3: 0.35
+
+# ---------------------------------------------------------------------------
+# User behaviour and the opt-in checks
+# ---------------------------------------------------------------------------
+behaviour:
+  voice_uptake: {value: 0.30, sweep: [0.0, 0.30, 0.70], src: "team assumption", note: "share of users who run the optional voice check once Pause & Verify is shown. Many skip it."}
+  amber_cancel_if_decisive_negative: {value: 0.85, src: "team assumption", note: "Amber with a 'not me' from the real person: most users stop."}
+  red_scam_completes_below_review:   {value: 0.20, src: "team assumption", note: "after a 30-min hold, a coerced victim re-confirms anyway (hold breaks urgency; SPEC 5: expiry never auto-sends)."}
+  red_scam_completes_review:         {value: 0.05, src: "team assumption", note: ">= Rs 50,000 needs an analyst review before release (SPEC 5)."}
+  red_genuine_completes:             {value: 0.95, src: "team assumption", note: "genuine held payments are released after a check/review; counted as Rs delayed."}
+
+detector:
+  src: "PLACEHOLDER (team assumption) until ml/results/metrics.json provides band_rates; see T01 4a/4b for why unseen generators are much worse"
+  unseen_generator_share: 0.5        # share of scam audio from generators the detector never saw (T01 #9/#10: big generalisation gaps)
+  band_rates:                        # P(band | audio class); bands from the Voice Provenance Service
+    synthetic_seen:   {likely_synthetic: 0.62, inconclusive: 0.26, no_strong_evidence: 0.12}
+    synthetic_unseen: {likely_synthetic: 0.30, inconclusive: 0.35, no_strong_evidence: 0.35}
+    bonafide:         {likely_synthetic: 0.06, inconclusive: 0.26, no_strong_evidence: 0.68}
+  watermark_given_synthetic: {value: 0.05, src: "team assumption", note: "most scammers strip/never embed watermarks (T01 6); positive-only signal."}
+
+# ---------------------------------------------------------------------------
+# Scenarios. Keys per scenario:
+#   caller: P(unknown = not a saved contact), P(international), P(voip/WhatsApp), P(number in 1600 series)
+#   fri: DoT FRI tier of the caller's number (mocked in the product)
+#   call_long: P(call > 15 min);  amount / user_p95: lognormal (median Rs, sigma)
+#   payee: P(new); P(trusted | known) = paid >= 3 times and amount <= 1.5x usual (G5)
+#   payee_flag: I4C suspect registry / mule score;  burst: P(>= 2 new payees in 30 min)
+#   claim: answer to "Who asked you to make this payment?" (coached victims answer none/other)
+#   name_mismatch_if_family: P(VPA name unrelated to the claimed relative | claim = family)
+#   synthetic_audio: P(the 8-12 s capture contains synthetic speech); quality_ok: P(speech >= 4 s and SNR >= 10 dB)
+#   cues: P(cue heard in the capture and caught by ASR)
+#   fv: Family Verify: P(relative in Pehchaan circle), P(user taps it), outcome mix
+#   callback / safeword / registry: uptake and outcome mixes
+#   amber_cancel: P(user cancels after Amber)
+# Every block carries src; the defaults below are team assumptions unless cited.
+# ---------------------------------------------------------------------------
+scenarios:
+  G_friend:
+    kind: genuine
+    label: "Paying a friend while chatting"
+    src: "team assumption: saved caller, small new-payee splits"
+    caller: {unknown: 0.05, international: 0.03, voip: 0.40, from_1600: 0.0}
+    fri: {none: 0.985, medium: 0.012, high: 0.002, very_high: 0.001}
+    call_long: 0.15
+    amount: {median: 2000, sigma: 0.9}
+    user_p95: {median: 9000, sigma: 0.7}
+    payee: {new: 0.70, trusted_if_known: 0.40}
+    payee_flag: {none: 0.993, medium: 0.006, high: 0.001}
+    burst: 0.05
+    claim: {family: 0.08, bank: 0.0, authority: 0.0, other: 0.52, none: 0.40}
+    name_mismatch_if_family: 0.40
+    synthetic_audio: 0.0
+    quality_ok: 0.85
+    cues: {cue_secrecy: 0.02, cue_urgency: 0.08, cue_otp_pin: 0.003, cue_arrest_threat: 0.001, cue_remote_app: 0.005, cue_refund_verification: 0.01}
+    fv: {enrolled: 0.5, uptake: 0.70, confirmed: 0.80, denied: 0.01, timeout: 0.19}
+    callback: {uptake: 0.35, confirmed: 0.75, denied: 0.0, no_answer: 0.25}
+    safeword: {has: 0.15, uptake: 0.6, pass: 0.90}
+    registry: {coverage: 0.7, uptake: 0.75, active_call: 0.0}
+    amber_cancel: 0.08
+
+  G_merchant:
+    kind: genuine
+    label: "Merchant / delivery call"
+    src: "team assumption: unknown caller, small amounts, new payee; FRI/mule false positives on gig workers per IFS 3.2 #7"
+    caller: {unknown: 0.80, international: 0.002, voip: 0.08, from_1600: 0.0}
+    fri: {none: 0.970, medium: 0.022, high: 0.006, very_high: 0.002}
+    call_long: 0.02
+    amount: {median: 900, sigma: 1.1}
+    user_p95: {median: 8000, sigma: 0.7}
+    payee: {new: 0.85, trusted_if_known: 0.30}
+    payee_flag: {none: 0.985, medium: 0.012, high: 0.003}
+    burst: 0.02
+    claim: {family: 0.0, bank: 0.03, authority: 0.0, other: 0.70, none: 0.27}
+    name_mismatch_if_family: 0.5
+    synthetic_audio: 0.0
+    quality_ok: 0.80
+    cues: {cue_secrecy: 0.005, cue_urgency: 0.05, cue_otp_pin: 0.005, cue_arrest_threat: 0.001, cue_remote_app: 0.005, cue_refund_verification: 0.03}
+    fv: {enrolled: 0.5, uptake: 0.70, confirmed: 0.80, denied: 0.01, timeout: 0.19}
+    callback: {uptake: 0.35, confirmed: 0.75, denied: 0.0, no_answer: 0.25}
+    safeword: {has: 0.15, uptake: 0.6, pass: 0.90}
+    registry: {coverage: 0.7, uptake: 0.75, active_call: 0.0}
+    amber_cancel: 0.10
+
+  G_relative:
+    kind: genuine
+    label: "Genuine relative asks for money"
+    src: "team assumption: NRI families common (international 25%), some new numbers; FV confirms most, others time out"
+    caller: {unknown: 0.15, international: 0.25, voip: 0.50, from_1600: 0.0}
+    fri: {none: 0.985, medium: 0.012, high: 0.002, very_high: 0.001}
+    call_long: 0.10
+    amount: {median: 12000, sigma: 0.9}
+    user_p95: {median: 12000, sigma: 0.7}
+    payee: {new: 0.50, trusted_if_known: 0.45}
+    payee_flag: {none: 0.993, medium: 0.006, high: 0.001}
+    burst: 0.02
+    claim: {family: 0.92, bank: 0.0, authority: 0.0, other: 0.04, none: 0.04}
+    name_mismatch_if_family: 0.30
+    synthetic_audio: 0.0
+    quality_ok: 0.80
+    cues: {cue_secrecy: 0.05, cue_urgency: 0.25, cue_otp_pin: 0.003, cue_arrest_threat: 0.003, cue_remote_app: 0.005, cue_refund_verification: 0.005}
+    fv: {enrolled: 0.5, uptake: 0.70, confirmed: 0.78, denied: 0.01, timeout: 0.21}
+    callback: {uptake: 0.35, confirmed: 0.70, denied: 0.0, no_answer: 0.30}
+    safeword: {has: 0.15, uptake: 0.6, pass: 0.90}
+    registry: {coverage: 0.7, uptake: 0.75, active_call: 0.0}
+    amber_cancel: 0.08
+
+  G_elderly_noisy:
+    kind: genuine
+    label: "Elderly user, noisy line"
+    src: "team assumption: poor audio (quality gate fails 70%), slower Family Verify, more timeouts"
+    caller: {unknown: 0.12, international: 0.12, voip: 0.35, from_1600: 0.0}
+    fri: {none: 0.985, medium: 0.012, high: 0.002, very_high: 0.001}
+    call_long: 0.15
+    amount: {median: 6000, sigma: 1.0}
+    user_p95: {median: 7000, sigma: 0.7}
+    payee: {new: 0.40, trusted_if_known: 0.50}
+    payee_flag: {none: 0.993, medium: 0.006, high: 0.001}
+    burst: 0.01
+    claim: {family: 0.60, bank: 0.0, authority: 0.0, other: 0.20, none: 0.20}
+    name_mismatch_if_family: 0.30
+    synthetic_audio: 0.0
+    quality_ok: 0.30
+    cues: {cue_secrecy: 0.03, cue_urgency: 0.15, cue_otp_pin: 0.003, cue_arrest_threat: 0.003, cue_remote_app: 0.005, cue_refund_verification: 0.01}
+    fv: {enrolled: 0.5, uptake: 0.55, confirmed: 0.62, denied: 0.01, timeout: 0.37}
+    callback: {uptake: 0.30, confirmed: 0.65, denied: 0.0, no_answer: 0.35}
+    safeword: {has: 0.10, uptake: 0.5, pass: 0.80}
+    registry: {coverage: 0.7, uptake: 0.75, active_call: 0.0}
+    amber_cancel: 0.12
+
+  G_bank1600:
+    kind: genuine
+    label: "Genuine bank call (1600 series)"
+    src: "T01 #5 (TRAI 1600 mandate; post-deadline compliance unverified -> 85% from 1600) + team assumption; registry confirms 95% when the bank participates"
+    caller: {unknown: 0.95, international: 0.0, voip: 0.0, from_1600: 0.85}
+    fri: {none: 0.990, medium: 0.008, high: 0.0015, very_high: 0.0005}
+    call_long: 0.08
+    amount: {median: 9000, sigma: 1.0}
+    user_p95: {median: 9000, sigma: 0.7}
+    payee: {new: 0.45, trusted_if_known: 0.50}
+    payee_flag: {none: 0.995, medium: 0.004, high: 0.001}
+    burst: 0.01
+    claim: {family: 0.0, bank: 0.85, authority: 0.0, other: 0.05, none: 0.10}
+    name_mismatch_if_family: 0.5
+    synthetic_audio: 0.0
+    quality_ok: 0.85
+    cues: {cue_secrecy: 0.005, cue_urgency: 0.10, cue_otp_pin: 0.01, cue_arrest_threat: 0.001, cue_remote_app: 0.005, cue_refund_verification: 0.03}
+    fv: {enrolled: 0.5, uptake: 0.70, confirmed: 0.80, denied: 0.01, timeout: 0.19}
+    callback: {uptake: 0.35, confirmed: 0.75, denied: 0.0, no_answer: 0.25}
+    safeword: {has: 0.15, uptake: 0.6, pass: 0.90}
+    registry: {coverage: 0.7, uptake: 0.75, active_call: 0.95}
+    amber_cancel: 0.10
+
+  T1:
+    kind: scam
+    label: "T1 Cloned relative"
+    src: "T01 1a (Hyderabad +Canada nephew, Delhi son, Mumbai 'embassy Dubai'): overseas/WhatsApp numbers, mule payees; team assumption for rates"
+    caller: {unknown: 0.92, international: 0.55, voip: 0.75, from_1600: 0.0}
+    fri: {none: 0.85, medium: 0.08, high: 0.05, very_high: 0.02}   # international/OTT numbers are mostly outside FRI
+    call_long: 0.10
+    amount: {median: 40000, sigma: 0.8}                            # T01 1a: Rs 10k-1.97 lakh
+    user_p95: {median: 10000, sigma: 0.8}
+    payee: {new: 0.97, trusted_if_known: 0.0}
+    payee_flag: {none: 0.65, medium: 0.22, high: 0.13}             # IFS #9: 32 lakh mule accounts in the registry; fresh mules lag
+    burst: 0.10
+    claim: {family: 0.80, bank: 0.0, authority: 0.0, other: 0.05, none: 0.15}   # 'Mummy ko mat batana' coaching
+    name_mismatch_if_family: 0.85
+    synthetic_audio: 0.85
+    quality_ok: 0.70                                               # 'bad line' excuse
+    cues: {cue_secrecy: 0.30, cue_urgency: 0.50, cue_otp_pin: 0.02, cue_arrest_threat: 0.15, cue_remote_app: 0.02, cue_refund_verification: 0.01}
+    fv: {enrolled: 0.5, uptake: 0.50, confirmed: 0.005, denied: 0.70, timeout: 0.295}   # 'police took my phone' lowers uptake
+    callback: {uptake: 0.30, confirmed: 0.0, denied: 0.70, no_answer: 0.30}
+    safeword: {has: 0.15, uptake: 0.6, pass: 0.05}
+    registry: {coverage: 0.7, uptake: 0.65, active_call: 0.01}
+    amber_cancel: 0.40
+
+  T2:
+    kind: scam
+    label: "T2 Fake bank official"
+    src: "SPEC T2 + T01 #4/#5 (10-digit mobiles, FRI coverage of Indian SIMs); synthetic voice ~50% (AI voice agents vs human callers) is a team assumption"
+    caller: {unknown: 0.97, international: 0.05, voip: 0.15, from_1600: 0.01}
+    fri: {none: 0.55, medium: 0.22, high: 0.14, very_high: 0.09}
+    call_long: 0.35
+    amount: {median: 30000, sigma: 1.0}
+    user_p95: {median: 10000, sigma: 0.8}
+    payee: {new: 0.95, trusted_if_known: 0.0}
+    payee_flag: {none: 0.55, medium: 0.27, high: 0.18}
+    burst: 0.15
+    claim: {family: 0.0, bank: 0.75, authority: 0.0, other: 0.10, none: 0.15}
+    name_mismatch_if_family: 0.85
+    synthetic_audio: 0.50
+    quality_ok: 0.80
+    cues: {cue_secrecy: 0.10, cue_urgency: 0.40, cue_otp_pin: 0.30, cue_arrest_threat: 0.05, cue_remote_app: 0.15, cue_refund_verification: 0.20}
+    fv: {enrolled: 0.5, uptake: 0.50, confirmed: 0.005, denied: 0.70, timeout: 0.295}
+    callback: {uptake: 0.30, confirmed: 0.0, denied: 0.70, no_answer: 0.30}
+    safeword: {has: 0.15, uptake: 0.6, pass: 0.05}
+    registry: {coverage: 0.7, uptake: 0.65, active_call: 0.01}    # scammer says "don't hang up / don't check"
+    amber_cancel: 0.40
+
+  T3:
+    kind: scam
+    label: "T3 Digital-arrest hybrid"
+    src: "SPEC T3 + T01 1a (fake police + cloned son); IFS #11-12 (Skype/WhatsApp, long coercive calls); cloned share not quantified anywhere (T01 1a) -> 40% team assumption"
+    caller: {unknown: 0.95, international: 0.25, voip: 0.70, from_1600: 0.0}
+    fri: {none: 0.70, medium: 0.15, high: 0.10, very_high: 0.05}
+    call_long: 0.85
+    amount: {median: 70000, sigma: 0.6}
+    user_p95: {median: 10000, sigma: 0.8}
+    payee: {new: 0.97, trusted_if_known: 0.0}
+    payee_flag: {none: 0.50, medium: 0.30, high: 0.20}
+    burst: 0.30
+    claim: {family: 0.25, bank: 0.0, authority: 0.50, other: 0.05, none: 0.20}
+    name_mismatch_if_family: 0.90
+    synthetic_audio: 0.40
+    quality_ok: 0.75
+    cues: {cue_secrecy: 0.30, cue_urgency: 0.50, cue_otp_pin: 0.05, cue_arrest_threat: 0.50, cue_remote_app: 0.15, cue_refund_verification: 0.10}
+    fv: {enrolled: 0.5, uptake: 0.45, confirmed: 0.0, denied: 0.65, timeout: 0.35}
+    callback: {uptake: 0.20, confirmed: 0.0, denied: 0.65, no_answer: 0.35}
+    safeword: {has: 0.15, uptake: 0.5, pass: 0.05}
+    registry: {coverage: 0.7, uptake: 0.65, active_call: 0.01}
+    amber_cancel: 0.35
+    red_completes_override: {below_review: 0.25, review: 0.08}   # stronger coercion

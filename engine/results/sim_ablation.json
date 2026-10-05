@@ -1,0 +1,109 @@
+{
+  "assumption_driven_projection": true,
+  "disclaimer": "Assumption-driven projection. These numbers come from a synthetic session simulator whose every distribution is listed in engine/sim_assumptions.yaml (public base rates where cited, team assumptions otherwise). They show how the Pehchaan decision logic behaves under those assumptions; they are not measured outcomes on real customers.",
+  "seed": 20261006,
+  "prior": 0.0025,
+  "voice_uptake": 0.3,
+  "rows": [
+    {
+      "level": "context_only",
+      "label": "Context only (call + payment)",
+      "genuine_saw_pause_and_verify_pct": 3.761,
+      "genuine_final_amber_pct": 3.753,
+      "genuine_red_pct": 0.008,
+      "scam_amber_plus_pct": 88.274,
+      "scam_red_pct": 27.009,
+      "scam_stopped_pct": 47.077,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 89.547,
+          "red_pct": 19.9
+        },
+        "T2": {
+          "amber_plus_pct": 80.593,
+          "red_pct": 15.71
+        },
+        "T3": {
+          "amber_plus_pct": 97.423,
+          "red_pct": 45.6
+        }
+      },
+      "inr_protected_per_100k": 6676431
+    },
+    {
+      "level": "plus_claim",
+      "label": "+ one-tap claim",
+      "genuine_saw_pause_and_verify_pct": 10.131,
+      "genuine_final_amber_pct": 9.708,
+      "genuine_red_pct": 0.423,
+      "scam_amber_plus_pct": 96.506,
+      "scam_red_pct": 68.246,
+      "scam_stopped_pct": 69.718,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.533,
+          "red_pct": 44.043
+        },
+        "T2": {
+          "amber_plus_pct": 94.453,
+          "red_pct": 70.417
+        },
+        "T3": {
+          "amber_plus_pct": 99.13,
+          "red_pct": 79.287
+        }
+      },
+      "inr_protected_per_100k": 9657362
+    },
+    {
+      "level": "plus_out_of_band",
+      "label": "+ out-of-band checks",
+      "genuine_saw_pause_and_verify_pct": 10.131,
+      "genuine_final_amber_pct": 5.89,
+      "genuine_red_pct": 0.851,
+      "scam_amber_plus_pct": 96.476,
+      "scam_red_pct": 73.552,
+      "scam_stopped_pct": 72.097,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.4,
+          "red_pct": 59.473
+        },
+        "T2": {
+          "amber_plus_pct": 94.45,
+          "red_pct": 73.71
+        },
+        "T3": {
+          "amber_plus_pct": 99.123,
+          "red_pct": 81.393
+        }
+      },
+      "inr_protected_per_100k": 9925849
+    },
+    {
+      "level": "plus_voice",
+      "label": "+ voice check (30% uptake)",
+      "genuine_saw_pause_and_verify_pct": 10.131,
+      "genuine_final_amber_pct": 5.654,
+      "genuine_red_pct": 0.919,
+      "scam_amber_plus_pct": 96.459,
+      "scam_red_pct": 76.996,
+      "scam_stopped_pct": 73.709,
+      "per_pattern": {
+        "T1": {
+          "amber_plus_pct": 96.377,
+          "red_pct": 64.53
+        },
+        "T2": {
+          "amber_plus_pct": 94.423,
+          "red_pct": 76.667
+        },
+        "T3": {
+          "amber_plus_pct": 99.123,
+          "red_pct": 84.543
+        }
+      },
+      "inr_protected_per_100k": 10145812
+    }
+  ]
+}

@@ -1,0 +1,226 @@
+{
+  "assumption_driven_projection": true,
+  "disclaimer": "Assumption-driven projection. These numbers come from a synthetic session simulator whose every distribution is listed in engine/sim_assumptions.yaml (public base rates where cited, team assumptions otherwise). They show how the Pehchaan decision logic behaves under those assumptions; they are not measured outcomes on real customers.",
+  "generated_at_ist": "2026-10-06T01:39:41+05:30",
+  "engine_config_version": "0.1.0",
+  "assumptions_file": "engine/sim_assumptions.yaml",
+  "assumptions_version": "0.1.0",
+  "seed": 20261006,
+  "n_sessions": {
+    "G_merchant": 38000,
+    "G_friend": 30000,
+    "G_relative": 15000,
+    "G_elderly_noisy": 12000,
+    "G_bank1600": 5000,
+    "T1": 30000,
+    "T2": 30000,
+    "T3": 30000
+  },
+  "prior": {
+    "value": 0.0025,
+    "as_fraction": "1/400",
+    "basis": "SPEC default (engine config)",
+    "base_rate_anchor": {
+      "call_driven_scam_cases_per_month": 82104,
+      "scam_triggered_txns_per_month": 184734,
+      "genuine_triggered_txns_per_month": 240683800,
+      "prior_derived": 0.0007669510485433244,
+      "prior_derived_as_fraction": "1/1304",
+      "cross_check_all_upi_frauds_per_month": 168479,
+      "note": "pi0 = scam_triggered / (scam_triggered + genuine_triggered). The SPEC default 1/400 is ~3x more scam-dense than this anchor, i.e. cautious: it over-states genuine friction."
+    }
+  },
+  "voice": {
+    "check_uptake": 0.3,
+    "band_rates_source": "placeholder (ml/results/metrics.json not found)",
+    "engine_voice_lr_basis": "assumed",
+    "band_rates_used": {
+      "synthetic_seen": {
+        "likely_synthetic": 0.62,
+        "inconclusive": 0.26,
+        "no_strong_evidence": 0.12
+      },
+      "synthetic_unseen": {
+        "likely_synthetic": 0.3,
+        "inconclusive": 0.35,
+        "no_strong_evidence": 0.35
+      },
+      "bonafide": {
+        "likely_synthetic": 0.06,
+        "inconclusive": 0.26,
+        "no_strong_evidence": 0.68
+      }
+    }
+  },
+  "flow": "stage 1 context (K,P) -> one-tap claim question unless clearly benign (p < 0.01) -> Pause & Verify if Amber/Red -> claim-specific checks + optional voice check -> final tier",
+  "friction_budget_genuine_pct": {
+    "silent_green": 42.046,
+    "one_tap_question_then_green": 47.823,
+    "saw_pause_and_verify": 10.131,
+    "resolved_to_green_by_a_check": 3.558,
+    "final_green": 93.427,
+    "final_amber": 5.654,
+    "final_red_hold": 0.919,
+    "by_scenario": {
+      "G_merchant": {
+        "label": "Merchant / delivery call",
+        "mix_weight": 0.38,
+        "silent_green": 18.011,
+        "question_then_green": 77.418,
+        "saw_pause_and_verify": 4.571,
+        "final_green": 95.529,
+        "final_amber": 3.032,
+        "final_red": 1.439,
+        "amber_plus": 4.471,
+        "resolved_green_after_check": 0.1,
+        "used_fv": 0.0,
+        "used_callback": 0.0,
+        "used_safeword": 0.0,
+        "used_registry": 1.303,
+        "used_voice": 1.308
+      },
+      "G_friend": {
+        "label": "Paying a friend while chatting",
+        "mix_weight": 0.3,
+        "silent_green": 67.133,
+        "question_then_green": 30.477,
+        "saw_pause_and_verify": 2.39,
+        "final_green": 98.333,
+        "final_amber": 1.64,
+        "final_red": 0.027,
+        "amber_plus": 1.667,
+        "resolved_green_after_check": 0.723,
+        "used_fv": 0.363,
+        "used_callback": 0.28,
+        "used_safeword": 0.083,
+        "used_registry": 0.0,
+        "used_voice": 0.673
+      },
+      "G_relative": {
+        "label": "Genuine relative asks for money",
+        "mix_weight": 0.15,
+        "silent_green": 47.233,
+        "question_then_green": 30.733,
+        "saw_pause_and_verify": 22.033,
+        "final_green": 88.54,
+        "final_amber": 10.687,
+        "final_red": 0.773,
+        "amber_plus": 11.46,
+        "resolved_green_after_check": 10.573,
+        "used_fv": 7.313,
+        "used_callback": 5.64,
+        "used_safeword": 1.1,
+        "used_registry": 0.0,
+        "used_voice": 6.507
+      },
+      "G_elderly_noisy": {
+        "label": "Elderly user, noisy line",
+        "mix_weight": 0.12,
+        "silent_green": 55.833,
+        "question_then_green": 32.392,
+        "saw_pause_and_verify": 11.775,
+        "final_green": 92.042,
+        "final_amber": 7.692,
+        "final_red": 0.267,
+        "amber_plus": 7.958,
+        "resolved_green_after_check": 3.817,
+        "used_fv": 2.892,
+        "used_callback": 2.475,
+        "used_safeword": 0.283,
+        "used_registry": 0.0,
+        "used_voice": 3.292
+      },
+      "G_bank1600": {
+        "label": "Genuine bank call (1600 series)",
+        "mix_weight": 0.05,
+        "silent_green": 25.54,
+        "question_then_green": 15.28,
+        "saw_pause_and_verify": 59.18,
+        "final_green": 66.0,
+        "final_amber": 29.68,
+        "final_red": 4.32,
+        "amber_plus": 34.0,
+        "resolved_green_after_check": 25.18,
+        "used_fv": 0.0,
+        "used_callback": 0.0,
+        "used_safeword": 0.0,
+        "used_registry": 31.22,
+        "used_voice": 17.32
+      }
+    }
+  },
+  "catch_rates_pct": {
+    "T1": {
+      "label": "T1 Cloned relative",
+      "mix_weight": 0.2,
+      "amber_plus": 96.377,
+      "red_hold": 64.53,
+      "stopped_expected": 68.297,
+      "saw_pause_and_verify": 96.533,
+      "used_fv": 19.977,
+      "used_callback": 19.127,
+      "used_safeword": 4.62,
+      "used_registry": 0.0,
+      "used_voice": 28.41
+    },
+    "T2": {
+      "label": "T2 Fake bank official",
+      "mix_weight": 0.45,
+      "amber_plus": 94.423,
+      "red_hold": 76.667,
+      "stopped_expected": 72.148,
+      "saw_pause_and_verify": 94.453,
+      "used_fv": 0.0,
+      "used_callback": 0.0,
+      "used_safeword": 0.0,
+      "used_registry": 33.933,
+      "used_voice": 28.39
+    },
+    "T3": {
+      "label": "T3 Digital-arrest hybrid",
+      "mix_weight": 0.35,
+      "amber_plus": 99.123,
+      "red_hold": 84.543,
+      "stopped_expected": 78.807,
+      "saw_pause_and_verify": 99.13,
+      "used_fv": 5.873,
+      "used_callback": 3.97,
+      "used_safeword": 1.393,
+      "used_registry": 0.0,
+      "used_voice": 29.657
+    },
+    "all_scams_weighted": {
+      "amber_plus": 96.459,
+      "red_hold": 76.996,
+      "stopped_expected": 73.709
+    }
+  },
+  "per_100k_triggered_sessions": {
+    "genuine_sessions": 99750.0,
+    "scam_sessions": 250.0,
+    "genuine_saw_pause_and_verify": 10105.7,
+    "genuine_held_red": 916.7,
+    "scams_amber_plus": 241.15,
+    "scams_held_red": 192.49,
+    "scams_stopped_expected": 184.27,
+    "inr_at_risk_without_pehchaan": 13005185,
+    "inr_protected_expected": 10145812,
+    "inr_genuine_delayed_by_hold": 8557783,
+    "inr_genuine_abandoned_at_amber": 7406114,
+    "protected_per_rupee_delayed": 1.19,
+    "share_of_red_holds_that_are_scams": 0.1735,
+    "genuine_holds_per_scam_held": 4.76,
+    "genuine_pause_verify_per_scam_amber_plus": 41.91
+  },
+  "national_scale_illustrative": {
+    "label": "ILLUSTRATIVE ONLY: if every UPI app ran Pehchaan, at the base-rate-derived prior 1/1304 and the assumed 1% trigger rate",
+    "triggered_sessions_per_month": 240868534,
+    "genuine_pause_and_verify_per_month": 5971372,
+    "genuine_holds_per_month": 377923,
+    "scam_payments_stopped_per_month": 110197,
+    "inr_protected_crore_per_month": 609.7,
+    "inr_genuine_delayed_crore_per_month": 456.1,
+    "genuine_holds_per_scam_held": 3.73
+  },
+  "elapsed_sec": 2.96
+}

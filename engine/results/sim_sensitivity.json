@@ -1,0 +1,368 @@
+{
+  "assumption_driven_projection": true,
+  "disclaimer": "Assumption-driven projection. These numbers come from a synthetic session simulator whose every distribution is listed in engine/sim_assumptions.yaml (public base rates where cited, team assumptions otherwise). They show how the Pehchaan decision logic behaves under those assumptions; they are not measured outcomes on real customers.",
+  "seed": 20261006,
+  "note": "Same simulated sessions (common random numbers) re-scored at each prior and voice-check uptake.",
+  "rows": [
+    {
+      "prior": 0.0005,
+      "prior_fraction": "1/2000",
+      "voice_uptake": 0.0,
+      "genuine_saw_pause_and_verify_pct": 1.343,
+      "genuine_final_amber_pct": 0.74,
+      "genuine_red_pct": 0.099,
+      "scam_amber_plus_pct": 81.947,
+      "scam_red_pct": 47.583,
+      "scam_stopped_pct": 54.073,
+      "per_pattern_red_pct": {
+        "T1": 26.843,
+        "T2": 50.147,
+        "T3": 56.137
+      },
+      "per_pattern_amber_plus_pct": {
+        "T1": 74.43,
+        "T2": 79.5,
+        "T3": 89.39
+      },
+      "share_of_red_holds_that_are_scams": 0.1938,
+      "inr_protected_per_100k": 1498530,
+      "inr_delayed_per_100k": 518944
+    },
+    {
+      "prior": 0.001,
+      "prior_fraction": "1/1000",
+      "voice_uptake": 0.0,
+      "genuine_saw_pause_and_verify_pct": 3.569,
+      "genuine_final_amber_pct": 2.028,
+      "genuine_red_pct": 0.171,
+      "scam_amber_plus_pct": 89.788,
+      "scam_red_pct": 50.394,
+      "scam_stopped_pct": 58.329,
+      "per_pattern_red_pct": {
+        "T1": 30.313,
+        "T2": 53.98,
+        "T3": 57.257
+      },
+      "per_pattern_amber_plus_pct": {
+        "T1": 88.103,
+        "T2": 85.773,
+        "T3": 95.913
+      },
+      "share_of_red_holds_that_are_scams": 0.2278,
+      "inr_protected_per_100k": 3195099,
+      "inr_delayed_per_100k": 1785045
+    },
+    {
+      "prior": 0.0025,
+      "prior_fraction": "1/400",
+      "voice_uptake": 0.0,
+      "genuine_saw_pause_and_verify_pct": 10.131,
+      "genuine_final_amber_pct": 5.89,
+      "genuine_red_pct": 0.851,
+      "scam_amber_plus_pct": 96.476,
+      "scam_red_pct": 73.552,
+      "scam_stopped_pct": 72.097,
+      "per_pattern_red_pct": {
+        "T1": 59.473,
+        "T2": 73.71,
+        "T3": 81.393
+      },
+      "per_pattern_amber_plus_pct": {
+        "T1": 96.4,
+        "T2": 94.45,
+        "T3": 99.123
+      },
+      "share_of_red_holds_that_are_scams": 0.178,
+      "inr_protected_per_100k": 9925849,
+      "inr_delayed_per_100k": 7385826
+    },
+    {
+      "prior": 0.005,
+      "prior_fraction": "1/200",
+      "voice_uptake": 0.0,
+      "genuine_saw_pause_and_verify_pct": 19.026,
+      "genuine_final_amber_pct": 12.468,
+      "genuine_red_pct": 1.875,
+      "scam_amber_plus_pct": 98.898,
+      "scam_red_pct": 81.366,
+      "scam_stopped_pct": 76.607,
+      "per_pattern_red_pct": {
+        "T1": 74.533,
+        "T2": 80.487,
+        "T3": 86.4
+      },
+      "per_pattern_amber_plus_pct": {
+        "T1": 98.747,
+        "T2": 98.317,
+        "T3": 99.733
+      },
+      "share_of_red_holds_that_are_scams": 0.179,
+      "inr_protected_per_100k": 20878950,
+      "inr_delayed_per_100k": 15286070
+    },
+    {
+      "prior": 0.01,
+      "prior_fraction": "1/100",
+      "voice_uptake": 0.0,
+      "genuine_saw_pause_and_verify_pct": 26.372,
+      "genuine_final_amber_pct": 17.126,
+      "genuine_red_pct": 2.68,
+      "scam_amber_plus_pct": 99.424,
+      "scam_red_pct": 89.493,
+      "scam_stopped_pct": 80.746,
+      "per_pattern_red_pct": {
+        "T1": 86.79,
+        "T2": 86.187,
+        "T3": 95.29
+      },
+      "per_pattern_amber_plus_pct": {
+        "T1": 99.38,
+        "T2": 99.057,
+        "T3": 99.92
+      },
+      "share_of_red_holds_that_are_scams": 0.2522,
+      "inr_protected_per_100k": 44221187,
+      "inr_delayed_per_100k": 33596204
+    },
+    {
+      "prior": 0.0005,
+      "prior_fraction": "1/2000",
+      "voice_uptake": 0.3,
+      "genuine_saw_pause_and_verify_pct": 1.343,
+      "genuine_final_amber_pct": 0.708,
+      "genuine_red_pct": 0.105,
+      "scam_amber_plus_pct": 81.889,
+      "scam_red_pct": 52.649,
+      "scam_stopped_pct": 56.48,
+      "per_pattern_red_pct": {
+        "T1": 32.803,
+        "T2": 54.457,
+        "T3": 61.667
+      },
+      "per_pattern_amber_plus_pct": {
+        "T1": 74.37,
+        "T2": 79.42,
+        "T3": 89.36
+      },
+      "share_of_red_holds_that_are_scams": 0.2005,
+      "inr_protected_per_100k": 1569321,
+      "inr_delayed_per_100k": 742863
+    },
+    {
+      "prior": 0.001,
+      "prior_fraction": "1/1000",
+      "voice_uptake": 0.3,
+      "genuine_saw_pause_and_verify_pct": 3.569,
+      "genuine_final_amber_pct": 1.929,
+      "genuine_red_pct": 0.195,
+      "scam_amber_plus_pct": 89.771,
+      "scam_red_pct": 56.779,
+      "scam_stopped_pct": 61.399,
+      "per_pattern_red_pct": {
+        "T1": 38.407,
+        "T2": 59.127,
+        "T3": 64.26
+      },
+      "per_pattern_amber_plus_pct": {
+        "T1": 88.083,
+        "T2": 85.743,
+        "T3": 95.913
+      },
+      "share_of_red_holds_that_are_scams": 0.2257,
+      "inr_protected_per_100k": 3378132,
+      "inr_delayed_per_100k": 2413670
+    },
+    {
+      "prior": 0.0025,
+      "prior_fraction": "1/400",
+      "voice_uptake": 0.3,
+      "genuine_saw_pause_and_verify_pct": 10.131,
+      "genuine_final_amber_pct": 5.654,
+      "genuine_red_pct": 0.919,
+      "scam_amber_plus_pct": 96.459,
+      "scam_red_pct": 76.996,
+      "scam_stopped_pct": 73.709,
+      "per_pattern_red_pct": {
+        "T1": 64.53,
+        "T2": 76.667,
+        "T3": 84.543
+      },
+      "per_pattern_amber_plus_pct": {
+        "T1": 96.377,
+        "T2": 94.423,
+        "T3": 99.123
+      },
+      "share_of_red_holds_that_are_scams": 0.1735,
+      "inr_protected_per_100k": 10145812,
+      "inr_delayed_per_100k": 8557783
+    },
+    {
+      "prior": 0.005,
+      "prior_fraction": "1/200",
+      "voice_uptake": 0.3,
+      "genuine_saw_pause_and_verify_pct": 19.026,
+      "genuine_final_amber_pct": 11.687,
+      "genuine_red_pct": 1.958,
+      "scam_amber_plus_pct": 98.865,
+      "scam_red_pct": 84.148,
+      "scam_stopped_pct": 77.919,
+      "per_pattern_red_pct": {
+        "T1": 77.827,
+        "T2": 83.177,
+        "T3": 89.01
+      },
+      "per_pattern_amber_plus_pct": {
+        "T1": 98.72,
+        "T2": 98.26,
+        "T3": 99.727
+      },
+      "share_of_red_holds_that_are_scams": 0.1776,
+      "inr_protected_per_100k": 21255064,
+      "inr_delayed_per_100k": 16826912
+    },
+    {
+      "prior": 0.01,
+      "prior_fraction": "1/100",
+      "voice_uptake": 0.3,
+      "genuine_saw_pause_and_verify_pct": 26.372,
+      "genuine_final_amber_pct": 16.739,
+      "genuine_red_pct": 2.79,
+      "scam_amber_plus_pct": 99.421,
+      "scam_red_pct": 91.0,
+      "scam_stopped_pct": 81.44,
+      "per_pattern_red_pct": {
+        "T1": 88.353,
+        "T2": 88.197,
+        "T3": 96.117
+      },
+      "per_pattern_amber_plus_pct": {
+        "T1": 99.38,
+        "T2": 99.05,
+        "T3": 99.92
+      },
+      "share_of_red_holds_that_are_scams": 0.2478,
+      "inr_protected_per_100k": 44570314,
+      "inr_delayed_per_100k": 33922116
+    },
+    {
+      "prior": 0.0005,
+      "prior_fraction": "1/2000",
+      "voice_uptake": 0.7,
+      "genuine_saw_pause_and_verify_pct": 1.343,
+      "genuine_final_amber_pct": 0.663,
+      "genuine_red_pct": 0.121,
+      "scam_amber_plus_pct": 81.822,
+      "scam_red_pct": 59.618,
+      "scam_stopped_pct": 59.812,
+      "per_pattern_red_pct": {
+        "T1": 40.747,
+        "T2": 60.343,
+        "T3": 69.47
+      },
+      "per_pattern_amber_plus_pct": {
+        "T1": 74.32,
+        "T2": 79.327,
+        "T3": 89.317
+      },
+      "share_of_red_holds_that_are_scams": 0.1977,
+      "inr_protected_per_100k": 1668474,
+      "inr_delayed_per_100k": 1020269
+    },
+    {
+      "prior": 0.001,
+      "prior_fraction": "1/1000",
+      "voice_uptake": 0.7,
+      "genuine_saw_pause_and_verify_pct": 3.569,
+      "genuine_final_amber_pct": 1.788,
+      "genuine_red_pct": 0.225,
+      "scam_amber_plus_pct": 89.728,
+      "scam_red_pct": 65.491,
+      "scam_stopped_pct": 65.588,
+      "per_pattern_red_pct": {
+        "T1": 49.243,
+        "T2": 66.233,
+        "T3": 73.82
+      },
+      "per_pattern_amber_plus_pct": {
+        "T1": 88.043,
+        "T2": 85.673,
+        "T3": 95.903
+      },
+      "share_of_red_holds_that_are_scams": 0.2256,
+      "inr_protected_per_100k": 3630002,
+      "inr_delayed_per_100k": 3128921
+    },
+    {
+      "prior": 0.0025,
+      "prior_fraction": "1/400",
+      "voice_uptake": 0.7,
+      "genuine_saw_pause_and_verify_pct": 10.131,
+      "genuine_final_amber_pct": 5.274,
+      "genuine_red_pct": 1.027,
+      "scam_amber_plus_pct": 96.436,
+      "scam_red_pct": 81.64,
+      "scam_stopped_pct": 75.881,
+      "per_pattern_red_pct": {
+        "T1": 71.31,
+        "T2": 80.833,
+        "T3": 88.58
+      },
+      "per_pattern_amber_plus_pct": {
+        "T1": 96.36,
+        "T2": 94.383,
+        "T3": 99.12
+      },
+      "share_of_red_holds_that_are_scams": 0.1661,
+      "inr_protected_per_100k": 10438893,
+      "inr_delayed_per_100k": 10268663
+    },
+    {
+      "prior": 0.005,
+      "prior_fraction": "1/200",
+      "voice_uptake": 0.7,
+      "genuine_saw_pause_and_verify_pct": 19.026,
+      "genuine_final_amber_pct": 10.596,
+      "genuine_red_pct": 2.087,
+      "scam_amber_plus_pct": 98.818,
+      "scam_red_pct": 87.777,
+      "scam_stopped_pct": 79.625,
+      "per_pattern_red_pct": {
+        "T1": 82.297,
+        "T2": 86.713,
+        "T3": 92.277
+      },
+      "per_pattern_amber_plus_pct": {
+        "T1": 98.713,
+        "T2": 98.163,
+        "T3": 99.72
+      },
+      "share_of_red_holds_that_are_scams": 0.1745,
+      "inr_protected_per_100k": 21741406,
+      "inr_delayed_per_100k": 18975717
+    },
+    {
+      "prior": 0.01,
+      "prior_fraction": "1/100",
+      "voice_uptake": 0.7,
+      "genuine_saw_pause_and_verify_pct": 26.372,
+      "genuine_final_amber_pct": 16.173,
+      "genuine_red_pct": 2.972,
+      "scam_amber_plus_pct": 99.418,
+      "scam_red_pct": 93.01,
+      "scam_stopped_pct": 82.359,
+      "per_pattern_red_pct": {
+        "T1": 90.617,
+        "T2": 90.897,
+        "T3": 97.093
+      },
+      "per_pattern_amber_plus_pct": {
+        "T1": 99.377,
+        "T2": 99.047,
+        "T3": 99.92
+      },
+      "share_of_red_holds_that_are_scams": 0.2402,
+      "inr_protected_per_100k": 45024026,
+      "inr_delayed_per_100k": 34982787
+    }
+  ]
+}
