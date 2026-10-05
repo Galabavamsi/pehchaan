@@ -1,0 +1,30 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# node
+node_modules/
+
+# build output / large data
+deck/out/
+data/raw/
+data/generated/
+*.wav
+*.mp3
+*.flac
+*.mp4
+*.ckpt
+*.pt
+*.safetensors
+.firecrawl/
+
+# scraped caches / sample renders
+research/raw/
+deck/tooling-samples/out/

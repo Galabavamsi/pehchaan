@@ -1,0 +1,10 @@
+vars: {d2-config: {layout-engine: elk; pad: 10}}
+style: {fill: transparent}
+direction: right
+classes: {svc: {shape: image; width: 64; height: 64; label.near: outside-bottom-center; style.font-size: 18}}
+chime: "Amazon Chime SDK\nvoice connector" {class: svc; icon: https://icons.terrastruct.com/aws%2FCustomer%20Engagement%2FAmazon-Connect.svg}
+kvs: "Kinesis Video\nStreams" {class: svc; icon: https://icons.terrastruct.com/aws%2FMedia%20Services%2FAmazon-Kinesis-Video-Streams.svg}
+sm: "SageMaker\nendpoint" {class: svc; icon: https://icons.terrastruct.com/aws%2FMachine%20Learning%2FAmazon-SageMaker.svg}
+s3: "S3 Object Lock\nevidence vault" {class: svc; icon: https://icons.terrastruct.com/aws%2FStorage%2FAmazon-Simple-Storage-Service-S3.svg}
+chime -> kvs -> sm
+sm -> s3: "hashes" {style.stroke-dash: 3}

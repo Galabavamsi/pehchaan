@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>RAKSHAM tooling samples</title>
+<link rel="stylesheet" href="../assets/fonts/fonts.css">
+<style>
+  @font-face { font-family: 'Excalifont'; src: url(fonts-extra/Excalifont-latin.woff2) format('woff2'); }
+  @font-face { font-family: 'Virgil'; src: url(fonts-extra/Virgil-latin.woff2) format('woff2'); }
+  @page { size: 1280px 720px; margin: 0; }
+  :root { --ink:#1B1F24; --mute:#5A6270; --paper:#F6F1E7; --saffron:#E8772E; --teal:#127A72; --red:#C8372D; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #ccc; }
+  section.slide:last-of-type { page-break-after: auto; break-after: auto; }
+  section.slide { width: 1280px; height: 720px; position: relative; overflow: hidden; background: var(--paper);
+    padding: 40px 56px; page-break-after: always; break-after: page; font-family: 'Inter', 'Noto Sans Devanagari', sans-serif; color: var(--ink); }
+  .meta { font: 500 13px/1.4 'JetBrains Mono', monospace; color: var(--mute); letter-spacing: .02em; display: flex; gap: 18px; }
+  .meta b { color: var(--ink); font-weight: 600; }
+  .meta .v { color: var(--teal); } .meta .r { color: var(--red); }
+  h2 { font: 700 34px/1.1 'Space Grotesk', sans-serif; margin: 10px 0 6px; letter-spacing: -.01em; }
+  .sub { font-size: 16px; color: var(--mute); margin: 0 0 18px; max-width: 1050px; }
+  .fig { position: absolute; left: 40px; right: 40px; top: 170px; bottom: 34px; display: flex; align-items: center; justify-content: center; }
+  .fig > svg, .fig > img { max-width: 100%; max-height: 100%; width: 100%; height: 100%; }
+  .foot { position: absolute; bottom: 12px; left: 56px; font: 400 11px 'JetBrains Mono', monospace; color: #8E97A3; }
+  /* cover sample */
+  .cover h1 { font: 700 76px/1.02 'Space Grotesk', sans-serif; letter-spacing: -.025em; margin: 70px 0 0; max-width: 1000px; }
+  .cover .lede { font-size: 24px; color: var(--mute); margin-top: 26px; max-width: 760px; line-height: 1.4; }
+  .cover .swoosh { position: absolute; left: 50px; top: 370px; width: 560px; }
+  .cover .stat { position: absolute; right: 90px; top: 430px; text-align: center; }
+  .cover .stat .n { font: 700 64px 'Space Grotesk', 'Noto Sans Devanagari'; }
+  .cover .stat .l { font: 400 14px 'JetBrains Mono'; color: var(--mute); }
+  .cover .hand { position: absolute; right: 330px; top: 560px; font: 26px 'Excalifont'; color: var(--red); transform: rotate(-3deg); }
+  .cover .arrow { position: absolute; right: 220px; top: 520px; width: 140px; transform: scaleY(-1) rotate(-8deg); }
+  .icons { position: absolute; left: 56px; bottom: 50px; display: flex; gap: 22px; color: var(--ink); }
+  .icons svg { width: 34px; height: 34px; stroke-width: 1.75; }
+  .grid { position: absolute; left: 40px; right: 40px; top: 150px; bottom: 30px; display: grid; gap: 14px; }
+  .card { background: #FFFDF8; border: 1px solid #E3DED3; border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; min-height: 0; }
+  .card .t { font: 600 12px 'JetBrains Mono'; color: var(--mute); margin-bottom: 6px; }
+  .card .t b { color: var(--ink); }
+  .card .body { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  .card .body > svg, .card .body > img, .card .body > div > svg { max-width: 100%; max-height: 100%; width: 100%; height: 100%; }
+  .iconrow { display: flex; gap: 26px; align-items: center; }
+  .iconrow svg { width: 40px; height: 40px; }
+  .mermaid { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+  .mermaid svg { max-width: 100% !important; max-height: 100%; }
+  .mermaidTooltip { display: none !important; }  /* Mermaid appends this to <body>; it adds a blank trailing PDF page */
+</style>
+</head>
+<body>
+
+<!-- 1 -->
+<section class="slide cover">
+  <div class="meta"><b>rough-notation</b><span>MIT</span><b>perfect-freehand</b><span>MIT</span><b>Lucide</b><span>ISC</span><b>Excalifont</b><span>OFL-1.1</span><span class="v">all vector</span></div>
+  <h1>Deepfake calls, <span id="hl">caught mid-sentence</span>.</h1>
+  <p class="lede">A detector ensemble scores the <span id="ul">live call</span>, then steps up authentication <span id="bx">before</span> money moves.</p>
+  <div class="stat"><div class="n"><span id="circ">₹1,000 cr</span></div><div class="l">placeholder statistic</div></div>
+  <div class="hand">why this matters</div>
+  <div class="arrow">{{svg:freehand_arrow}}</div>
+  <div class="icons">
+    {{icon:lucide-static/icons/audio-waveform.svg}} {{icon:lucide-static/icons/brain-circuit.svg}} {{icon:lucide-static/icons/scale.svg}}
+    {{icon:lucide-static/icons/shield-check.svg}} {{icon:lucide-static/icons/user-check.svg}} {{icon:lucide-static/icons/vault.svg}}
+  </div>
+  <div class="swoosh" style="top:540px; left:300px; width:420px; opacity:.9">{{svg:freehand_swoosh}}</div>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <div class="meta"><b>D2 v0.9 + ELK</b><span>MPL-2.0 (ELK: EPL-2.0)</span><span class="v">vector, fonts embedded</span><span>custom TTF via --font-regular/--font-bold</span></div>
+  <h2>D2 · ELK layout · custom classes</h2>
+  <p class="sub">Text-to-diagram; containers = data boundaries. Inline SVG, 2182×493 native → scaled ~0.55× to slide width, so source font sizes are set to 20–24.</p>
+  <div class="fig">{{svg:d2_elk_tuned}}</div>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <div class="meta"><b>D2 --sketch</b><span>MPL-2.0</span><span class="v">vector</span><span>same source, one flag</span></div>
+  <h2>D2 · sketch mode</h2>
+  <p class="sub">Hand-drawn strokes and hachure fills (rough.js under the hood), using our Inter TTF for labels.</p>
+  <div class="fig">{{svg:d2_sketch_tuned}}</div>
+</section>
+
+<!-- 4 -->
+<section class="slide">
+  <div class="meta"><b>ELK.js 0.12 + rough.js 4.6</b><span>EPL-2.0 + MIT</span><span class="v">vector, page fonts</span><span>~150 lines of our own JS</span></div>
+  <h2>ELK.js layout · rough.js renderer (custom)</h2>
+  <p class="sub">We own every pixel: boundaries hatched, detectors cross-hatched, outputs zig-zag; labels in Space Grotesk / JetBrains Mono from the deck.</p>
+  <div class="fig">{{svg:elk_rough}}</div>
+</section>
+
+<!-- 5 -->
+<section class="slide">
+  <div class="meta"><b>ELK.js + rough.js (roughness 0)</b><span>EPL-2.0 + MIT</span><span class="v">vector</span><span>same layout, crisp skin</span></div>
+  <h2>Same ELK layout · clean skin</h2>
+  <p class="sub">One flag switches sketch ↔ crisp, so architecture pages can be crisp while the pitch slides stay hand-drawn.</p>
+  <div class="fig">{{svg:elk_clean}}</div>
+</section>
+
+<!-- 6 -->
+<section class="slide">
+  <div class="meta"><b>Excalidraw (@excalidraw/utils 0.1.5 exportToSvg)</b><span>MIT · Excalifont OFL-1.1</span><span class="v">vector, font subset embedded</span></div>
+  <h2>Programmatic .excalidraw → SVG</h2>
+  <p class="sub">ELK coordinates written as an .excalidraw scene (editable on excalidraw.com), exported headlessly in Chromium.</p>
+  <div class="fig">{{svg:excalidraw}}</div>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+  <div class="meta"><b>Mermaid 12 flowchart</b><span>MIT</span><span class="v">vector (htmlLabels:false)</span><span>rendered in-page at build time</span></div>
+  <h2>Mermaid · classic vs look: handDrawn</h2>
+  <div class="grid" style="grid-template-rows: 1fr 1fr; top:120px">
+    <div class="card"><div class="t"><b>look: classic</b> · theme base (v12 default is 'neo')</div><div class="body"><pre class="mermaid" id="m1">
+---
+config:
+  look: classic
+  theme: base
+---
+flowchart LR
+  subgraph EDGE["Bank / telco edge"]
+    A([Call audio]) -->|20 ms frames| B[Feature extraction]
+  end
+  subgraph CLOUD["Detection cloud"]
+    subgraph ENS["Detector ensemble"]
+      D1[Synthetic-voice]
+      D2[Scam-script intent]
+      D3[SIM-swap signals]
+    end
+    F[Risk fusion]
+    S[Step-up auth]
+    H[Human review]
+    V[(Evidence vault)]
+  end
+  B --> D1 & D2 & D3
+  D1 & D2 & D3 --> F
+  F -->|p > 0.6| S
+  F -->|p > 0.9| H
+  F -.-> V
+</pre></div></div>
+    <div class="card"><div class="t"><b>look: handDrawn</b> · same source</div><div class="body"><pre class="mermaid" id="m2">
+---
+config:
+  look: handDrawn
+---
+flowchart LR
+  subgraph EDGE["Bank / telco edge"]
+    A([Call audio]) -->|20 ms frames| B[Feature extraction]
+  end
+  subgraph CLOUD["Detection cloud"]
+    subgraph ENS["Detector ensemble"]
+      D1[Synthetic-voice]
+      D2[Scam-script intent]
+      D3[SIM-swap signals]
+    end
+    F[Risk fusion]
+    S[Step-up auth]
+    H[Human review]
+    V[(Evidence vault)]
+  end
+  B --> D1 & D2 & D3
+  D1 & D2 & D3 --> F
+  F -->|p > 0.6| S
+  F -->|p > 0.9| H
+  F -.-> V
+</pre></div></div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="slide">
+  <div class="meta"><b>Mermaid architecture-beta</b><span>MIT</span><span class="v">vector</span><span>built-in icons: cloud/database/disk/internet/server</span></div>
+  <h2>Mermaid · architecture-beta</h2>
+  <div class="fig" style="top:120px"><pre class="mermaid" id="m3">
+architecture-beta
+  group edge(cloud)[Bank edge]
+  group cloud(cloud)[Detection cloud]
+  service audio(internet)[Call audio] in edge
+  service feat(server)[Feature extraction] in edge
+  service ens(server)[Detector ensemble] in cloud
+  service fuse(server)[Risk fusion] in cloud
+  service review(server)[Human review] in cloud
+  service vault(database)[Evidence vault] in cloud
+  audio:R --> L:feat
+  feat:R --> L:ens
+  ens:R --> L:fuse
+  fuse:B --> T:review
+  fuse:R --> L:vault
+</pre></div>
+</section>
+
+<!-- 9 -->
+<section class="slide">
+  <div class="meta"><b>Graphviz dot 11</b><span>EPL-1.0</span><span class="v">vector</span><span class="r">fonts not installed system-wide → metrics from fallback Sans</span></div>
+  <h2>Graphviz · clusters</h2>
+  <div class="fig" style="top:120px">{{svg:graphviz}}</div>
+</section>
+
+<!-- 10 -->
+<section class="slide">
+  <div class="meta"><b>Result visuals</b><span class="v">all vector, page fonts</span></div>
+  <h2>Charts: Vega-Lite · Observable Plot · ECharts SSR</h2>
+  <div class="grid" style="grid-template-columns: 1.35fr 0.8fr 1fr; grid-template-rows: 1fr 1fr; top:110px">
+    <div class="card" style="grid-row: span 1"><div class="t"><b>Vega-Lite 6</b> via vl-convert (py, offline) · BSD-3</div><div class="body">{{svg:vl_latency}}</div></div>
+    <div class="card" style="grid-row: span 2"><div class="t"><b>Observable Plot 0.6</b> + jsdom · ISC</div><div class="body">{{svg:plot_confusion}}</div></div>
+    <div class="card"><div class="t"><b>Observable Plot</b> · DET (log-log)</div><div class="body">{{svg:plot_det}}</div></div>
+    <div class="card"><div class="t"><b>ECharts 6 SSR</b> renderToSVGString · Apache-2.0</div><div class="body">{{svg:echarts_funnel}}</div></div>
+    <div class="card"><div class="t"><b>matplotlib</b> svg.fonttype=none · PSF/BSD</div><div class="body">{{svg:mpl_roc}}</div></div>
+  </div>
+</section>
+
+<!-- 11 -->
+<section class="slide">
+  <div class="meta"><b>Icons</b><span class="v">inline SVG, currentColor</span></div>
+  <h2>Icon sets side by side</h2>
+  <div class="grid" style="grid-template-rows: repeat(3, 1fr); top:120px">
+    <div class="card"><div class="t"><b>Lucide</b> · ISC · stroke 2</div><div class="body iconrow">
+      {{icon:lucide-static/icons/phone-incoming.svg}} {{icon:lucide-static/icons/audio-waveform.svg}} {{icon:lucide-static/icons/fingerprint.svg}} {{icon:lucide-static/icons/brain-circuit.svg}} {{icon:lucide-static/icons/scale.svg}} {{icon:lucide-static/icons/shield-check.svg}} {{icon:lucide-static/icons/user-check.svg}} {{icon:lucide-static/icons/siren.svg}} {{icon:lucide-static/icons/vault.svg}} {{icon:lucide-static/icons/file-lock.svg}}</div></div>
+    <div class="card"><div class="t"><b>Tabler</b> · MIT · outline</div><div class="body iconrow">
+      {{icon:@tabler/icons/icons/outline/phone-call.svg}} {{icon:@tabler/icons/icons/outline/wave-sine.svg}} {{icon:@tabler/icons/icons/outline/fingerprint.svg}} {{icon:@tabler/icons/icons/outline/brain.svg}} {{icon:@tabler/icons/icons/outline/scale.svg}} {{icon:@tabler/icons/icons/outline/shield-check.svg}} {{icon:@tabler/icons/icons/outline/user-check.svg}} {{icon:@tabler/icons/icons/outline/alarm.svg}} {{icon:@tabler/icons/icons/outline/lock-square.svg}} {{icon:@tabler/icons/icons/outline/file-certificate.svg}}</div></div>
+    <div class="card"><div class="t"><b>Phosphor</b> · MIT · duotone</div><div class="body iconrow" style="color: var(--saffron)">
+      {{icon:@phosphor-icons/core/assets/duotone/phone-call-duotone.svg}} {{icon:@phosphor-icons/core/assets/duotone/waveform-duotone.svg}} {{icon:@phosphor-icons/core/assets/duotone/fingerprint-duotone.svg}} {{icon:@phosphor-icons/core/assets/duotone/brain-duotone.svg}} {{icon:@phosphor-icons/core/assets/duotone/scales-duotone.svg}} {{icon:@phosphor-icons/core/assets/duotone/shield-check-duotone.svg}} {{icon:@phosphor-icons/core/assets/duotone/user-check-duotone.svg}} {{icon:@phosphor-icons/core/assets/duotone/siren-duotone.svg}} {{icon:@phosphor-icons/core/assets/duotone/vault-duotone.svg}} {{icon:@phosphor-icons/core/assets/duotone/seal-check-duotone.svg}}</div></div>
+  </div>
+</section>
+
+<!-- 12 -->
+<section class="slide">
+  <div class="meta"><b>SVG filter brush</b><span class="r">expect RASTER in PDF</span></div>
+  <h2>feTurbulence + feDisplacementMap "paint" stroke</h2>
+  <p class="sub">Looks painterly, but Chromium's PDF backend rasterises filtered content. Compare with page 1 (perfect-freehand, vector).</p>
+  <svg viewBox="0 0 1100 300" style="position:absolute; left:90px; top:240px; width:1100px; height:300px">
+    <defs><filter id="brush" x="-10%" y="-40%" width="120%" height="180%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035 0.6" numOctaves="3" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="14" xChannelSelector="R" yChannelSelector="G"/></filter></defs>
+    <rect x="30" y="80" width="760" height="90" rx="20" fill="#E8772E" opacity=".85" filter="url(#brush)"/>
+    <text x="60" y="145" font-family="Space Grotesk" font-weight="700" font-size="58" fill="#1B1F24">painted highlight</text>
+  </svg>
+</section>
+
+<!-- 13 -->
+<section class="slide">
+  <div class="meta"><b>&lt;img src=*.svg&gt; embedding test</b><span>D2 sketch as external image</span></div>
+  <h2>SVG as &lt;img&gt; (not inlined)</h2>
+  <p class="sub">Checks that Chromium keeps image-embedded SVG vector in the PDF. Fonts inside must be embedded (D2/Excalidraw do; Vega/Plot don't).</p>
+  <div class="fig"><img src="svg/d2_sketch.svg" alt=""></div>
+</section>
+
+<!-- 14 -->
+<section class="slide">
+  <div class="meta"><b>D2 sequence_diagram</b><span>·</span><b>D2 + AWS icons (shape: image)</b><span>·</span><b>Mermaid sequenceDiagram</b><span class="v">all vector (icons embedded as SVG data-URIs)</span></div>
+  <h2>Runtime sequence + AWS deployment view</h2>
+  <div class="grid" style="grid-template-columns: 1.15fr 1fr; grid-template-rows: 1fr 1fr; top:120px">
+    <div class="card" style="grid-row: span 2"><div class="t"><b>D2</b> shape: sequence_diagram</div><div class="body">{{svg:d2_sequence}}</div></div>
+    <div class="card"><div class="t"><b>D2</b> + icons.terrastruct.com AWS SVGs (swap for official AWS package)</div><div class="body">{{svg:d2_aws}}</div></div>
+    <div class="card"><div class="t"><b>Mermaid</b> sequenceDiagram</div><div class="body"><pre class="mermaid" id="m4">
+---
+config:
+  look: classic
+  theme: base
+---
+sequenceDiagram
+  participant C as Caller
+  participant B as Bank IVR
+  participant D as Detector
+  participant U as Customer app
+  C->>B: voice call
+  B->>D: features (20 ms)
+  D-->>B: p(fraud)=0.82
+  B->>U: step-up push
+  U-->>B: approve / deny
+</pre></div></div>
+  </div>
+</section>
+
+<script src="node_modules/mermaid/dist/mermaid.min.js"></script>
+<script src="node_modules/rough-notation/lib/rough-notation.iife.js"></script>
+<script>
+  window.__ready = false;
+  (async () => {
+    await Promise.all(['16px Inter', '600 16px "Space Grotesk"', '700 16px "Space Grotesk"', '14px "JetBrains Mono"', '20px Excalifont']
+      .map(f => document.fonts.load(f)));
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'base', fontFamily: 'Inter',
+      // Mermaid 12: per-diagram defaults flowchart.look='neo' (drop-shadow filters -> rasterised in PDF) and theme 'redux-color';
+      // a global look/theme does NOT override them, so set them inside the diagram block.
+      flowchart: { htmlLabels: false, curve: 'basis', padding: 12, look: 'classic', theme: 'base' },
+      themeVariables: { fontFamily: 'Inter', fontSize: '15px', primaryColor: '#FFFFFF', primaryBorderColor: '#1B1F24', primaryTextColor: '#1B1F24',
+        lineColor: '#1B1F24', clusterBkg: '#EFE8DA', clusterBorder: '#9AA3AE', edgeLabelBackground: '#F6F1E7', tertiaryColor: '#FFF7EE' } });
+    await mermaid.run({ querySelector: '.mermaid' });
+    const { annotate, annotationGroup } = RoughNotation;
+    annotationGroup([
+      annotate(document.getElementById('hl'), { type: 'highlight', color: '#F6C79B', animate: false, multiline: true, iterations: 2 }),
+      annotate(document.getElementById('ul'), { type: 'underline', color: '#127A72', animate: false, strokeWidth: 2.5 }),
+      annotate(document.getElementById('bx'), { type: 'box', color: '#C8372D', animate: false, strokeWidth: 2 }),
+      annotate(document.getElementById('circ'), { type: 'circle', color: '#C8372D', animate: false, strokeWidth: 2.5, padding: 14 }),
+    ]).show();
+    window.__ready = true;
+  })().catch(e => { console.error(e); window.__ready = true; });
+</script>
+</body>
+</html>

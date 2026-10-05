@@ -1,0 +1,14 @@
+vars: {d2-config: {pad: 10}}
+style: {fill: transparent}
+shape: sequence_diagram
+caller: "Caller\n(possible deepfake)"
+bank: "Bank IVR /\nagent"
+det: "Detection\nservice"
+cust: "Customer\napp"
+caller -> bank: "voice call"
+bank -> det: "streamed features (20 ms)"
+det -> det: "ensemble + fusion"
+det -> bank: "p(fraud)=0.82"
+bank -> cust: "step-up push (biometric)"
+cust -> bank: "approve / deny"
+bank -> det: "outcome label → evidence vault" {style.stroke-dash: 3}

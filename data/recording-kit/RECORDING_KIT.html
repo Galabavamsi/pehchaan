@@ -1,0 +1,136 @@
+<html><head><meta charset='utf-8'><style>
+@import url('file:///D:/hackathons/amazon-raksham/deck/assets/fonts/fonts.css');
+body { font-family: Inter, 'Noto Sans Devanagari', sans-serif; font-size: 11pt; line-height: 1.5; color:#1b1f24; max-width: 760px; margin: 0 auto; }
+h1 { font-family: 'Space Grotesk', Inter, sans-serif; font-size: 22pt; margin-bottom: 4px; }
+h2 { font-family: 'Space Grotesk', Inter, sans-serif; font-size: 14pt; margin-top: 22px; border-bottom: 2px solid #e8742a; padding-bottom: 3px; }
+code { font-family: 'JetBrains Mono', monospace; background:#f3efe6; padding: 1px 4px; border-radius: 3px; font-size: 9.5pt; }
+table { border-collapse: collapse; width: 100%; font-size: 10pt; } td, th { border: 1px solid #ddd; padding: 4px 8px; text-align: left; }
+em { color: #5a6270; } li { margin-bottom: 4px; } hr { border: none; border-top: 1px solid #ddd; margin: 18px 0; }
+</style></head><body><h1>Pehchaan voice recording kit</h1>
+<p><strong>Why we need this:</strong> to test our voice-clone detector honestly, we clone <em>our own</em> voices (with consent) using several AI voice tools, then check whether the detector can tell the clone from the real person — in Indian languages and over real phone lines. Real recordings of you are the "genuine" side of that test. Most teams will only test on English academic datasets; this is our edge.</p>
+<p><strong>Time needed:</strong> about 12 minutes of speaking per person, plus one 3-minute phone call per pair.</p>
+<p><strong>Before you start:</strong> read and sign the consent form (<code>CONSENT_FORM.md</code>). No consent, no recording.</p>
+<hr />
+<h2>How to record</h2>
+<ul>
+<li>Quiet room. Turn off fans/AC near you, no music or TV.</li>
+<li>Use your phone's voice recorder (Voice Memos / Recorder app) or a laptop mic. Hold the phone about 15–20 cm from your mouth.</li>
+<li>Speak the way you would <strong>on a phone call</strong> — natural, not a slow "reading" voice. Different speeds and emotions are good; for the role-play lines, act it out.</li>
+<li>Leave a 1–2 second pause between lines. If you stumble, just say the line again.</li>
+<li>One file per section is fine. WAV is best; M4A/MP3 from a phone is OK.</li>
+<li>Female speakers: change the Hindi verb forms to feminine (गया → गई, करता → करती, बोल रहा → बोल रही).</li>
+</ul>
+<h2>File names</h2>
+<p>Each person gets an ID: <code>S01</code>, <code>S02</code>, <code>S03</code>, <code>S04</code>. Name files like this:</p>
+<table>
+<thead>
+<tr>
+<th>Section</th>
+<th>File name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A. English lines</td>
+<td><code>S01_A_en.wav</code></td>
+</tr>
+<tr>
+<td>B. Hindi lines</td>
+<td><code>S01_B_hi.wav</code></td>
+</tr>
+<tr>
+<td>C. Mother-tongue lines</td>
+<td><code>S01_C_te.wav</code> (use a language code: te, ta, kn, ml, mr, bn, gu, pa, or, ur…)</td>
+</tr>
+<tr>
+<td>D. Free speech</td>
+<td><code>S01_D_free.wav</code></td>
+</tr>
+<tr>
+<td>E. Phone call (pair)</td>
+<td><code>S01-S02_E_cellular.m4a</code> and <code>S01-S02_E_whatsapp.m4a</code></td>
+</tr>
+</tbody>
+</table>
+<p>Put every file (and a photo or scan of each signed consent form) in
+<code>D:\hackathons\amazon-raksham\data\raw\recordings\</code> on the build laptop. Don't post them in group chats or public drives. They are kept out of git.</p>
+<hr />
+<h2>A. English (about 1.5 min)</h2>
+<p>Everyday call lines:</p>
+<ul>
+<li><strong>E01</strong> Hi Ma, I reached the hostel safely, I'll call you after dinner.</li>
+<li><strong>E02</strong> Can you send me the electricity bill amount? I'll pay it on UPI tonight.</li>
+<li><strong>E03</strong> The meeting is shifted to four thirty, please inform the rest of the team.</li>
+<li><strong>E04</strong> I'm stuck in traffic near the metro station, start without me.</li>
+<li><strong>E05</strong> Please check if the courier has arrived, the tracking says it was delivered.</li>
+</ul>
+<p>Scam role-play lines (fictional, act them out):</p>
+<ul>
+<li><strong>E06</strong> Papa, it's me. I've had an accident and the police have taken my phone.</li>
+<li><strong>E07</strong> Please don't tell Mummy, just send fifty thousand rupees to this UPI ID right now.</li>
+<li><strong>E08</strong> Hello, I'm calling from your bank's fraud department. Your account will be blocked today.</li>
+<li><strong>E09</strong> Sir, to stop the transaction, please read out the six digit OTP you just received.</li>
+<li><strong>E10</strong> This is Inspector Sharma from the cyber cell. You are under digital arrest, do not disconnect.</li>
+<li><strong>E11</strong> Transfer the amount for verification; it will be refunded within one hour.</li>
+</ul>
+<p>Numbers and mixed sounds:</p>
+<ul>
+<li><strong>E12</strong> My UPI ID is ravi dot kumar at the rate okaxis, and the amount is twelve thousand four hundred.</li>
+<li><strong>E13</strong> The quick brown fox jumps over the lazy dog while the sun sets behind the hills.</li>
+<li><strong>E14</strong> Account number ending four seven two nine, IFSC code S B I N zero zero one two three four.</li>
+<li><strong>E15</strong> Thank you for calling, have a good evening, and please stay safe.</li>
+</ul>
+<h2>B. Hindi (about 2 min)</h2>
+<ul>
+<li><strong>H01</strong> हाँ माँ, मैं ठीक से पहुँच गया हूँ, खाना खाकर फ़ोन करता हूँ।
+  <em>Haan Maa, main theek se pahunch gaya hoon, khaana khaakar phone karta hoon.</em></li>
+<li><strong>H02</strong> बिजली का बिल कितना आया है? मैं आज रात UPI से भर दूँगा।
+  <em>Bijli ka bill kitna aaya hai? Main aaj raat UPI se bhar doonga.</em></li>
+<li><strong>H03</strong> मीटिंग साढ़े चार बजे हो गई है, सबको बता देना।
+  <em>Meeting saadhe chaar baje ho gayi hai, sabko bata dena.</em></li>
+<li><strong>H04</strong> मैं मेट्रो स्टेशन के पास ट्रैफ़िक में फँसा हूँ, तुम लोग शुरू करो।
+  <em>Main metro station ke paas traffic mein phansa hoon, tum log shuru karo.</em></li>
+<li><strong>H05</strong> पापा, मैं बोल रहा हूँ। मेरा एक्सीडेंट हो गया है और पुलिस ने मेरा फ़ोन ले लिया है।
+  <em>Papa, main bol raha hoon. Mera accident ho gaya hai aur police ne mera phone le liya hai.</em></li>
+<li><strong>H06</strong> मम्मी को मत बताना, बस अभी इस UPI ID पर पचास हज़ार भेज दो।
+  <em>Mummy ko mat batana, bas abhi is UPI ID par pachaas hazaar bhej do.</em></li>
+<li><strong>H07</strong> नमस्ते, मैं आपके बैंक के फ्रॉड डिपार्टमेंट से बोल रहा हूँ, आज आपका खाता बंद हो जाएगा।
+  <em>Namaste, main aapke bank ke fraud department se bol raha hoon, aaj aapka khaata band ho jaayega.</em></li>
+<li><strong>H08</strong> ट्रांज़ैक्शन रोकने के लिए अभी आया हुआ छह अंकों का OTP बताइए।
+  <em>Transaction rokne ke liye abhi aaya hua chhah ankon ka OTP bataiye.</em></li>
+<li><strong>H09</strong> मैं साइबर सेल से इंस्पेक्टर शर्मा बोल रहा हूँ, आप डिजिटल अरेस्ट में हैं, फ़ोन मत काटिए।
+  <em>Main cyber cell se Inspector Sharma bol raha hoon, aap digital arrest mein hain, phone mat kaatiye.</em></li>
+<li><strong>H10</strong> वेरिफिकेशन के लिए पैसे भेजिए, एक घंटे में वापस आ जाएँगे।
+  <em>Verification ke liye paise bhejiye, ek ghante mein vaapas aa jaayenge.</em></li>
+<li><strong>H11</strong> मेरी UPI ID है रवि डॉट कुमार एट द रेट ओकेएक्सिस, और रकम है बारह हज़ार चार सौ।
+  <em>Meri UPI ID hai Ravi dot Kumar at the rate okaxis, aur rakam hai baarah hazaar chaar sau.</em></li>
+<li><strong>H12</strong> खाता नंबर के आख़िरी अंक चार सात दो नौ हैं।
+  <em>Khaata number ke aakhiri ank chaar saat do nau hain.</em></li>
+<li><strong>H13</strong> कल सुबह दस बजे बैंक जाकर पासबुक अपडेट करवा लेना।
+  <em>Kal subah das baje bank jaakar passbook update karva lena.</em></li>
+<li><strong>H14</strong> आज बहुत गर्मी है, शाम को बारिश हो सकती है।
+  <em>Aaj bahut garmi hai, shaam ko baarish ho sakti hai.</em></li>
+<li><strong>H15</strong> फ़ोन करने के लिए धन्यवाद, अपना ध्यान रखना।
+  <em>Phone karne ke liye dhanyavaad, apna dhyaan rakhna.</em></li>
+</ul>
+<h2>C. Your mother tongue (about 1.5 min)</h2>
+<p>If your mother tongue is not Hindi or English, say <strong>E01–E11</strong> in it, the way you would naturally say them on a call. Don't translate word for word. Mixing in English words (as people really do) is fine. Start each line by saying its number ("E-zero-one…") so we can line them up later.</p>
+<p>If Hindi is your mother tongue, skip this section, or do it in any other Indian language you speak well.</p>
+<h2>D. Free speech (about 4 min)</h2>
+<p>Unscripted speech matters: AI voices mostly copy <em>read</em> speech, so real conversation is the hardest test. Use any language or a mix (Hinglish is great).</p>
+<ol>
+<li><strong>About 1 min:</strong> describe what you did yesterday, from morning to night.</li>
+<li><strong>About 1 min:</strong> explain to a friend how to make your favourite dish.</li>
+<li><strong>About 2 min, in pairs:</strong> role-play a phone call. One of you is a parent, the other is a student calling from the hostel about fees, an exam or travel plans. Keep it natural, no script.</li>
+</ol>
+<h2>E. Real phone call (pairs, about 3 min each)</h2>
+<p>This gives us <em>genuine</em> speech after it has passed through a real phone network, so the detector can't cheat by learning "phone quality = fake".</p>
+<ol>
+<li>Speaker A calls Speaker B on a <strong>normal mobile call</strong>. B records the call, either with the dialer's built-in call recorder or by putting the call on speaker and recording it on a second device.</li>
+<li>A reads <strong>E01–E05</strong> and <strong>H01–H05</strong>, then you chat for about 1 minute.</li>
+<li>Repeat the same thing as a <strong>WhatsApp voice call</strong>.</li>
+<li>Swap roles if you have time.</li>
+</ol>
+<p>Tell each other that the call is being recorded. Everyone on the call must have signed the consent form.</p>
+<hr />
+<p><strong>Checklist before handing over:</strong> signed consent form ✓ · sections A, B, D (and C if applicable) ✓ · one cellular and one WhatsApp call per pair ✓ · files named correctly ✓</p></body></html>

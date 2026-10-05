@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="plot-d6a7b5" fill="currentColor" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle" width="300" height="260" viewBox="0 0 300 260" style="font-family: Inter; font-size: 13px; color: rgb(27, 31, 36); background: transparent;"><style>:where(.plot-d6a7b5) {
+  --plot-background: white;
+  display: block;
+  height: auto;
+  height: intrinsic;
+  max-width: 100%;
+}
+:where(.plot-d6a7b5 text),
+:where(.plot-d6a7b5 tspan) {
+  white-space: pre;
+}</style><g aria-label="y-axis tick label" text-anchor="end" transform="translate(-9,45.5)"><text y="0.32em" transform="translate(70,46)">Fraud</text><text y="0.32em" transform="translate(70,143)">Legit</text></g><g aria-label="y-axis label" transform="translate(-67,0)"><text y="0.71em" transform="translate(70,140) rotate(-90)">ACTUAL</text></g><g aria-label="x-axis tick label" transform="translate(47.5,-9)"><text transform="translate(77,40)">Fraud</text><text transform="translate(178,40)">Legit</text></g><g aria-label="x-axis label" transform="translate(0,-37)"><text y="0.71em" transform="translate(175,40)">PREDICTED</text></g><g aria-label="cell"><rect x="77" width="95" y="46" height="91" rx="6" fill="rgb(241, 172, 125)"></rect><rect x="178" width="95" y="46" height="91" rx="6" fill="rgb(251, 235, 220)"></rect><rect x="77" width="95" y="143" height="91" rx="6" fill="rgb(250, 228, 210)"></rect><rect x="178" width="95" y="143" height="91" rx="6" fill="rgb(232, 119, 46)"></rect></g><g aria-label="text" font-family="Space Grotesk" font-size="22" font-weight="700" transform="translate(47.5,45.5)"><text y="0.32em" transform="translate(77,46)" fill="white">412</text><text y="0.32em" transform="translate(178,46)" fill="#1B1F24">23</text><text y="0.32em" transform="translate(77,143)" fill="#1B1F24">31</text><text y="0.32em" transform="translate(178,143)" fill="white">4,534</text></g></svg>

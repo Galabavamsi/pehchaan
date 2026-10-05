@@ -1,0 +1,53 @@
+vars: {
+  d2-config: {
+    layout-engine: elk
+    pad: 20
+  }
+}
+direction: right
+style: {fill: transparent}
+classes: {
+  stage: {
+    style: {fill: "#FFFFFF"; stroke: "#1B1F24"; stroke-width: 2; border-radius: 10; font-size: 24; font-color: "#1B1F24"; shadow: false}
+  }
+  det: {
+    style: {fill: "#FFF4E8"; stroke: "#E8772E"; stroke-width: 2; border-radius: 8; font-size: 20; font-color: "#1B1F24"}
+  }
+  out: {
+    style: {fill: "#E7F3F1"; stroke: "#127A72"; stroke-width: 2; border-radius: 10; font-size: 22; font-color: "#0C4B46"}
+  }
+  flow: {
+    style: {stroke: "#1B1F24"; stroke-width: 2; font-size: 17; font-color: "#5A6270"}
+  }
+}
+
+edge: "Bank / telco edge  (raw audio never leaves)" {
+  style: {fill: "#F6F1E7"; stroke: "#9AA3AE"; stroke-dash: 4; border-radius: 14; font-size: 18; font-color: "#5A6270"}
+  audio: "Call audio\n8 kHz stream" {class: stage; shape: oval}
+  feat: "Feature extraction\nlog-mel · prosody · codec" {class: stage}
+}
+
+cloud: "Detection cloud  (features + scores only)" {
+  style: {fill: "#FBFAF7"; stroke: "#9AA3AE"; stroke-dash: 4; border-radius: 14; font-size: 18; font-color: "#5A6270"}
+  ens: "Detector ensemble" {
+    style: {fill: "#FFFFFF"; stroke: "#E8772E"; stroke-width: 2; border-radius: 12; font-size: 20; font-color: "#B4521A"}
+    d1: "Synthetic-voice\ndetector" {class: det}
+    d2: "Scam-script\nintent model" {class: det}
+    d3: "Caller-ID /\nSIM-swap signals" {class: det}
+  }
+  fuse: "Risk fusion\ncalibrated p(fraud)" {class: stage; style.fill: "#1B1F24"; style.font-color: "#FFFFFF"}
+  step: "Step-up auth" {class: out}
+  human: "Human review\nanalyst queue" {class: out}
+  vault: "Evidence vault\nhash-chained, WORM" {class: stage; shape: cylinder}
+}
+
+edge.audio -> edge.feat: "20 ms frames" {class: flow}
+edge.feat -> cloud.ens.d1: "" {class: flow}
+edge.feat -> cloud.ens.d2: "ASR text" {class: flow}
+edge.feat -> cloud.ens.d3: "metadata" {class: flow}
+cloud.ens.d1 -> cloud.fuse {class: flow}
+cloud.ens.d2 -> cloud.fuse {class: flow}
+cloud.ens.d3 -> cloud.fuse {class: flow}
+cloud.fuse -> cloud.step: "p > 0.6" {class: flow; style.stroke: "#127A72"}
+cloud.fuse -> cloud.human: "p > 0.9" {class: flow; style.stroke: "#C8372D"}
+cloud.fuse -> cloud.vault: "scores + hashes" {class: flow; style.stroke-dash: 3}

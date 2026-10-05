@@ -1,0 +1,33 @@
+{
+  "name": "tooling-samples",
+  "version": "1.0.0",
+  "description": "RAKSHAM deck tooling samples (not part of the deck build)",
+  "scripts": {
+    "svgs": "node elk_rough.mjs && node elk_excalidraw.mjs && node charts_node.mjs && node freehand.mjs && python charts_vl.py && python charts_mpl.py && python export_excalidraw.py",
+    "d2": "bash d2.sh",
+    "html": "python build_samples.py",
+    "render": "python render.py",
+    "all": "npm run d2 && npm run svgs && npm run html && npm run render"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "dependencies": {
+    "@excalidraw/utils": "^0.1.5",
+    "@observablehq/plot": "^0.6.17",
+    "@phosphor-icons/core": "^2.1.1",
+    "@tabler/icons": "^3.49.0",
+    "d3": "^7.9.0",
+    "echarts": "^6.1.0",
+    "elkjs": "^0.12.0",
+    "jsdom": "^30.1.2",
+    "lucide-static": "^1.52.0",
+    "mermaid": "^12.1.0",
+    "perfect-freehand": "^1.2.3",
+    "pptxgenjs": "^4.0.1",
+    "rough-notation": "^0.5.1",
+    "roughjs": "^4.6.6",
+    "vega": "^6.4.0",
+    "vega-lite": "^6.4.3"
+  },
+  "private": true
+}
