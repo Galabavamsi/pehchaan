@@ -7,7 +7,7 @@ B=s3://pehchaan-ml-301745146083-apse1/sm/$V
 S=/opt/dlami/nvme/stage_$V
 mkdir -p $S
 cd ~
-python3 - <<'EOF'
+~/envs/det/bin/python - <<'EOF'
 import pandas as pd
 src = pd.read_csv("/home/ubuntu/work/manifests/corpus_src.csv")
 ev = pd.read_csv("/home/ubuntu/work/manifests/corpus_eval.csv")

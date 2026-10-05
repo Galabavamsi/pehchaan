@@ -1,0 +1,44 @@
+{
+ "model_version": "pehchaan-xlsr-aasist-ft-v0+d550584a1ef8",
+ "weights": "weights/pehchaan-xlsr-aasist-ft-v0.safetensors",
+ "platt": {
+  "a": 0.5357485881825909,
+  "b": -0.10692847755084052
+ },
+ "bands": {
+  "p_lo": 0.2,
+  "p_hi": 0.8
+ },
+ "band_LRs_measured": {
+  "test_all": {
+   "likely_synthetic": 110.252,
+   "inconclusive": 1.735,
+   "no_strong_evidence": 0.112
+  },
+  "test_seen_generators": {
+   "likely_synthetic": 119.243,
+   "inconclusive": 0.906,
+   "no_strong_evidence": 0.059
+  },
+  "test_heldout_generators": {
+   "likely_synthetic": 102.845,
+   "inconclusive": 2.421,
+   "no_strong_evidence": 0.156
+  },
+  "test_phone_channels": {
+   "likely_synthetic": 153.75,
+   "inconclusive": 1.613,
+   "no_strong_evidence": 0.111
+  },
+  "test_phone_channels_heldout_generators": {
+   "likely_synthetic": 143.911,
+   "inconclusive": 2.182,
+   "no_strong_evidence": 0.153
+  }
+ },
+ "quality_gate": {
+  "min_speech_sec": 4.0,
+  "min_snr_db": 10.0
+ },
+ "note": "Calibrated on dev (seen generators). Held-out-generator LRs are the conservative ones for fusion."
+}

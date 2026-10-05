@@ -31,6 +31,7 @@ for r in $RUNS; do
       norawboost) A="--rawboost_p 0" ;;
       initdf)    A="--init df" ;;
       noteam)    A="--exclude_sources team,team_clone" ;;
+      lrhi)      A="--lr_ssl 1e-5 --lr_head 1e-4" ;;
       *)         A="" ;;
     esac
     python train/finetune.py --src_manifest /home/ubuntu/work/manifests/corpus_src.csv \
