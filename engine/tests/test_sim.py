@@ -175,3 +175,37 @@ def test_voice_is_one_directional_in_the_flow():
     r20 = run_flow(S, eng, 1 / 400, 0.0, 3, **kw)
     assert ((r2["final"] == 2) == (r20["final"] == 2)).all()
 
+
+
+def _flow_kw(A):
+    beh = A["behaviour"]
+    return dict(review_at=CFG.actions.analyst_review_at_or_above_inr,
+                amber_cancel_neg=beh["amber_cancel_if_decisive_negative"]["value"],
+                red_genuine_completes=beh["red_genuine_completes"]["value"],
+                checklist_uptake=beh["checklist_uptake"]["value"],
+                amber_cancel_user_neg=beh["amber_cancel_if_user_reported_negative"]["value"])
+
+
+def test_a20_checklist_offered_when_context_was_amber_and_counts_as_friction():
+    A = load_assumptions()
+    n_by = {k: 2000 for k in A["mix"]["genuine"] if k.startswith("G_")}
+    n_by.update({k: 4000 for k in A["mix"]["scam"] if k.startswith("T")})
+    S = generate(A, n_by, np.random.default_rng(4), A["detector"]["band_rates"])
+    R = run_flow(S, BatchEngine(CFG), 1 / 400, 0.3, 3, **_flow_kw(A))
+    ck = R["checks"]["checklist"]
+    assert ck.any() and R["shown"][ck].all()           # everyone offered the checklist saw Pause & Verify
+    # A20: some coached "No one" sessions had an Amber context, went Green on the claim, and still got it
+    assert (ck & (R["stage1"] == 1) & (R["stage2"] == 0)).any()
+
+
+def test_a19_auto_family_verify_uptake():
+    import copy as _copy
+    A = load_assumptions()
+    assert A["behaviour"]["family_verify_auto"]["value"] is True
+    n_by = {"T1": 500, "G_relative_request": 500} if "G_relative_request" in A["mix"]["genuine"] else {"T1": 500}
+    S = generate(A, n_by, np.random.default_rng(2), A["detector"]["band_rates"])
+    assert np.allclose(S["fv_uptake"], A["behaviour"]["family_verify_auto"]["uptake"])
+    B = _copy.deepcopy(A)
+    B["behaviour"]["family_verify_auto"]["value"] = False
+    S2 = generate(B, {"T1": 500}, np.random.default_rng(2), A["detector"]["band_rates"])
+    assert np.allclose(S2["fv_uptake"], A["scenarios"]["T1"]["fv"]["uptake"])

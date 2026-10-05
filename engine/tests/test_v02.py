@@ -175,3 +175,35 @@ def test_checklist_answers_raise_risk():
     base = assess(["caller_unknown", "caller_voip_unknown", "payee_new", "amount_gt_p95", "claim_none"])
     with_cues = assess(base.signals + ["cue_secrecy", "cue_otp_pin"])
     assert with_cues.p > base.p and with_cues.families["S"].lr == pytest.approx(30)  # 4 x 8 = 32 -> cap 30
+
+
+# ---------------------------------------------------------------- A20 checklist on Amber context
+def test_a20_checklist_when_context_was_amber_even_if_claim_makes_it_green():
+    from pehchaan.actions import actions_for
+    ctx = ["caller_unknown", "caller_voip_unknown", "caller_international", "payee_new"]
+    c1 = assess(ctx)
+    a2 = assess(ctx + ["claim_none"])
+    assert c1.tier == "amber" and a2.tier == "green"
+    ids_ = [x.id for x in actions_for(a2.tier, "none", signals=a2.signals, context_tier=c1.tier)]
+    assert ids_[0] == "cue_checklist" and "proceed" in ids_
+    # no Amber context -> plain Green; already answered -> plain Green; a cue known -> plain Green
+    assert [x.id for x in actions_for("green", "none", context_tier="green")] == ["proceed"]
+    assert [x.id for x in actions_for("green", "none", context_tier="amber", done={"cue_checklist"})] == ["proceed"]
+    assert [x.id for x in actions_for("green", "other", context_tier="amber", signals=["cue_secrecy"])] == ["proceed"]
+    # other claims never get it
+    assert [x.id for x in actions_for("green", "family", context_tier="amber")] == ["proceed"]
+    # Amber still offers it as before
+    assert actions_for("amber", "other", context_tier="green")[0].id == "cue_checklist"
+
+
+# ---------------------------------------------------------------- A19 auto Family Verify
+def test_a19_auto_family_verify_rule():
+    from pehchaan.actions import should_auto_family_verify
+    from pehchaan.config import load_config
+    assert should_auto_family_verify("amber", "family", True)
+    assert should_auto_family_verify("red", "family", True)
+    assert not should_auto_family_verify("green", "family", True)       # Green proceeds silently
+    assert not should_auto_family_verify("amber", "family", False)      # relative not in the circle
+    assert not should_auto_family_verify("amber", "bank", True)
+    off = load_config(overrides={"actions": {"family_verify_auto": False}})
+    assert not should_auto_family_verify("amber", "family", True, cfg=off)

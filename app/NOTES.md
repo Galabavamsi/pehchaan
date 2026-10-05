@@ -49,7 +49,14 @@ The SPEC is implemented as written. The prototype has to make some choices the S
     - The ceiling is uptake, not enrolment. Even at 90% enrolment, only 34% of T1 victims run Family Verify (assumed 50% uptake, because "police took his phone").
     - What-if, not in the deck numbers: with Family Verify sent by default after "Family member" (uptake 0.9), T1 held is 59% at 50% enrolment and 66% at 90%.
     - Proposal: send Family Verify automatically when the payer names an enrolled relative, rather than offering it as an option.
-20. **Green 0.15 and coached "No one" on T1.** T1's demo context (stage-1 p 0.158) answered "No one" (LR 0.8) falls to p 0.13 and now proceeds Green. That is the accepted Amber+ cost. "Someone else" (LR 1.0) stays Amber with the checklist. The checklist demo and screenshot 13 therefore use T3 (digital arrest), where coaching to say "no one" is the pattern itself.
+21. **A19 auto Family Verify (adopted into SPEC v0.2 §4).** Implemented as `actions.family_verify_auto: true` and `pehchaan.actions.should_auto_family_verify`.
+    - The push is sent without a tap when the claim is `claim_family`, the named relative has a bound phone, and the result after the claim is Amber or Red. Interpretation: a Green result still proceeds silently, so auto-send adds no friction to genuine Green payments.
+    - It is sent once per case. After **Cancel request** (`POST /v1/verify/family/{id}/cancel`, logged as `fv_cancelled`) the payer is back on the Amber options and can send it again by hand. A second send while one is pending gets 409.
+    - Simulator: `behaviour.family_verify_auto.uptake` is 0.90, meaning 10% cancel. It replaces each scenario's opt-in `fv.uptake`; no-response stays `fv.timeout`.
+22. **A20 checklist on an Amber context (adopted).** `checklist_offered` shows the three questions for `claim_none` / `claim_other` when the result is Amber, or when the stage-1 (K+P) tier was Amber and the claim brought it to Green. It is never shown at Red, never twice, and never once a cue is known.
+    - On that Green-with-checklist screen the server shows the context reasons (international caller, unsaved number), not the reassuring claim.
+    - The simulator counts the screen as Pause & Verify friction: +0.16 pp of genuine payments (5.47% → 5.63%, still within the 6% budget).
+20. **Green 0.15 and coached "No one" on T1 (superseded by A20 above: the T1 checklist demo is back).** T1's demo context (stage-1 p 0.158) answered "No one" (LR 0.8) falls to p 0.13 and now proceeds Green. That is the accepted Amber+ cost. "Someone else" (LR 1.0) stays Amber with the checklist. The checklist demo and screenshot 13 therefore use T3 (digital arrest), where coaching to say "no one" is the pattern itself.
     - Possible follow-up: show the checklist whenever stage-1 context was Amber and the answer is "No one", even if the claim drops p below green_below.
 
 ## B. Proposed SPEC changes (product-logic weak spots). B1–B4, B6 and B7 were adopted in v0.2

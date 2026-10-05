@@ -11,7 +11,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from pehchaan import assess, default_config, evaluate_trigger, should_ask_claim
-from pehchaan.actions import actions_for
+from pehchaan.actions import actions_for, should_auto_family_verify
 from pehchaan.evidence import (
     Signer,
     append_event,
@@ -200,6 +200,8 @@ class CaseService:
         stage = "verified" if has_check else ("claim" if case.get("claim") else "context")
         ask = stage == "context" and should_ask_claim(a, CFG)
         prev_tier = case.get("tier")
+        if stage == "context":
+            case["context_tier"] = a.tier   # SPEC v0.2 A20: the K+P tier before the claim
         case.update({
             "stage": stage, "tier": a.tier, "raw_tier": a.raw_tier, "p": a.p, "log_odds": a.log_odds,
             "prior": a.prior, "prior_log_odds": a.prior_log_odds, "thresholds": a.thresholds,
@@ -220,7 +222,11 @@ class CaseService:
         aparams = {"relative": params.get("relative"), "relative_hi": params.get("relative_hi"),
                    "bank": params.get("bank"), "bank_hi": params.get("bank_hi"), "their": params.get("their")}
         case["actions"] = [x.model_dump() for x in actions_for(a.tier, case.get("claim"), amount_inr=case["amount_inr"],
-                                                                 params=aparams, done=done, signals=a.signals, cfg=CFG)]
+                                                                 params=aparams, done=done, signals=a.signals,
+                                                                 context_tier=case.get("context_tier"), cfg=CFG)]
+        if a.tier == "green" and any(x["id"] == "cue_checklist" for x in case["actions"]):
+            # A20: the checklist screen explains the risky context, not the reassuring claim
+            case["top_reasons"] = [r.model_dump() for r in a.top_reasons(3, tier="amber")]
         case["copy"] = {"title": copy_text(f"tier_{a.tier}_title"), "body": copy_text(f"tier_{a.tier}_body")}
         # status + hold
         if a.tier == "red":
@@ -335,6 +341,7 @@ class CaseService:
                 "claimed_bank", "checklist_done", "cues",
                 "reasons", "top_reasons", "actions", "guardrails", "families", "signals", "qualifying_families",
                 "ask_claim", "status", "hold", "copy", "claim", "relative", "checks", "trigger", "amount_display",
+                "context_tier",
                 "payee_name", "payee_vpa", "caller_display", "config_version"]
         out = {k: case.get(k) for k in keys}
         out["triggered"] = True
@@ -392,13 +399,15 @@ class CaseService:
         return self._rescore(case, "voice")
 
     # ------------------------------------------------------- family verify
-    def create_challenge(self, cid: str, relative_id: str | None) -> tuple[dict, dict]:
+    def create_challenge(self, cid: str, relative_id: str | None, auto: bool = False) -> tuple[dict, dict]:
         case = self.get(cid)
         rel = self._relative(case["payer_id"], relative_id or (case.get("relative") or {}).get("id"))
         if not rel:
             raise CaseError(404, "no relative in the payer's Pehchaan circle")
         if not rel.get("device_id"):
             raise CaseError(409, f"{rel['name']} has not joined the Pehchaan circle on a phone")
+        if (case["checks"].get("family_verify") or {}).get("status") == "pending":
+            raise CaseError(409, "a Family Verify request is already pending for this case")
         ch_id = "fv_" + secrets.token_hex(6)
         nonce = secrets.token_hex(16)
         created = self.now()
@@ -415,11 +424,11 @@ class CaseService:
         case["relative"] = case.get("relative") or rel
         case["relative_name"] = rel["name"]
         case["checks"]["family_verify"] = {"status": "pending", "challenge_id": ch_id, "sent_at": ist_iso(created),
-                                           "expires_at": ist_iso(expires), "relative_id": rel["id"]}
+                                           "expires_at": ist_iso(expires), "relative_id": rel["id"], "auto": auto}
         self._event(case, "fv_challenge_sent", "family_verify", {
-            "challenge_id": ch_id, "relative_id": rel["id"], "device_id": rel["device_id"],
+            "challenge_id": ch_id, "relative_id": rel["id"], "device_id": rel["device_id"], "auto_sent": auto,
             "shown": {"amount_band": amount_band, "payee_name": case["payee_name"]}})
-        case = self._rescore(case, "fv_sent")
+        case = self._rescore(case, "fv_auto_sent" if auto else "fv_sent")
         push = {"challenge_id": ch_id, "case_id": cid, "nonce": nonce, "expires_at": ist_iso(expires),
                 "timeout_sec": CFG.actions.family_verify_timeout_sec, "relative": rel,
                 "payer_name": payer.get("name"), "calls_payer": rel.get("calls_payer"),
@@ -457,6 +466,28 @@ class CaseService:
             "challenge_id": ch_id, "answer": answer, "device_id": device_id, "signature_verified": True,
             "sig_sha256_prefix": __import__("hashlib").sha256(signature_b64.encode()).hexdigest()[:16]})
         return self._rescore(case, f"fv_{result}")
+
+    def auto_family_verify_due(self, cid: str) -> bool:
+        """SPEC v0.2 A19: auto-send FV after 'Family member' + an enrolled relative, if the result needs a check."""
+        case = self.get(cid)
+        rel = case.get("relative") or {}
+        fv = case["checks"].get("family_verify")
+        if fv:  # already sent, answered or cancelled once: never re-send on its own
+            return False
+        return should_auto_family_verify(case["tier"], case.get("claim"), bool(rel.get("device_id")), CFG)
+
+    def cancel_challenge(self, ch_id: str) -> dict:
+        row = self.s.one("SELECT * FROM challenges WHERE id=?", (ch_id,))
+        if not row:
+            raise CaseError(404, "challenge not found")
+        if row["status"] != "pending":
+            raise CaseError(409, f"challenge already {row['status']}")
+        self.s.x("UPDATE challenges SET status='cancelled' WHERE id=?", (ch_id,))
+        case = self.get(row["case_id"])
+        case["checks"]["family_verify"].update({"status": "cancelled", "cancelled_at": self.ts()})
+        self._event(case, "fv_cancelled", "payer_app", {"challenge_id": ch_id, "auto_sent": bool(
+            case["checks"]["family_verify"].get("auto"))})
+        return self._rescore(case, "fv_cancelled")
 
     def timeout_challenge(self, ch_id: str) -> dict | None:
         row = self.s.one("SELECT * FROM challenges WHERE id=?", (ch_id,))

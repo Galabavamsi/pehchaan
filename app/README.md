@@ -38,7 +38,7 @@ python app/screenshots/shoot.py         # needs both servers running; writes the
 
 | ID | Story | What happens |
 |---|---|---|
-| T1 | A cloned "Rahul" calls Sunita from an unknown +44 WhatsApp number and asks for ₹50,000 to "Arif Traders". | One-tap question, then Amber with the top reasons (name mismatch, international caller). She taps Family Verify. The real Rahul's phone says "No, that's not me", so G7 (decisive floor) puts it in a Red 30-minute hold. She cancels and the report is pre-filled. |
+| T1 | A cloned "Rahul" calls Sunita from an unknown +44 WhatsApp number and asks for ₹50,000 to "Arif Traders". | One-tap question; naming Rahul sends Family Verify automatically (SPEC v0.2 A19). The real Rahul's phone says "No, that's not me", so G7 (decisive floor) puts it in a Red 30-minute hold. She cancels and the report is pre-filled. |
 | L2 | The real Rahul, on his new +44 number, asks for ₹50,000 to "Rahul Sharma". | Same Amber context as T1. Family Verify gets "Yes, it's me", the result goes Green and she pays. One tap of friction. |
 | L1 | Sunita pays her friend Meena ₹2,000 while on a call with her. | The trigger fires (new payee, active call), but the context is clearly benign. She goes straight to the PIN screen with no Pehchaan screen. |
 | T2 | A "fraud department" caller on a 10-digit mobile (not 1600) asks Ramesh to move ₹35,000. | He picks **My bank**, then **Bharat Demo Bank**, which gives Amber with "Check with Bharat Demo Bank". The integrated registry shows no active call, so G7 holds the payment. If he names **Another bank** instead, the lookup returns `bank_registry_unknown` (LR 1): it stays Amber with "hang up and call the official number". |
@@ -49,8 +49,9 @@ python app/screenshots/shoot.py         # needs both servers running; writes the
 1. **Set-up (20 s).** Open `#/demo` on the projector and click **T1**.
    - Say: "Sunita is on a WhatsApp call. The voice sounds exactly like her son Rahul. He says there's been an accident and asks for ₹50,000." For V4, play the consented cloned-voice call here.
 2. **The pay tap (20 s).** Tap **Pay ₹50,000**. Pehchaan asks one question: *Who asked you to make this payment?* Tap **Family member**, then **Rahul**.
-   - Point out the two plain reasons, and that the screen never says "scam".
-3. **Verify the person (40 s).** Tap **Ask Rahul on his phone**. Rahul's phone (middle) lights up. Read the prompt aloud and tap **No, that's not me**.
+   - The Family Verify push goes out on its own: "We've asked Rahul to confirm on his own phone", with a small **Cancel request** link (SPEC v0.2 A19).
+3. **Verify the person (40 s).** Rahul's phone (middle) lights up. Read the prompt aloud and tap **No, that's not me**.
+   - Cancel request, if you want to show it, returns to the Amber screen with the two plain reasons (it never says "scam"), and Family Verify can be sent again from there.
    - All three screens update together. Sunita's payment is held for 30 minutes. The console shows the case in Red with the waterfall: the out-of-band "not me" is the decisive bar, not the voice.
 4. **Report (30 s).** Tap **Cancel and report**.
    - Show the signed pack: the case ID, the SHA-256 chain, and the 1930, cybercrime.gov.in and Chakshu fields already filled in.
@@ -63,7 +64,7 @@ python app/screenshots/shoot.py         # needs both servers running; writes the
 7. **Bank and police (40 s).**
    - Click **T2** and pick **My bank**, then **Bharat Demo Bank**, then **Check with Bharat Demo Bank**. Result: "Bharat Demo Bank is not calling you right now."
    - Click **T3** and pick **Police, CBI or Govt** to show the "no digital arrest" fact card.
-8. **Coached "no one" (20 s, optional).** On T3 (digital arrest), answer **No one**. The three-question checklist appears (secrecy, OTP/PIN, arrest threat); ticking "keep it secret" raises the risk.
+8. **Coached "no one" (20 s, optional).** On T1, answer **No one**. The claim alone would make it Green, but the context was Amber, so the checklist still appears (SPEC v0.2 A20). The three-question checklist appears (secrecy, OTP/PIN, arrest threat); ticking "keep it secret" raises the risk.
 9. **Analyst (20 s).** In the console, open the T1 case.
    - Show the guardrail notes and the access-logged banner.
    - Click **Confirm scam and report**, which flags the payee VPA to the PSP.

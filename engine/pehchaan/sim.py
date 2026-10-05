@@ -232,6 +232,13 @@ def _lognormal(rng, med, sigma, n):
     return np.exp(np.log(med) + sigma * rng.standard_normal(n))
 
 
+def fv_uptake(A: dict, fv: dict) -> float:
+    """SPEC v0.2 A19: with auto Family Verify the push goes out without a tap, so 'uptake' is the share
+    of payers who do not cancel the request; otherwise it is the scenario's opt-in uptake."""
+    auto = A["behaviour"].get("family_verify_auto") or {}
+    return float(auto["uptake"]) if auto.get("value") else float(fv["uptake"])
+
+
 def generate(A: dict, n_by_scn: dict[str, int], rng: np.random.Generator, band_rates: dict) -> Sessions:
     meta = A["meta"]
     cap = float(meta["upi_p2p_cap_inr"])
@@ -302,7 +309,7 @@ def generate(A: dict, n_by_scn: dict[str, int], rng: np.random.Generator, band_r
         fv = S["fv"]
         put("fv_enrolled", u() < fv["enrolled"])
         put("u_fv", u())
-        put("fv_uptake", np.full(n, fv["uptake"]))
+        put("fv_uptake", np.full(n, fv_uptake(A, fv)))
         put("fv_out", rng.choice(3, size=n, p=_probs(fv, ["confirmed", "denied", "timeout"])))
         cb = S["callback"]
         put("u_cb", u())
@@ -374,7 +381,7 @@ def run_flow(S: Sessions, eng: BatchEngine, prior: float, voice_uptake: float, l
     claim = S["claim"]
     if level == 0:
         asked = np.zeros(n, dtype=bool)
-        shown = a1.tier >= 1
+        shown = saw_pv = a1.tier >= 1
         final, final_X, p_final = a1.tier, a1.X, a1.p
         a2_tier = a1.tier
         checks = {}
@@ -392,13 +399,17 @@ def run_flow(S: Sessions, eng: BatchEngine, prior: float, voice_uptake: float, l
             X2[:, IDX["bank_no_active_call"]] = auto_reg & integ & ~S["reg_active"]
             X2[:, IDX["bank_registry_unknown"]] = auto_reg & ~integ
         a2 = eng.assess(X2, prior, trusted=S["trusted"])
-        shown = asked & (a2.tier >= 1)
-        # 3-tap checklist for coached "no one" / "someone else" at Amber (counted with the claim layer)
-        ck_taken = shown & (a2.tier == 1) & ((claim == C_NONE) | (claim == C_OTHER)) & (S["u_ck"] < checklist_uptake)
+        # 3-tap checklist for coached "no one" / "someone else" (counted with the claim layer).
+        # SPEC v0.2 A20: offered at Amber, and also when the context alone was Amber but the claim made it Green.
+        none_other = asked & ((claim == C_NONE) | (claim == C_OTHER))
+        ck_offer = none_other & ((a2.tier == 1) | ((a1.tier >= 1) & (a2.tier == 0)))
+        ck_taken = ck_offer & (S["u_ck"] < checklist_uptake)
         if ck_taken.any():
             for cue in CHECKLIST_CUES:
                 X2[:, IDX[cue]] |= ck_taken & S[f"ck_{cue}"]
             a2 = eng.assess(X2, prior, trusted=S["trusted"])
+        shown = asked & (a2.tier >= 1)   # the Pause & Verify checks are on screen
+        saw_pv = shown | ck_offer         # friction: the checklist screen counts as Pause & Verify
         a2_tier = np.where(asked, a2.tier, a1.tier)
         final = a2_tier.copy()
         final_X = np.where(asked[:, None], a2.X, a1.X)
@@ -452,7 +463,7 @@ def run_flow(S: Sessions, eng: BatchEngine, prior: float, voice_uptake: float, l
     stopped = np.where(final == 2, 1 - red_complete, np.where(final == 1, amber_cancel, 0.0))
     return {
         "stage1": a1.tier, "stage2": a2_tier, "final": final, "p": p_final,
-        "asked": asked, "shown": shown, "checks": checks, "final_X": final_X,
+        "asked": asked, "shown": saw_pv, "checks": checks, "final_X": final_X,
         "stopped": stopped,
         "abandoned": np.where(final == 1, S["amber_cancel"], 0.0),
         "held": final == 2,
@@ -668,7 +679,8 @@ def fv_enrolment_sweep(A: dict, n_by: dict[str, int], seed: int, band_rates: dic
     return {"note": ("Family Verify enrolment applied to every scenario; same sessions (common random numbers), "
                      f"prior {_frac(prior)}, voice uptake {uptake:.0%}; all other assumptions fixed. Headline uses 0.5."),
             "grid": grid, "headline_enrolment": float(A["scenarios"]["T1"]["fv"]["enrolled"]),
-            "assumed_T1_fv_uptake": float(A["scenarios"]["T1"]["fv"]["uptake"]), "rows": rows}
+            "assumed_T1_fv_uptake": fv_uptake(A, A["scenarios"]["T1"]["fv"]),
+            "family_verify_auto": bool((A["behaviour"].get("family_verify_auto") or {}).get("value")), "rows": rows}
 
 
 def precision_priors(A: dict) -> list[float]:
@@ -757,8 +769,20 @@ def _nearest(rows: list[dict], prior: float, key: str):
     return r[key]
 
 
+V02PRE_KEYS = [
+    "green_below", "genuine_silent_pct", "genuine_one_tap_pct", "genuine_pause_and_verify_pct", "genuine_final_amber_pct",
+    "genuine_final_red_pct", "genuine_resolved_green_by_a_check_pct",
+    "scam_T1_amber_plus_pct", "scam_T2_amber_plus_pct", "scam_T3_amber_plus_pct", "scam_weighted_amber_plus_pct",
+    "scam_T1_red_pct", "scam_T2_red_pct", "scam_T3_red_pct", "scam_weighted_red_pct", "scam_weighted_stopped_pct",
+    "ablation_context_only_scam_red_pct", "ablation_plus_claim_scam_red_pct", "ablation_plus_out_of_band_scam_red_pct",
+    "ablation_plus_voice_scam_red_pct", "zero_voice_scam_red_pct_1_400", "holds_per_scam_held_1_400",
+    "holds_per_scam_held_1_1300", "inr_protected_per_inr_delayed", "t1_red_pct_by_fv_enrolment",
+    "t1_amber_plus_pct_by_fv_enrolment", "scam_weighted_red_pct_by_fv_enrolment",
+]
+
+
 def deck_numbers(summary: dict, ablation: dict, sensitivity: dict, sweep: dict, precision: list[dict],
-                 baseline: dict | None, cfg: Config) -> dict:
+                 baseline: dict | None, cfg: Config, pre: dict | None = None) -> dict:
     f, c, p = summary["friction_budget_genuine_pct"], summary["catch_rates_pct"], summary["per_100k_triggered_sessions"]
     anchor = summary["prior"]["base_rate_anchor"]["prior_derived"]
     zero = next(r for r in sensitivity["rows"] if r["voice_uptake"] == 0.0 and abs(r["prior"] - summary["prior"]["value"]) < 1e-12)
@@ -810,6 +834,11 @@ def deck_numbers(summary: dict, ablation: dict, sensitivity: dict, sweep: dict, 
         d["v01_holds_per_scam_held_1_1300"] = _nearest(baseline["rows"], anchor, "genuine_holds_per_scam_held")
         for k, v in baseline["headline_v01"].items():
             d[f"v01_{k}"] = v
+    if pre:  # the previous report (commit 36e6653): green 0.15, one-directional voice, FV offered, A20 off
+        d["v02pre_source"] = "commit 36e6653: green_below 0.15, one-directional voice, Family Verify offered (not auto), checklist at Amber only"
+        for k in V02PRE_KEYS:
+            if k in pre:
+                d[f"v02pre_{k}"] = pre[k]
     lat_path = ENGINE_DIR.parent / "app" / "server" / "latency.json"
     if lat_path.exists():
         lat = json.loads(lat_path.read_text(encoding="utf-8"))
@@ -994,10 +1023,12 @@ def simulate(n_genuine: int | None = None, n_scam: int | None = None, seed: int 
     base_path = (Path(out_dir) if out_dir is not None else RESULTS_DIR) / "sim_v01_baseline.json"
     if base_path.exists():
         baseline = json.loads(base_path.read_text(encoding="utf-8"))
+    pre_path = base_path.with_name("sim_v02pre_baseline.json")
+    pre = json.loads(pre_path.read_text(encoding="utf-8")) if pre_path.exists() else None
     summary["alert_budget"] = {k: sweep[k] for k in ("budget", "theta_red_in_config", "best_theta_meeting_red_budget",
                                                     "config_meets_red_budget", "config_meets_pause_verify_budget")}
     summary["red_precision_vs_prior"] = precision
-    deck = deck_numbers(summary, ablation, sensitivity, sweep, precision, baseline, cfg)
+    deck = deck_numbers(summary, ablation, sensitivity, sweep, precision, baseline, cfg, pre)
 
     summary["elapsed_sec"] = round(time.time() - t0, 2)
     if out_dir is not None:
@@ -1010,7 +1041,8 @@ def simulate(n_genuine: int | None = None, n_scam: int | None = None, seed: int 
         (out_dir / "deck_numbers.json").write_text(json.dumps(deck, indent=2, ensure_ascii=False), encoding="utf-8")
         if charts:
             from .sim_charts import render_all
-            render_all(summary, sensitivity, ablation, out_dir, sweep=sweep, precision=precision, baseline=baseline)
+            render_all(summary, sensitivity, ablation, out_dir, sweep=sweep, precision=precision, baseline=baseline,
+                       pre=pre)
     if verbose:
         _print_headline(summary, ablation, sensitivity)
         print(f"  theta_red {cfg.tiers.red_at_or_above}  red budget met: {sweep['config_meets_red_budget']}  "

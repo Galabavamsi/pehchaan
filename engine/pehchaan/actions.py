@@ -41,6 +41,41 @@ def _l(en: str, hi: str, params: dict) -> dict[str, str]:
     return {"en": _fill(en, params, _P_EN), "hi": _fill(hi, params, _P_HI, "_hi")}
 
 
+def checklist_offered(tier: str, claim: str | None, context_tier: str | None = None,
+                      signals: list[str] | set[str] | None = None, done: set[str] | None = None) -> bool:
+    """SPEC v0.2 A20: the 3-tap cue checklist for 'No one' / 'Someone else'.
+
+    Offered when the result is Amber, or when the context alone (K+P, before the
+    claim) was Amber even though the claim lowered p below green_below. Never at
+    Red (already held), never twice, never once a cue is known.
+    """
+    if claim not in ("none", "other") or tier == "red" or "cue_checklist" in (done or set()):
+        return False
+    if set(signals or []) & CUE_CODES:
+        return False
+    return tier == "amber" or (tier == "green" and context_tier in ("amber", "red"))
+
+
+def should_auto_family_verify(tier: str, claim: str | None, relative_enrolled: bool,
+                              cfg: Config | None = None) -> bool:
+    """SPEC v0.2 A19: send the Family Verify push without waiting for a tap when the
+    payer answered 'Family member', the named relative is in the circle (bound
+    phone) and the result needs a check (Amber or Red). Green proceeds as before."""
+    cfg = cfg or default_config()
+    return bool(cfg.actions.family_verify_auto and claim == "family" and relative_enrolled and tier in ("amber", "red"))
+
+
+_CHECKLIST_LABEL = {"en": "Three quick questions about the call", "hi": "कॉल के बारे में तीन छोटे सवाल"}
+_CHECKLIST_DETAIL = {"en": "Did they ask for secrecy, an OTP or PIN, or say someone could be arrested?",
+                     "hi": "क्या उन्होंने बात छिपाने, OTP या PIN, या किसी की गिरफ़्तारी की बात कही?"}
+
+
+def _checklist_action() -> Action:
+    return Action(id="cue_checklist", kind="check", primary=True,
+                  produces=["cue_secrecy", "cue_otp_pin", "cue_arrest_threat"],
+                  label=dict(_CHECKLIST_LABEL), detail=dict(_CHECKLIST_DETAIL))
+
+
 def actions_for(
     tier: str,
     claim: str | None,
@@ -49,6 +84,7 @@ def actions_for(
     params: dict | None = None,
     done: set[str] | None = None,
     signals: list[str] | set[str] | None = None,
+    context_tier: str | None = None,
     cfg: Config | None = None,
 ) -> list[Action]:
     cfg = cfg or default_config()
@@ -60,7 +96,12 @@ def actions_for(
     out: list[Action] = []
 
     if tier == "green":
-        return [Action(id="proceed", kind="proceed", primary=True, label={"en": "Pay now", "hi": "अभी पेमेंट करें"})]
+        pay = Action(id="proceed", kind="proceed", primary=True, label={"en": "Pay now", "hi": "अभी पेमेंट करें"})
+        if checklist_offered(tier, claim, context_tier, sig, done):
+            # A20: the context alone was Amber, so a coached "No one" still gets the three questions
+            pay.primary = False
+            return [_checklist_action(), pay]
+        return [pay]
 
     def checks() -> list[Action]:
         c: list[Action] = []
@@ -93,13 +134,8 @@ def actions_for(
                 Action(id="call_1930", kind="human", label={"en": "Call 1930 helpline", "hi": "1930 हेल्पलाइन पर कॉल करें"}),
             ]
         else:
-            if claim in ("none", "other") and tier == "amber" and not (sig & CUE_CODES):
-                c.append(Action(
-                    id="cue_checklist", kind="check", primary=True,
-                    produces=["cue_secrecy", "cue_otp_pin", "cue_arrest_threat"],
-                    label={"en": "Three quick questions about the call", "hi": "कॉल के बारे में तीन छोटे सवाल"},
-                    detail={"en": "Did they ask for secrecy, an OTP or PIN, or say someone could be arrested?",
-                            "hi": "क्या उन्होंने बात छिपाने, OTP या PIN, या किसी की गिरफ़्तारी की बात कही?"}))
+            if checklist_offered(tier, claim, context_tier, sig, done):
+                c.append(_checklist_action())
             c += [
                 Action(id="coached_warning", kind="info", label=copy_text("coached_warning")),
                 Action(id="callback_known", kind="check", primary=not any(a.primary for a in c),

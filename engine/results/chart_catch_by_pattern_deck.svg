@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="600pt" height="470pt" viewBox="0 0 600 470" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-10-06T04:42:00.745562</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.9.3, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 470 
+L 600 470 
+L 600 0 
+L 0 0 
+L 0 470 
+z
+" style="fill: none; opacity: 0"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 132 406 
+L 532 406 
+L 532 58 
+L 132 58 
+L 132 406 
+z
+" style="fill: none"/>
+   </g>
+   <g id="line2d_1">
+    <path d="M 4 321.121951 
+L 532 321.121951 
+" style="fill: none; stroke: #cfc5b0; stroke-linecap: square"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_2">
+      <path d="M 132 406 
+L 132 58 
+" clip-path="url(#p86fb6d5652)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_3"/>
+     <g id="text_1">
+      <text style="fill: #6b7280; font: 17px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="132" y="421.91" transform="rotate(-0 132 421.91)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_4">
+      <path d="M 232 406 
+L 232 58 
+" clip-path="url(#p86fb6d5652)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_5"/>
+     <g id="text_2">
+      <text style="fill: #6b7280; font: 17px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="232" y="421.91" transform="rotate(-0 232 421.91)">25</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_6">
+      <path d="M 332 406 
+L 332 58 
+" clip-path="url(#p86fb6d5652)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_7"/>
+     <g id="text_3">
+      <text style="fill: #6b7280; font: 17px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="332" y="421.91" transform="rotate(-0 332 421.91)">50</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_8">
+      <path d="M 432 406 
+L 432 58 
+" clip-path="url(#p86fb6d5652)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_9"/>
+     <g id="text_4">
+      <text style="fill: #6b7280; font: 17px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="432" y="421.91" transform="rotate(-0 432 421.91)">75</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_10">
+      <path d="M 532 406 
+L 532 58 
+" clip-path="url(#p86fb6d5652)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_11"/>
+     <g id="text_5">
+      <text style="fill: #6b7280; font: 17px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="532" y="421.91" transform="rotate(-0 532 421.91)">100%</text>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_12"/>
+     <g id="text_6">
+      <text style="fill: #1b1f24; font: 17px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(42.238125 102.948396)">T1 Cloned</text>
+      <text style="fill: #1b1f24; font: 17px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(62.8825 120.021708)">relative</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_13"/>
+     <g id="text_7">
+      <text style="fill: #1b1f24; font: 17px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(12.942344 187.826444)">T2 Fake bank</text>
+      <text style="fill: #1b1f24; font: 17px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(67.610625 204.899757)">official</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_14"/>
+     <g id="text_8">
+      <text style="fill: #1b1f24; font: 17px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(45.590312 272.808087)">T3 Digital</text>
+      <text style="fill: #1b1f24; font: 17px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(75.210156 290.080618)">arrest</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_15"/>
+     <g id="text_9">
+      <text style="fill: #1b1f24; font: 17px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(55.240469 357.615745)">Genuine</text>
+      <text style="fill: #1b1f24; font: 17px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(43.109375 374.689058)">payments</text>
+     </g>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 136 76.673171 
+L 502.252 76.673171 
+Q 506.252 76.673171 506.252 80.673171 
+L 506.252 98.136585 
+Q 506.252 102.136585 502.252 102.136585 
+L 136 102.136585 
+Q 132 102.136585 132 98.136585 
+L 132 80.673171 
+Q 132 76.673171 136 76.673171 
+z
+" clip-path="url(#p86fb6d5652)" style="fill: #e0a526"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 132 76.673171 
+L 502.252 76.673171 
+L 502.252 102.136585 
+L 132 102.136585 
+z
+" clip-path="url(#p86fb6d5652)" style="fill: #e0a526"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 136 107.229268 
+L 362.628 107.229268 
+Q 366.628 107.229268 366.628 111.229268 
+L 366.628 128.692683 
+Q 366.628 132.692683 362.628 132.692683 
+L 136 132.692683 
+Q 132 132.692683 132 128.692683 
+L 132 111.229268 
+Q 132 107.229268 136 107.229268 
+z
+" clip-path="url(#p86fb6d5652)" style="fill: #c8372d"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 132 107.229268 
+L 362.628 107.229268 
+L 362.628 132.692683 
+L 132 132.692683 
+z
+" clip-path="url(#p86fb6d5652)" style="fill: #c8372d"/>
+   </g>
+   <g id="text_10">
+    <text style="fill: #1b1f24; font: 17px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="511.852" y="94.079878" transform="rotate(-0 511.852 94.079878)">94%</text>
+   </g>
+   <g id="text_11">
+    <text style="fill: #1b1f24; font: 17px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="372.228" y="124.635976" transform="rotate(-0 372.228 124.635976)">59%</text>
+   </g>
+   <g id="patch_7">
+    <path d="M 136 161.55122 
+L 503.212 161.55122 
+Q 507.212 161.55122 507.212 165.55122 
+L 507.212 183.014634 
+Q 507.212 187.014634 503.212 187.014634 
+L 136 187.014634 
+Q 132 187.014634 132 183.014634 
+L 132 165.55122 
+Q 132 161.55122 136 161.55122 
+z
+" clip-path="url(#p86fb6d5652)" style="fill: #e0a526"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 132 161.55122 
+L 503.212 161.55122 
+L 503.212 187.014634 
+L 132 187.014634 
+z
+" clip-path="url(#p86fb6d5652)" style="fill: #e0a526"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 136 192.107317 
+L 416.348 192.107317 
+Q 420.348 192.107317 420.348 196.107317 
+L 420.348 213.570732 
+Q 420.348 217.570732 416.348 217.570732 
+L 136 217.570732 
+Q 132 217.570732 132 213.570732 
+L 132 196.107317 
+Q 132 192.107317 136 192.107317 
+z
+" clip-path="url(#p86fb6d5652)" style="fill: #c8372d"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 132 192.107317 
+L 416.348 192.107317 
+L 416.348 217.570732 
+L 132 217.570732 
+z
+" clip-path="url(#p86fb6d5652)" style="fill: #c8372d"/>
+   </g>
+   <g id="text_12">
+    <text style="fill: #1b1f24; font: 17px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="512.812" y="178.957927" transform="rotate(-0 512.812 178.957927)">94%</text>
+   </g>
+   <g id="text_13">
+    <text style="fill: #1b1f24; font: 17px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="425.948" y="209.514024" transform="rotate(-0 425.948 209.514024)">72%</text>
+   </g>
+   <g id="patch_11">
+    <path d="M 136 246.429268 
+L 524 246.429268 
+Q 528 246.429268 528 250.429268 
+L 528 267.892683 
+Q 528 271.892683 524 271.892683 
+L 136 271.892683 
+Q 132 271.892683 132 267.892683 
+L 132 250.429268 
+Q 132 246.429268 136 246.429268 
+z
+" clip-path="url(#p86fb6d5652)" style="fill: #e0a526"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 132 246.429268 
+L 524 246.429268 
+L 524 271.892683 
+L 132 271.892683 
+z
+" clip-path="url(#p86fb6d5652)" style="fill: #e0a526"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 136 276.985366 
+L 453.28 276.985366 
+Q 457.28 276.985366 457.28 280.985366 
+L 457.28 298.44878 
+Q 457.28 302.44878 453.28 302.44878 
+L 136 302.44878 
+Q 132 302.44878 132 298.44878 
+L 132 280.985366 
+Q 132 276.985366 136 276.985366 
+z
+" clip-path="url(#p86fb6d5652)" style="fill: #c8372d"/>
+   </g>
+   <g id="patch_14">
+    <path d="M 132 276.985366 
+L 453.28 276.985366 
+L 453.28 302.44878 
+L 132 302.44878 
+z
+" clip-path="url(#p86fb6d5652)" style="fill: #c8372d"/>
+   </g>
+   <g id="text_14">
+    <text style="fill: #1b1f24; font: 17px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="533.6" y="263.835976" transform="rotate(-0 533.6 263.835976)">99%</text>
+   </g>
+   <g id="text_15">
+    <text style="fill: #1b1f24; font: 17px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="462.88" y="294.392073" transform="rotate(-0 462.88 294.392073)">81%</text>
+   </g>
+   <g id="patch_15">
+    <path d="M 136 331.307317 
+L 150.504 331.307317 
+Q 154.504 331.307317 154.504 335.307317 
+L 154.504 352.770732 
+Q 154.504 356.770732 150.504 356.770732 
+L 136 356.770732 
+Q 132 356.770732 132 352.770732 
+L 132 335.307317 
+Q 132 331.307317 136 331.307317 
+z
+" clip-path="url(#p86fb6d5652)" style="fill: #e0a526"/>
+   </g>
+   <g id="patch_16">
+    <path d="M 132 331.307317 
+L 150.504 331.307317 
+L 150.504 356.770732 
+L 132 356.770732 
+z
+" clip-path="url(#p86fb6d5652)" style="fill: #e0a526"/>
+   </g>
+   <g id="patch_17">
+    <path d="M 132.422 361.863415 
+L 132.422 361.863415 
+Q 132.844 361.863415 132.844 362.285415 
+L 132.844 386.904829 
+Q 132.844 387.326829 132.422 387.326829 
+L 132.422 387.326829 
+Q 132 387.326829 132 386.904829 
+L 132 362.285415 
+Q 132 361.863415 132.422 361.863415 
+z
+" clip-path="url(#p86fb6d5652)" style="fill: #c8372d"/>
+   </g>
+   <g id="patch_18">
+    <path d="M 132 361.863415 
+L 132.422 361.863415 
+L 132.422 387.326829 
+L 132 387.326829 
+z
+" clip-path="url(#p86fb6d5652)" style="fill: #c8372d"/>
+   </g>
+   <g id="text_16">
+    <text style="fill: #1b1f24; font: 17px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="160.104" y="348.714024" transform="rotate(-0 160.104 348.714024)">5.6%</text>
+   </g>
+   <g id="text_17">
+    <text style="fill: #1b1f24; font: 17px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="138.444" y="379.270122" transform="rotate(-0 138.444 379.270122)">0.21%</text>
+   </g>
+  </g>
+  <g id="patch_19">
+   <path d="M 14 29 
+L 29 29 
+L 29 14 
+L 14 14 
+z
+" style="fill: #e0a526"/>
+  </g>
+  <g id="patch_20">
+   <path d="M 258.75 29 
+L 273.75 29 
+L 273.75 14 
+L 258.75 14 
+z
+" style="fill: #c8372d"/>
+  </g>
+  <g id="text_18">
+   <text style="fill: #1b1f24; font: 17px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="38" y="26.794531" transform="rotate(-0 38 26.794531)">Paused (Pause &amp; Verify)</text>
+  </g>
+  <g id="text_19">
+   <text style="fill: #1b1f24; font: 17px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="282.75" y="26.449219" transform="rotate(-0 282.75 26.449219)">Held 30 min (Red)</text>
+  </g>
+  <g id="text_20">
+   <text style="fill: #6b7280; font: 14px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="14" y="458" transform="rotate(-0 14 458)">Assumption-driven projection · engine/sim_assumptions.yaml · seed 20261006</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p86fb6d5652">
+   <rect x="132" y="58" width="400" height="348"/>
+  </clipPath>
+ </defs>
+</svg>

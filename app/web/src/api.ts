@@ -20,6 +20,11 @@ export interface Hold {
 export interface Relative {
   id: string; name: string; name_hi?: string; full_name: string; relation: string; relation_hi?: string;
   device_id: string; saved_number?: string; lives_in?: string; calls_payer?: string; calls_payer_hi?: string;
+  pronoun?: "he" | "she" | string;
+}
+export interface FvSent {
+  challenge_id: string; expires_at: string; timeout_sec: number; auto?: boolean;
+  relative?: { id: string; name: string; relation: string };
 }
 export interface VoiceResult {
   p_synthetic: number; band: string; quality: { speech_sec: number; snr_db: number; ok: boolean; duration_sec?: number };
@@ -36,6 +41,7 @@ export interface Assessment {
   copy: { title: Bi; body: Bi }; claim?: string | null; relative?: Relative | null;
   checks?: Record<string, any>; amount_display?: string; payee_name?: string; payee_vpa?: string;
   caller_display?: string; latency_ms?: number; utr?: string; release_requested?: boolean;
+  context_tier?: Tier; auto_family_verify?: FvSent;
 }
 export interface Payer {
   id: string; name: string; name_hi?: string; gender?: string; age_band?: string; city?: string; phone: string;
@@ -76,7 +82,9 @@ export const api = {
   scenario: (name: string) => req<Scenario>(`/v1/demo/scenario/${name}`, { method: "POST" }),
   assess: (body: unknown) => req<Assessment>("/v1/risk/assess", { method: "POST", json: body }),
   verifyFamily: (case_id: string, relative_id?: string) =>
-    req<{ challenge_id: string; expires_at: string; timeout_sec: number; assessment: Assessment }>("/v1/verify/family", { method: "POST", json: { case_id, relative_id } }),
+    req<FvSent & { assessment: Assessment }>("/v1/verify/family", { method: "POST", json: { case_id, relative_id } }),
+  cancelFamilyVerify: (challenge_id: string) =>
+    req<Assessment>(`/v1/verify/family/${challenge_id}/cancel`, { method: "POST" }),
   respond: (id: string, answer: "yes" | "no", device_id: string, signature_b64: string) =>
     req<{ ok: boolean; result: string; tier: Tier }>(`/v1/verify/family/${id}/respond`, { method: "POST", json: { answer, device_id, signature_b64 } }),
   registerDevice: (device_id: string, user_id: string, public_key_b64: string) =>

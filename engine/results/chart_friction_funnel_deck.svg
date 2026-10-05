@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="600pt" height="470pt" viewBox="0 0 600 470" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-10-06T04:42:00.486108</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.9.3, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 470 
+L 600 470 
+L 600 0 
+L 0 0 
+L 0 470 
+z
+" style="fill: none; opacity: 0"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 14 42 
+L 484 42 
+L 484 68 
+L 14 68 
+z
+" clip-path="url(#p84e124a600)" style="fill: #e2d9c6; opacity: 0.5"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 14 146 
+L 484 146 
+L 484 172 
+L 14 172 
+z
+" clip-path="url(#p84e124a600)" style="fill: #e2d9c6; opacity: 0.5"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 14 250 
+L 484 250 
+L 484 276 
+L 14 276 
+z
+" clip-path="url(#p84e124a600)" style="fill: #e2d9c6; opacity: 0.5"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 14 354 
+L 484 354 
+L 484 380 
+L 14 380 
+z
+" clip-path="url(#p84e124a600)" style="fill: #e2d9c6; opacity: 0.5"/>
+   </g>
+   <g id="text_1">
+    <text style="fill: #1b1f24; font: 600 18px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="14" y="30" transform="rotate(-0 14 30)">Genuine triggered payments</text>
+   </g>
+   <g id="patch_6">
+    <path d="M 18 42 
+L 480 42 
+Q 484 42 484 46 
+L 484 64 
+Q 484 68 480 68 
+L 18 68 
+Q 14 68 14 64 
+L 14 46 
+Q 14 42 18 42 
+z
+" clip-path="url(#p84e124a600)" style="fill: #6b7280"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 14 42 
+L 480 42 
+L 480 68 
+L 14 68 
+z
+" clip-path="url(#p84e124a600)" style="fill: #6b7280"/>
+   </g>
+   <g id="text_2">
+    <text style="fill: #1b1f24; font: 18px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="494" y="59.95" transform="rotate(-0 494 59.95)">100%</text>
+   </g>
+   <g id="text_3">
+    <text style="fill: #6b7280; font: 17px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="14" y="94" transform="rotate(-0 14 94)">42% go through with no screen</text>
+   </g>
+   <g id="text_4">
+    <text style="fill: #1b1f24; font: 600 18px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="14" y="134" transform="rotate(-0 14 134)">Asked one tap: “Who asked you?”</text>
+   </g>
+   <g id="patch_8">
+    <path d="M 18 146 
+L 283.6387 146 
+Q 287.6387 146 287.6387 150 
+L 287.6387 168 
+Q 287.6387 172 283.6387 172 
+L 18 172 
+Q 14 172 14 168 
+L 14 150 
+Q 14 146 18 146 
+z
+" clip-path="url(#p84e124a600)" style="fill: #e8742a"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 14 146 
+L 283.6387 146 
+L 283.6387 172 
+L 14 172 
+z
+" clip-path="url(#p84e124a600)" style="fill: #e8742a"/>
+   </g>
+   <g id="text_5">
+    <text style="fill: #1b1f24; font: 18px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="494" y="163.95" transform="rotate(-0 494 163.95)">58%</text>
+   </g>
+   <g id="text_6">
+    <text style="fill: #6b7280; font: 17px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="14" y="198" transform="rotate(-0 14 198)">53% answer and pay straight away</text>
+   </g>
+   <g id="text_7">
+    <text style="fill: #1b1f24; font: 600 18px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="14" y="238" transform="rotate(-0 14 238)">Shown Pause &amp; Verify</text>
+   </g>
+   <g id="patch_10">
+    <path d="M 18 250 
+L 36.4422 250 
+Q 40.4422 250 40.4422 254 
+L 40.4422 272 
+Q 40.4422 276 36.4422 276 
+L 18 276 
+Q 14 276 14 272 
+L 14 254 
+Q 14 250 18 250 
+z
+" clip-path="url(#p84e124a600)" style="fill: #e0a526"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 14 250 
+L 36.4422 250 
+L 36.4422 276 
+L 14 276 
+z
+" clip-path="url(#p84e124a600)" style="fill: #e0a526"/>
+   </g>
+   <g id="text_8">
+    <text style="fill: #1b1f24; font: 18px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="494" y="267.95" transform="rotate(-0 494 267.95)">5.6%</text>
+   </g>
+   <g id="text_9">
+    <text style="fill: #6b7280; font: 17px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="14" y="302" transform="rotate(-0 14 302)">2.7% cleared by a check</text>
+   </g>
+   <g id="text_10">
+    <text style="fill: #1b1f24; font: 600 18px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="14" y="342" transform="rotate(-0 14 342)">Held 30 minutes (Red)</text>
+   </g>
+   <g id="patch_12">
+    <path d="M 14.49585 354 
+L 14.49585 354 
+Q 14.9917 354 14.9917 354.49585 
+L 14.9917 379.50415 
+Q 14.9917 380 14.49585 380 
+L 14.49585 380 
+Q 14 380 14 379.50415 
+L 14 354.49585 
+Q 14 354 14.49585 354 
+z
+" clip-path="url(#p84e124a600)" style="fill: #c8372d"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 14 354 
+L 14.49585 354 
+L 14.49585 380 
+L 14 380 
+z
+" clip-path="url(#p84e124a600)" style="fill: #c8372d"/>
+   </g>
+   <g id="text_11">
+    <text style="fill: #1b1f24; font: 18px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="494" y="371.95" transform="rotate(-0 494 371.95)">0.21%</text>
+   </g>
+   <g id="text_12">
+    <text style="fill: #6b7280; font: 17px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="14" y="406" transform="rotate(-0 14 406)">released after a check or bank review</text>
+   </g>
+  </g>
+  <g id="text_13">
+   <text style="fill: #6b7280; font: 14px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="14" y="458" transform="rotate(-0 14 458)">Assumption-driven projection · engine/sim_assumptions.yaml · seed 20261006</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p84e124a600">
+   <rect x="0" y="0" width="600" height="470"/>
+  </clipPath>
+ </defs>
+</svg>

@@ -83,6 +83,7 @@ class ActionsCfg(BaseModel):
     hold_minutes: int = 30
     analyst_review_at_or_above_inr: float = 50000
     family_verify_timeout_sec: int = 180
+    family_verify_auto: bool = True  # SPEC v0.2 A19: auto-send FV for a named, enrolled relative
 
 
 class VoiceCfg(BaseModel):

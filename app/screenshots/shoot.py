@@ -85,12 +85,12 @@ def main() -> None:
             p.get_by_test_id("claim-family").click()
             p.get_by_test_id("screen-family").wait_for()
             p.get_by_test_id("rel-rel_rahul").click()
-            p.get_by_test_id("screen-options").wait_for()
+            # SPEC v0.2 A19: Family Verify is sent automatically after naming an enrolled relative
+            p.get_by_test_id("screen-fv-wait").wait_for()
+            p.get_by_test_id("fv-cancel-request").wait_for()
             settle(page)
             if want("03"):
                 shot(page, "03_family_options.png", "payer-device")
-            p.get_by_test_id("act-family_verify").click()
-            p.get_by_test_id("screen-fv-wait").wait_for()
             r = relative(page)
             r.get_by_test_id("rel-notif").wait_for()
             settle(page, 600)
@@ -147,13 +147,16 @@ def main() -> None:
             p.get_by_test_id("lang-toggle").first.click()
             settle(page, 300)
             pay_and_claim(page, "family", "rel_rahul")
+            p.get_by_test_id("screen-fv-wait").wait_for()   # auto-sent; "Cancel request" shows the Amber options
+            settle(page, 400)
+            p.get_by_test_id("fv-cancel-request").click()
             p.get_by_test_id("screen-options").wait_for()
             settle(page)
             shot(page, "11_hindi_amber.png", "payer-device")
 
         # ---------------------------------------------------------------- coached "no one" checklist (v0.2)
         if want("13"):
-            load(page, "T3")  # digital arrest: the victim is coached to answer "no one"
+            load(page, "T1")  # SPEC v0.2 A20: T1's context alone was Amber, so "No one" still gets the checklist
             pay_and_claim(page, "none")
             p = payer(page)
             p.get_by_test_id("cue-checklist").wait_for()
@@ -166,9 +169,7 @@ def main() -> None:
             load(page, "L2")
             pay_and_claim(page, "family", "rel_rahul")
             p = payer(page)
-            p.get_by_test_id("screen-options").wait_for()
-            settle(page, 400)
-            p.get_by_test_id("act-family_verify").click()
+            p.get_by_test_id("screen-fv-wait").wait_for()   # auto-sent (A19)
             r = relative(page)
             r.get_by_test_id("rel-notif").wait_for()
             settle(page, 400)

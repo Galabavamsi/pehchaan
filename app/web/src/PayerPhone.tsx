@@ -4,7 +4,7 @@ import {
   Phone, PhoneDisconnect, PhoneOutgoing, SealCheck, ShieldCheck, Signature, Storefront, UploadSimple, User,
   UserCircle, Users, WhatsappLogo, X,
 } from "@phosphor-icons/react";
-import { API, api, subscribe, type Action, type Assessment, type Lang, type Relative, type Scenario, type VoiceResult } from "./api";
+import { API, api, subscribe, type Action, type Assessment, type FvSent, type Lang, type Relative, type Scenario, type VoiceResult } from "./api";
 import { Device, ReasonIcon, Ring, Seal, StatusBar, useCountdown } from "./components";
 import { formatINR, UIContext, useT } from "./i18n";
 import { recordWav } from "./wav";
@@ -36,7 +36,7 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
   const [caseId, setCaseId] = useState<string | null>(null);
   const [claim, setClaim] = useState<ClaimCode | null>(null);
   const [relative, setRelative] = useState<Relative | null>(null);
-  const [fv, setFv] = useState<{ challenge_id: string; expires_at: string; timeout_sec: number } | null>(null);
+  const [fv, setFv] = useState<FvSent | null>(null);
   const [pack, setPack] = useState<any>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -64,9 +64,10 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
 
   function route(x: Assessment) {
     setA(x);
+    const checklist = x.actions.some((y) => y.id === "cue_checklist");
     if (x.tier === "red") setScreen("hold");
-    else if (x.tier === "green") setScreen("green");
-    else setScreen("options");
+    else if (x.tier === "green" && !checklist) setScreen("green");
+    else setScreen("options");  // Amber, or Green with the A20 checklist (context alone was Amber)
   }
 
   const run = async <T,>(f: () => Promise<T>): Promise<T | undefined> => {
@@ -90,7 +91,16 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
     setClaim(c);
     if (rel) setRelative(rel);
     const r = await run(() => api.assess({ case_id: caseId, claim: c, claim_target: rel?.id ?? target }));
-    if (r) route(r);
+    if (!r) return;
+    if (r.auto_family_verify) {  // SPEC v0.2 A19: the push is already on the relative's phone
+      setA(r); setFv(r.auto_family_verify); setScreen("fv_wait");
+    } else route(r);
+  }
+
+  async function cancelFvRequest() {
+    if (!fv) return;
+    const r = await run(() => api.cancelFamilyVerify(fv.challenge_id));
+    if (r) { setFv(null); route(r); }
   }
 
   async function sendCues(cues: string[]) {
@@ -241,8 +251,8 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
       )}
 
       {screen === "fv_wait" && fv && (
-        <FvWait fv={fv} relName={relName} head={head("plain")} onCallInstead={() => setDialog("callback")}
-          onCancel={() => userAction("cancel")} />
+        <FvWait fv={fv} relName={relName} pronoun={relative?.pronoun} head={head("plain")} onCallInstead={() => setDialog("callback")}
+          onCancel={() => userAction("cancel")} onCancelRequest={cancelFvRequest} busy={busy} />
       )}
 
       {screen === "voice" && (
@@ -435,7 +445,7 @@ function OptionsScreen({ a, head, claim, relName, amountTxt, payee, busy, onActi
             <ShieldCheck size={18} weight="bold" /><span>{bi(fact.label)}</span>
           </div>
         )}
-        <div className="sec-t">{checkTitle}</div>
+        {(primary || others.length > 0) && <div className="sec-t">{checkTitle}</div>}
         <div className="checks">
           {primary && (
             <button className="check-primary" onClick={() => onAction(primary)} disabled={busy} data-testid={`act-${primary.id}`}>
@@ -499,18 +509,20 @@ function actionIcon(id: string, size: number) {
   }
 }
 
-function FvWait({ fv, relName, head, onCallInstead, onCancel }: {
-  fv: { expires_at: string; timeout_sec: number }; relName: string; head: React.ReactNode; onCallInstead: () => void; onCancel: () => void;
+function FvWait({ fv, relName, pronoun, head, onCallInstead, onCancel, onCancelRequest, busy }: {
+  fv: FvSent; relName: string; pronoun?: string; head: React.ReactNode; onCallInstead: () => void; onCancel: () => void;
+  onCancelRequest: () => void; busy: boolean;
 }) {
   const { t } = useT();
   const cd = useCountdown(fv.expires_at, fv.timeout_sec);
+  const their = pronoun === "he" ? "his" : pronoun === "she" ? "her" : "their";
   return (
-    <div className="sheet" data-testid="screen-fv-wait">
+    <div className="sheet" data-testid="screen-fv-wait" data-auto={fv.auto ? "1" : "0"}>
       <StatusBar />
       {head}
       <div className="sbody">
-        <h1 className="q">{t("waiting_for", { name: relName })}</h1>
-        <p className="lede">{t("waiting_sub", { name: relName })}</p>
+        <h1 className="q">{fv.auto ? t("fv_auto_title", { name: relName, their }) : t("waiting_for", { name: relName })}</h1>
+        <p className="lede">{fv.auto ? t("fv_auto_sub", { name: relName }) : t("waiting_sub", { name: relName })}</p>
         <div className="ring-wrap">
           <Ring size={190} frac={cd.frac} stroke={12} track="#ede5d5" color="#e8742a">
             <div><div className="big">{cd.mmss}</div><div className="small">{t("fv_left")}</div></div>
@@ -520,6 +532,11 @@ function FvWait({ fv, relName, head, onCallInstead, onCancel }: {
           <li><span className="tick"><Check size={15} weight="bold" /></span>{t("fv_sent")}</li>
           <li><span className="tick wait pulse"><Signature size={15} weight="bold" /></span>{t("fv_signed")}</li>
         </ul>
+        {fv.auto && (
+          <button className="linkbtn" onClick={onCancelRequest} disabled={busy} data-testid="fv-cancel-request">
+            {t("fv_cancel_request")}
+          </button>
+        )}
       </div>
       <div className="foot">
         <button className="btn full" onClick={onCallInstead}>{t("call_instead", { name: relName })}</button>

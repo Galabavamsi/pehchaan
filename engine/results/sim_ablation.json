@@ -33,77 +33,77 @@
     {
       "level": "plus_claim",
       "label": "+ one-tap claim (incl. the 3-tap cue checklist for 'no one' / 'someone else')",
-      "genuine_saw_pause_and_verify_pct": 5.465,
-      "genuine_final_amber_pct": 5.333,
+      "genuine_saw_pause_and_verify_pct": 5.626,
+      "genuine_final_amber_pct": 5.334,
       "genuine_red_pct": 0.132,
-      "scam_amber_plus_pct": 95.114,
-      "scam_red_pct": 60.426,
-      "scam_stopped_pct": 65.593,
+      "scam_amber_plus_pct": 95.234,
+      "scam_red_pct": 60.439,
+      "scam_stopped_pct": 65.645,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 93.057,
-          "red_pct": 31.54
+          "amber_plus_pct": 93.18,
+          "red_pct": 31.56
         },
         "T2": {
-          "amber_plus_pct": 93.147,
-          "red_pct": 62.233
+          "amber_plus_pct": 93.317,
+          "red_pct": 62.25
         },
         "T3": {
-          "amber_plus_pct": 98.82,
-          "red_pct": 74.61
+          "amber_plus_pct": 98.873,
+          "red_pct": 74.613
         }
       },
-      "inr_protected_per_100k": 9164641
+      "inr_protected_per_100k": 9167580
     },
     {
       "level": "plus_out_of_band",
       "label": "+ out-of-band checks",
-      "genuine_saw_pause_and_verify_pct": 5.465,
-      "genuine_final_amber_pct": 2.887,
-      "genuine_red_pct": 0.199,
-      "scam_amber_plus_pct": 94.958,
-      "scam_red_pct": 68.094,
-      "scam_stopped_pct": 68.929,
+      "genuine_saw_pause_and_verify_pct": 5.626,
+      "genuine_final_amber_pct": 2.731,
+      "genuine_red_pct": 0.197,
+      "scam_amber_plus_pct": 95.078,
+      "scam_red_pct": 69.394,
+      "scam_stopped_pct": 69.589,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.86,
-          "red_pct": 50.71
+          "amber_plus_pct": 92.963,
+          "red_pct": 55.463
         },
         "T2": {
-          "amber_plus_pct": 92.913,
-          "red_pct": 68.987
+          "amber_plus_pct": 93.083,
+          "red_pct": 69.003
         },
         "T3": {
-          "amber_plus_pct": 98.787,
-          "red_pct": 76.88
+          "amber_plus_pct": 98.85,
+          "red_pct": 77.857
         }
       },
-      "inr_protected_per_100k": 9512290
+      "inr_protected_per_100k": 9600798
     },
     {
       "level": "plus_voice",
       "label": "+ voice check (30% uptake; detector band + script cues heard in the call audio. Holds added here come from the cues: the band never creates or removes one)",
-      "genuine_saw_pause_and_verify_pct": 5.465,
-      "genuine_final_amber_pct": 2.876,
-      "genuine_red_pct": 0.213,
-      "scam_amber_plus_pct": 94.962,
-      "scam_red_pct": 71.473,
-      "scam_stopped_pct": 70.536,
+      "genuine_saw_pause_and_verify_pct": 5.626,
+      "genuine_final_amber_pct": 2.72,
+      "genuine_red_pct": 0.211,
+      "scam_amber_plus_pct": 95.081,
+      "scam_red_pct": 72.632,
+      "scam_stopped_pct": 71.128,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.877,
-          "red_pct": 54.353
+          "amber_plus_pct": 92.98,
+          "red_pct": 58.657
         },
         "T2": {
-          "amber_plus_pct": 92.913,
-          "red_pct": 72.06
+          "amber_plus_pct": 93.083,
+          "red_pct": 72.087
         },
         "T3": {
-          "amber_plus_pct": 98.787,
-          "red_pct": 80.5
+          "amber_plus_pct": 98.85,
+          "red_pct": 81.32
         }
       },
-      "inr_protected_per_100k": 9738660
+      "inr_protected_per_100k": 9816880
     }
   ]
 }

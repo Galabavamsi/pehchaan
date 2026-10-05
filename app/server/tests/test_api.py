@@ -10,11 +10,17 @@ def start(client, name):
 
 
 def fv_answer(client, device_factory, sc, case_id, answer):
+    """Answer the Family Verify push. Since SPEC v0.2 A19 it is usually auto-sent with the
+    'Family member' claim; otherwise send it explicitly."""
     rel = sc["relative"]
     dev = device_factory(client, rel["device_id"], rel["id"])
-    r = client.post("/v1/verify/family", json={"case_id": case_id, "relative_id": rel["id"]})
-    assert r.status_code == 200, r.text
-    ch = r.json()
+    pending = [x for x in client.get(f"/v1/devices/{dev.device_id}/challenges").json() if x["case_id"] == case_id]
+    if pending:
+        ch = {"challenge_id": pending[0]["challenge_id"]}
+    else:
+        r = client.post("/v1/verify/family", json={"case_id": case_id, "relative_id": rel["id"]})
+        assert r.status_code == 200, r.text
+        ch = r.json()
     pending = client.get(f"/v1/devices/{dev.device_id}/challenges").json()
     assert pending and pending[0]["challenge_id"] == ch["challenge_id"]
     nonce = pending[0]["nonce"]
@@ -40,7 +46,9 @@ def test_t1_cloned_son_flow_ends_red_with_hold(client, device_factory):
     a2 = client.post("/v1/risk/assess", json={"case_id": cid, "claim": "family", "claim_target": "rel_rahul"}).json()
     assert a2["tier"] == "amber"
     assert "payee_name_mismatch" in a2["signals"]
-    assert [x["id"] for x in a2["actions"]][:3] == ["family_verify", "callback", "safeword"]
+    # SPEC v0.2 A19: the push is already on Rahul's phone; the other checks stay available
+    assert a2["auto_family_verify"]["auto"] is True and a2["checks"]["family_verify"]["status"] == "pending"
+    assert [x["id"] for x in a2["actions"]][:2] == ["callback", "safeword"]
     top = [r["code"] for r in a2["top_reasons"]][:2]
     assert "payee_name_mismatch" in top
     res = fv_answer(client, device_factory, sc, cid, "no")
@@ -114,9 +122,9 @@ def test_trusted_payee_bypass(client):
 def test_fv_signature_and_device_binding_enforced(client, device_factory):
     sc, a1 = start(client, "T1")
     cid = a1["case_id"]
-    client.post("/v1/risk/assess", json={"case_id": cid, "claim": "family", "claim_target": "rel_rahul"})
+    ch = client.post("/v1/risk/assess", json={"case_id": cid, "claim": "family", "claim_target": "rel_rahul"}).json()[
+        "auto_family_verify"]
     dev = device_factory(client, "dev_rahul", "rel_rahul")
-    ch = client.post("/v1/verify/family", json={"case_id": cid}).json()
     nonce = client.get("/v1/devices/dev_rahul/challenges").json()[0]["nonce"]
     bad = client.post(f"/v1/verify/family/{ch['challenge_id']}/respond",
                       json={"answer": "yes", "device_id": "dev_rahul", "signature_b64": dev.sign(ch["challenge_id"], nonce, "no")})
@@ -130,9 +138,9 @@ def test_fv_signature_and_device_binding_enforced(client, device_factory):
 def test_fv_timeout_falls_back(client, device_factory):
     sc, a1 = start(client, "L2")
     cid = a1["case_id"]
-    client.post("/v1/risk/assess", json={"case_id": cid, "claim": "family", "claim_target": "rel_rahul"})
+    ch = client.post("/v1/risk/assess", json={"case_id": cid, "claim": "family", "claim_target": "rel_rahul"}).json()[
+        "auto_family_verify"]
     device_factory(client, "dev_rahul", "rel_rahul")
-    ch = client.post("/v1/verify/family", json={"case_id": cid}).json()
     r = client.post(f"/v1/demo/fv/{ch['challenge_id']}/timeout").json()
     assert r["tier"] == "amber"
     a = client.get(f"/v1/cases/{cid}", headers=ANALYST).json()

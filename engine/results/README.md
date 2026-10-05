@@ -26,6 +26,8 @@ When `ml/results/metrics.json` appears, the next run uses its `band_rates` (spoo
 | `chart_red_precision.svg` | Genuine holds per scam held against the prior, v0.1 vs v0.2. |
 | `chart_threshold_tradeoff.svg` | Genuine and scam Red rates against θ_red, with the 0.25% budget line. |
 | `chart_fv_enrolment.svg` | T1 Amber+ / T1 Red / weighted scam Red against Family Verify enrolment. |
+| `chart_*_deck.svg` | Deck variants of ablation, friction_funnel, red_precision, catch_by_pattern and fv_enrolment: no in-chart title, all text ≥ 17 px, 14 px footnote, for placing about 420 px wide. |
+| `sim_v02pre_baseline.json` | Snapshot of `deck_numbers.json` from the previous report (commit 36e6653: green 0.15, one-directional voice, Family Verify offered, checklist at Amber only); copied into `deck_numbers.json` as `v02pre_*`. |
 | `preview/*.png` | 1200 px layout previews (not for the deck). |
 
 The SVGs are 600 units wide. Placed at about 600 px on a 1280×720 slide, every label is ≥ 12 px. Text stays as text (Space Grotesk / Inter / JetBrains Mono); inline the SVGs so they pick up the deck's `@font-face`.
@@ -50,11 +52,11 @@ Final changes (after the v0.2 review):
 - **One-directional voice:** `voice_no_strong_evidence` LR 0.7 → 1.0, and every voice-band LR (assumed or measured) is floored at 1.0. The detector can raise suspicion, never lower it. With strict G2 it cannot create or remove a hold.
 - **Simulator fix:** the voice step used to *overwrite* the checklist's cue answers with the ASR cues, which wiped checklist-derived holds whenever a voice check ran. ASR cues now add to the checklist answers. This alone raised weighted scam Red by about 3 pp (T3 most).
 
-## Headline v0.1 → v0.2 final (π0 1/400, θ_red 0.75, green_below 0.15, 30% voice uptake, placeholder detector rates)
+## Headline v0.1 → v0.2 pre → v0.2 final (π0 1/400, θ_red 0.75, green_below 0.15, 30% voice uptake, placeholder detector rates)
 
-- **Genuine:** silent 42.0 → 41.8%. One-tap then pay 47.8 → 52.8%. Pause & Verify 10.1 → 5.5% (budget ≤ 6%: met). Final Amber 5.7 → 2.9%. **Held 0.92 → 0.21%** (budget ≤ 0.25%: met).
-- **Scams reaching Amber+:** T1 96 → 93%, T2 94 → 93%, T3 99 → 99%, weighted 96 → 95%.
-- **Scams held (Red):** T1 65 → 54%, T2 77 → 72%, T3 85 → 80.5%, weighted 77 → 71%.
-- **Genuine holds per scam held:** 4.8 → 1.2 at 1/400, and 3.7 → 0.7 at the 1/1304 base-rate anchor. ₹ protected per ₹ delayed rises from 1.19 to 2.88.
-- **Zero voice checks:** scams held 74 → 68%. The voice layer adds about 3 pp of holds, all from script cues heard in the call audio (strict G2: the detector band itself never creates or removes a hold).
-- **Family Verify enrolment 20 → 90%:** T1 held 51 → 58%, weighted 71 → 73%, T1 Amber+ flat at 93%. Even at 90% enrolment only 34% of T1 victims run Family Verify (assumed 50% uptake).
+"v0.2 pre" is the previous report (36e6653). "Final" adds A19 (auto Family Verify, 90% not cancelled) and A20 (checklist whenever the context alone was Amber).
+
+- **Genuine:** Pause & Verify 10.1 → 5.5 → 5.6% (budget ≤ 6%: met). Held 0.92 → 0.21 → 0.21% (budget ≤ 0.25%: met).
+- **Scams held (Red):** T1 65 → 54 → 59%, T2 77 → 72 → 72%, T3 85 → 80.5 → 81%, weighted 77 → 71 → 73%. Amber+ stays about 95%.
+- **Genuine holds per scam held:** 4.8 → 1.2 → 1.2 at 1/400. ₹ protected per ₹ delayed: 1.19 → 2.88 → 2.98.
+- **FV enrolment 20 / 35 / 50 / 70 / 90%, T1 held:** offered 51 / 53 / 54 / 56 / 58% → auto-sent 53 / 56 / 59 / 62 / 66%.

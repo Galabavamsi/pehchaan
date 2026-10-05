@@ -108,6 +108,10 @@ actions:
   hold_minutes: 30
   analyst_review_at_or_above_inr: 50000
   family_verify_timeout_sec: 180
+  # SPEC v0.2 A19: when the payer answers 'Family member' and names a relative who is in the
+  # Pehchaan circle (bound phone), send the Family Verify push automatically if the result is
+  # Amber or Red. The payer sees "We've asked <name> to confirm" with a small Cancel request link.
+  family_verify_auto: true
 
 voice:
   # One-line swap: set lr_source to the ML results file to replace the three

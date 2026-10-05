@@ -182,6 +182,11 @@ def create_app(db_path: str | None = None, key_path: str | None = None) -> FastA
         if res.get("case_id"):
             case = svc.get(res["case_id"])
             await publish(case)
+            if body.claim and svc.auto_family_verify_due(res["case_id"]):
+                # SPEC v0.2 A19: "Family member" + an enrolled relative -> the push goes out without a tap
+                fv = await _send_fv(res["case_id"], (case.get("relative") or {}).get("id"), auto=True)
+                res = fv.pop("assessment")
+                res["auto_family_verify"] = fv
         return res
 
     # ------------------------------------------------------------- voice
@@ -217,15 +222,30 @@ def create_app(db_path: str | None = None, key_path: str | None = None) -> FastA
         except asyncio.CancelledError:
             pass
 
-    @app.post("/v1/verify/family")
-    async def verify_family(body: FamilyVerifyIn):
-        case, push = svc.create_challenge(body.case_id, body.relative_id)
+    async def _send_fv(case_id: str, relative_id: str | None, auto: bool = False) -> dict:
+        case, push = svc.create_challenge(case_id, relative_id, auto=auto)
         await hub.send(f"device:{push['relative']['device_id']}", {"type": "fv_request", "data": push})
         await publish(case)
         timers[push["challenge_id"]] = asyncio.create_task(_timeout_later(push["challenge_id"], push["timeout_sec"]))
         return {"challenge_id": push["challenge_id"], "expires_at": push["expires_at"], "timeout_sec": push["timeout_sec"],
-                "relative": {k: push["relative"][k] for k in ("id", "name", "relation")},
+                "relative": {k: push["relative"][k] for k in ("id", "name", "relation")}, "auto": auto,
                 "shown_to_relative": push["message"], "assessment": svc._response(case, time.perf_counter())}
+
+    @app.post("/v1/verify/family")
+    async def verify_family(body: FamilyVerifyIn):
+        return await _send_fv(body.case_id, body.relative_id)
+
+    @app.post("/v1/verify/family/{challenge_id}/cancel")
+    async def verify_cancel(challenge_id: str):
+        """The payer taps "Cancel request" on the auto-sent Family Verify (SPEC v0.2 A19)."""
+        case = svc.cancel_challenge(challenge_id)
+        t = timers.pop(challenge_id, None)
+        if t:
+            t.cancel()
+        await publish(case)
+        await hub.send(f"device:{(case.get('relative') or {}).get('device_id')}",
+                       {"type": "fv_expired", "challenge_id": challenge_id, "case_id": case["case_id"], "cancelled": True})
+        return svc._response(case, time.perf_counter())
 
     @app.post("/v1/verify/family/{challenge_id}/respond")
     async def verify_respond(challenge_id: str, body: RespondIn):

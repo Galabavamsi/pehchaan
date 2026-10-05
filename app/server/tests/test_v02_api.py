@@ -90,13 +90,51 @@ def test_user_reported_denial_makes_cancel_primary(client):
     assert cancel["primary"] is True
 
 
-def test_green_threshold_015_coached_no_one_on_t1_context_is_green(client):
-    # documents the accepted trade-off of green_below = 0.15: T1 context (p 0.158) answered "no one"
-    # (LR 0.8) falls to p 0.13 < 0.15 and proceeds; "someone else" (LR 1.0) stays Amber with the checklist
+def test_a20_checklist_on_t1_when_context_was_amber(client):
+    # green_below 0.15: T1's context (p 0.158, Amber) answered "No one" (LR 0.8) scores p 0.13 (Green),
+    # but SPEC v0.2 A20 still shows the three questions because the context alone was Amber
     sc, a1 = start(client, "T1")
     assert a1["tier"] == "amber" and a1["thresholds"]["green_below"] == 0.15
     a2 = client.post("/v1/risk/assess", json={"case_id": a1["case_id"], "claim": "none"}).json()
-    assert a2["tier"] == "green"
+    assert a2["tier"] == "green" and a2["context_tier"] == "amber"
+    assert ids(a2)[0] == "cue_checklist" and "proceed" in ids(a2)
+    assert {r["code"] for r in a2["top_reasons"]} & {"caller_international", "caller_voip_unknown", "caller_unknown"}
+    a3 = client.post("/v1/risk/assess", json={"case_id": a1["case_id"], "cues": ["cue_secrecy"], "checklist_done": True}).json()
+    assert a3["p"] > a2["p"] and a3["tier"] == "amber" and "cue_checklist" not in ids(a3)
+    # "None of these" closes it and the payment can go ahead
     sc, b1 = start(client, "T1")
-    b2 = client.post("/v1/risk/assess", json={"case_id": b1["case_id"], "claim": "other"}).json()
-    assert b2["tier"] == "amber" and ids(b2)[0] == "cue_checklist"
+    client.post("/v1/risk/assess", json={"case_id": b1["case_id"], "claim": "none"})
+    b3 = client.post("/v1/risk/assess", json={"case_id": b1["case_id"], "cues": [], "checklist_done": True}).json()
+    assert b3["tier"] == "green" and ids(b3) == ["proceed"]
+    # a Green context never gets it (L2-like: T2 context is Green at stage 1)
+    sc, c1 = start(client, "T2")
+    assert c1["tier"] == "green"
+    c2 = client.post("/v1/risk/assess", json={"case_id": c1["case_id"], "claim": "none"}).json()
+    assert ids(c2) == ["proceed"]
+
+
+def test_a19_family_verify_is_auto_sent_and_can_be_cancelled(client, device_factory):
+    sc, a1 = start(client, "T1")
+    cid = a1["case_id"]
+    a2 = client.post("/v1/risk/assess", json={"case_id": cid, "claim": "family", "claim_target": "rel_rahul"}).json()
+    fv = a2["auto_family_verify"]
+    assert fv["auto"] is True and fv["relative"]["id"] == "rel_rahul" and fv["timeout_sec"] > 0
+    assert a2["status"] == "awaiting_verification" and "family_verify" not in ids(a2)
+    dev = device_factory(client, "dev_rahul", "rel_rahul")
+    assert [x["challenge_id"] for x in client.get("/v1/devices/dev_rahul/challenges").json()] == [fv["challenge_id"]]
+    # a second explicit send while one is pending is refused
+    assert client.post("/v1/verify/family", json={"case_id": cid}).status_code == 409
+    # "Cancel request": the push is withdrawn, the payer is back on the Amber options, FV can be sent again by hand
+    c = client.post(f"/v1/verify/family/{fv['challenge_id']}/cancel").json()
+    assert c["checks"]["family_verify"]["status"] == "cancelled" and c["tier"] == "amber"
+    assert "family_verify" in ids(c) and "fv_timeout" not in c["signals"]
+    assert client.get("/v1/devices/dev_rahul/challenges").json() == []
+    assert client.post(f"/v1/verify/family/{fv['challenge_id']}/cancel").status_code == 409
+    again = client.post("/v1/verify/family", json={"case_id": cid}).json()
+    assert again["auto"] is False and again["challenge_id"] != fv["challenge_id"]
+    case = client.get(f"/v1/cases/{cid}", headers={"X-Role": "fraud_analyst", "X-Analyst": "a", "X-Access-Reason": "t"}).json()
+    types = [e["type"] for e in case["events"]]
+    assert "fv_cancelled" in types and types.count("fv_challenge_sent") == 2
+    # re-assessing the claim does not re-send on its own after a cancel
+    r = client.post("/v1/risk/assess", json={"case_id": cid, "claim": "family", "claim_target": "rel_rahul"}).json()
+    assert "auto_family_verify" not in r
