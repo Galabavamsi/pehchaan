@@ -32,3 +32,6 @@ deck/tooling-samples/out/
 # app runtime data (SQLite, signing key, packs)
 app/server/data/
 app/web/dist/
+
+# exported transcripts (share manually)
+session-export/
