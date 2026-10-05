@@ -135,8 +135,15 @@ def create_app(db_path: str | None = None, key_path: str | None = None) -> FastA
 
     app = FastAPI(title="Pehchaan risk API (prototype)", version="0.1.0",
                   description="Verify the person, not the voice. All context adapters are mocks (mock_*).")
-    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
+                       expose_headers=["X-Server-Now"])
     app.state.svc, app.state.hub = svc, hub
+
+    @app.middleware("http")
+    async def _server_now(request: Request, call_next):
+        resp = await call_next(request)
+        resp.headers["X-Server-Now"] = svc.ts()  # clients count down against server time (demo clock safe)
+        return resp
 
     if not store.list_cases() and not store.get_user("u_sunita"):
         seed_people(svc)
@@ -147,7 +154,7 @@ def create_app(db_path: str | None = None, key_path: str | None = None) -> FastA
         return JSONResponse(status_code=exc.status, content={"detail": exc.msg})
 
     async def publish(case: dict, kind: str = "assessment"):
-        msg = {"type": kind, "case_id": case["case_id"], "ts": ist_iso(), "data": svc._response(case, time.perf_counter())}
+        msg = {"type": kind, "case_id": case["case_id"], "ts": svc.ts(), "data": svc._response(case, time.perf_counter())}
         await hub.send(f"case:{case['case_id']}", msg)
         await hub.send("console", {"type": "case_update", "case_id": case["case_id"], "data": case_summary(case)})
 
@@ -322,11 +329,19 @@ def create_app(db_path: str | None = None, key_path: str | None = None) -> FastA
             t.cancel()
         timers.clear()
         sc = load_scenario(svc, name, with_background=background)
+        app.state.current = sc
         await hub.send("demo", {"type": "scenario", "data": sc})
         await hub.send("console", {"type": "reset", "scenario": sc["scenario"]})
         if sc.get("relative"):
             await hub.send(f"device:{sc['relative']['device_id']}", {"type": "reset"})
         return sc
+
+    @app.get("/v1/demo/current")
+    def demo_current():
+        cur = getattr(app.state, "current", None)
+        if not cur:
+            raise HTTPException(404, "no scenario loaded yet")
+        return cur
 
     @app.get("/v1/demo/scenarios")
     def demo_list():

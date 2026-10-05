@@ -31,7 +31,7 @@ class Action(BaseModel):
     requires: str | None = None   # e.g. "analyst_review"
 
 
-_P_EN = {"relative": "your family member", "bank": "your bank"}
+_P_EN = {"relative": "your family member", "bank": "your bank", "their": "their"}
 _P_HI = {"relative": "परिवार के सदस्य", "bank": "अपने बैंक"}
 
 
@@ -62,8 +62,8 @@ def actions_for(
         if claim == "family":
             c += [
                 Action(id="family_verify", kind="check", primary=True, produces=["fv_confirmed", "fv_denied", "fv_timeout"],
-                       label=_l("Ask {relative} on their phone", "{relative} से उनके फ़ोन पर पूछें", params),
-                       detail=_l("We send {relative} a private question. Only their own phone can answer.",
+                       label=_l("Ask {relative} on {their} phone", "{relative} से उनके फ़ोन पर पूछें", params),
+                       detail=_l("We send {relative} a private question. Only {their} own phone can answer.",
                                  "हम {relative} को एक निजी सवाल भेजेंगे। जवाब सिर्फ़ उनका अपना फ़ोन दे सकता है।", params)),
                 Action(id="callback", kind="check", produces=["callback_confirmed", "callback_denied"],
                        label=_l("Call {relative}'s saved number", "{relative} के सेव किए नंबर पर कॉल करें", params)),

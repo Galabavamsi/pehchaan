@@ -4,6 +4,7 @@ its hash-chained events and the cooling-off hold."""
 from __future__ import annotations
 
 import json
+import os
 import secrets
 import time
 from datetime import timedelta
@@ -50,6 +51,10 @@ ALLOWED_CUES = {"cue_secrecy", "cue_urgency", "cue_otp_pin", "cue_arrest_threat"
                 "cue_refund_verification"}
 
 
+PRONOUNS = {"he": {"their": "his", "they": "he", "them": "him"},
+            "she": {"their": "her", "they": "she", "them": "her"}}
+
+
 class CaseError(Exception):
     def __init__(self, status: int, msg: str):
         super().__init__(msg)
@@ -67,10 +72,16 @@ class CaseService:
         self.history = mock_payer_history(store)
         self.signer = Signer.load_or_create(key_path) if key_path else Signer.ephemeral()
         self._clock_offset = timedelta(0)
+        self._base_offset = timedelta(0)
+        demo = os.environ.get("PEHCHAAN_DEMO_TIME", "").strip()  # e.g. "10:40": run the demo clock at that IST time
+        if demo:
+            hh, mm = (int(x) for x in demo.split(":"))
+            real = now_ist()
+            self._base_offset = real.replace(hour=hh, minute=mm, second=0, microsecond=0) - real
 
     # ------------------------------------------------------------------ util
     def now(self):
-        return now_ist() + self._clock_offset
+        return now_ist() + self._base_offset + self._clock_offset
 
     def ts(self) -> str:
         return ist_iso(self.now())
@@ -177,6 +188,7 @@ class CaseService:
         if case.get("relative"):
             params["relative"] = case["relative"]["name"]
             params["relative_hi"] = case["relative"].get("name_hi")
+            params.update(PRONOUNS.get(case["relative"].get("pronoun"), {}))
         v = case["checks"].get("voice")
         a = assess(self._signals(case), voice_quality=(v or {}).get("quality") if v else None,
                    trusted=TrustedPayee(**case["trusted"]) if case.get("trusted") else None, params=params, cfg=CFG)
@@ -200,7 +212,7 @@ class CaseService:
         if (case["checks"].get("family_verify") or {}).get("status") == "pending":
             done.add("family_verify")
         aparams = {"relative": params.get("relative"), "relative_hi": params.get("relative_hi"),
-                   "bank": params.get("bank"), "bank_hi": params.get("bank_hi")}
+                   "bank": params.get("bank"), "bank_hi": params.get("bank_hi"), "their": params.get("their")}
         case["actions"] = [x.model_dump() for x in actions_for(a.tier, case.get("claim"), amount_inr=case["amount_inr"],
                                                                  params=aparams, done=done, cfg=CFG)]
         case["copy"] = {"title": copy_text(f"tier_{a.tier}_title"), "body": copy_text(f"tier_{a.tier}_body")}
@@ -527,7 +539,8 @@ class CaseService:
             case["check_summary"] = f"{case.get('payer_bank') or 'My bank'} confirmed it was not calling me."
         self._event(case, "evidence_pack_generated", "risk_api", {"by": "user", "transcript": include_transcript})
         case["voice"] = case.get("checks", {}).get("voice")
-        pack = build_evidence_pack(case, self.s.events(cid), self.signer, include_transcript=include_transcript)
+        pack = build_evidence_pack(case, self.s.events(cid), self.signer, include_transcript=include_transcript,
+                                   now_iso=self.ts())
         case["evidence"] = {"generated_at": pack["generated_at_ist"], "head": pack["hash_chain"]["head"],
                             "sig_key_id": pack["signature"]["key_id"]}
         self.s.put_case(case)

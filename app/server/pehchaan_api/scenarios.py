@@ -21,10 +21,10 @@ PAYERS = {
         "amount_p95": 62000, "amount_p99": 95000, "recent_new_payees_30m": 0,
         "circle": [
             {"id": "rel_rahul", "name": "Rahul", "name_hi": "राहुल", "full_name": "Rahul Sharma", "relation": "son",
-             "relation_hi": "बेटा", "device_id": "dev_rahul", "saved_number": "+919829011223", "lives_in": "London",
+             "relation_hi": "बेटा", "pronoun": "he", "device_id": "dev_rahul", "saved_number": "+919829011223", "lives_in": "London",
              "calls_payer": "Mummy", "calls_payer_hi": "मम्मी"},
             {"id": "rel_priya", "name": "Priya", "name_hi": "प्रिया", "full_name": "Priya Sharma", "relation": "daughter",
-             "relation_hi": "बेटी", "device_id": "dev_priya", "saved_number": "+919772033445", "lives_in": "Pune",
+             "relation_hi": "बेटी", "pronoun": "she", "device_id": "dev_priya", "saved_number": "+919772033445", "lives_in": "Pune",
              "calls_payer": "Mummy", "calls_payer_hi": "मम्मी"},
         ],
         "contacts": [("+919829011223", "Rahul (beta)"), ("+919772033445", "Priya"), ("+919414055667", "Meena Gupta")],
@@ -37,7 +37,7 @@ PAYERS = {
         "bank_name": BANK, "bank_name_hi": BANK_HI, "lang": "en",
         "amount_p95": 40000, "amount_p99": 75000, "recent_new_payees_30m": 0,
         "circle": [{"id": "rel_anand", "name": "Anand", "name_hi": "आनंद", "full_name": "Anand Iyer", "relation": "son",
-                    "relation_hi": "बेटा", "device_id": "dev_anand", "saved_number": "+919840011122",
+                    "relation_hi": "बेटा", "pronoun": "he", "device_id": "dev_anand", "saved_number": "+919840011122",
                     "calls_payer": "Appa", "calls_payer_hi": "अप्पा"}],
         "contacts": [("+919840011122", "Anand"), ("+914428001234", "Clinic")],
         "payees": [("anand.iyer@okdemo", 8, 15000), ("tneb.bill@okdemo", 10, 3100)],
@@ -48,7 +48,7 @@ PAYERS = {
         "bank_name": BANK, "bank_name_hi": BANK_HI, "lang": "hi",
         "amount_p95": 30000, "amount_p99": 60000, "recent_new_payees_30m": 0,
         "circle": [{"id": "rel_vikas", "name": "Vikas", "name_hi": "विकास", "full_name": "Vikas Verma", "relation": "son",
-                    "relation_hi": "बेटा", "device_id": "dev_vikas", "saved_number": "+919415022334",
+                    "relation_hi": "बेटा", "pronoun": "he", "device_id": "dev_vikas", "saved_number": "+919415022334",
                     "calls_payer": "Amma", "calls_payer_hi": "अम्मा"}],
         "contacts": [("+919415022334", "Vikas")],
         "payees": [("vikas.verma@okdemo", 7, 10000)],
@@ -189,7 +189,11 @@ def load_scenario(svc: CaseService, name: str, with_background: bool = True) -> 
         seed_background(svc)
     payer = svc.s.get_user(sc["payer_id"])
     rel = next((r for r in payer.get("circle", []) if r["id"] == sc.get("relative_id")), None)
+    saved_as = next((label for num, label in PAYERS[sc["payer_id"]]["contacts"]
+                     if num == sc["call"]["number"]), None)
+    payee_known = svc.history.payee(sc["payer_id"], sc["payment"]["payee_vpa"]) is not None
     return {
+        "caller_saved_as": saved_as, "payee_new": not payee_known,
         "scenario": name, "title": sc["title"], "pattern": sc["pattern"], "script": sc["script"],
         "payer": payer, "relative": rel, "call": sc["call"], "payment": sc["payment"], "expected": sc["expected"],
         "bank": {"name": BANK, "name_hi": BANK_HI},

@@ -3,17 +3,17 @@
   "n": 300,
   "target_p95_ms": 300,
   "new_case_ms": {
-    "p50": 1.69,
-    "p95": 2.2,
-    "max": 6.62
+    "p50": 1.94,
+    "p95": 2.63,
+    "max": 6.72
   },
   "reassess_with_claim_ms": {
-    "p50": 1.7,
-    "p95": 2.31
+    "p50": 2.03,
+    "p95": 2.74
   },
   "server_side_ms": {
-    "p50": 0.67,
-    "p95": 0.95
+    "p50": 0.69,
+    "p95": 1.01
   },
   "note": "In-process ASGI TestClient on a laptop (Windows 11, Python 3.12, SQLite). Excludes network/mTLS."
 }

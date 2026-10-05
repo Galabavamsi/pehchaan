@@ -187,7 +187,7 @@ def ncrp_prefill(case: dict) -> dict:
             "Bank / Wallet / Merchant": case.get("payer_bank") or "Bharat Demo Bank",
             "Account number / UPI ID (debited)": case.get("payer_vpa_masked"),
             "Transaction ID / UTR number": case.get("utr") or ("not sent — payment held by bank app" if not debited else ""),
-            "Amount": case.get("amount_inr"),
+            "Amount": int(case["amount_inr"]) if isinstance(case.get("amount_inr"), (int, float)) else case.get("amount_inr"),
             "Transaction date": (case.get("created_at_ist") or "")[:10],
             "Suspect mobile number": case.get("caller_number"),
             "Suspect UPI ID / bank account": case.get("payee_vpa"),
@@ -229,12 +229,14 @@ def psp_mule_flag(case: dict) -> dict:
 # ---------------------------------------------------------------------------
 # pack
 # ---------------------------------------------------------------------------
-def build_evidence_pack(case: dict, events: list[dict], signer: Signer, *, include_transcript: bool = False) -> dict:
+def build_evidence_pack(case: dict, events: list[dict], signer: Signer, *, include_transcript: bool = False,
+                        now_iso: str | None = None) -> dict:
     ok, msg = verify_chain(events)
+    now_iso = now_iso or ist_iso()
     pack = {
         "schema": PACK_SCHEMA,
         "case_id": case["case_id"],
-        "generated_at_ist": ist_iso(),
+        "generated_at_ist": now_iso,
         "payer": {"name_masked": mask_name(case.get("payer_name")), "phone_masked": mask_phone(case.get("payer_phone")),
                   "vpa_masked": case.get("payer_vpa_masked")},
         "payment": {"payee_vpa": case.get("payee_vpa"), "payee_name": case.get("payee_name"),
@@ -258,7 +260,7 @@ def build_evidence_pack(case: dict, events: list[dict], signer: Signer, *, inclu
     digest = sha256_hex(canonical(pack))
     pack["signature"] = {
         "alg": "Ed25519", "key_id": signer.key_id, "public_key_b64": signer.public_key_b64,
-        "signed_sha256": digest, "sig_b64": signer.sign(digest.encode()), "signed_at_ist": ist_iso(),
+        "signed_sha256": digest, "sig_b64": signer.sign(digest.encode()), "signed_at_ist": now_iso,
     }
     return pack
 
@@ -315,7 +317,7 @@ table {{ width:100%; border-collapse:collapse }} td {{ border-bottom:1px solid #
 <div class=grid style="margin-top:8px">
 <div class=box><b>Payer</b> {e(p['name_masked'])} · <span class=m>{e(p['phone_masked'])}</span><br>
 <b>Payee</b> {e(str(pay['payee_name']))} · <span class=m>{e(str(pay['payee_vpa']))}</span><br>
-<b>Amount</b> <span class=m>₹{pay['amount_inr']:,}</span> · status <b>{e(str(pay['status']))}</b></div>
+<b>Amount</b> <span class=m>{e(_inr(pay['amount_inr']))}</span> · status <b>{e(str(pay['status']))}</b></div>
 <div class=box><b>Caller</b> <span class=m>{e(str(call['caller_number']))}</span> · {e(str(call['channel']))}<br>
 <b>Claim</b> {e(str(pack['claim']))} · <b>p</b> <span class=m>{pack['decision']['p']:.3f}</span><br>
 <b>Voice</b> {vline}</div></div>
@@ -328,6 +330,11 @@ table {{ width:100%; border-collapse:collapse }} td {{ border-bottom:1px solid #
 {e(sig['alg'])} {e(sig['key_id'])} · sig {sig['sig_b64'][:44]}…</div>
 <p class=hi>Pre-filled for the user to review and submit. Pehchaan never files a police complaint by itself. No call audio is included.</p>
 </body></html>"""
+
+
+def _inr(v) -> str:
+    from .explain import format_inr
+    return format_inr(v) if isinstance(v, (int, float)) else str(v)
 
 
 def render_pack_pdf(pack: dict, out_path: str | Path, fonts_css_href: str | None = None) -> Path | None:

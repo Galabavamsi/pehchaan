@@ -91,8 +91,8 @@ REASON_TEXT: dict[str, tuple[str, str]] = {
         "पैसे पाने वाला ये खाता उस राष्ट्रीय सूची में है, जिसकी शिकायत दूसरे लोगों ने की है।",
     ),
     "payee_name_mismatch": (
-        "The account name '{payee}' does not match {relative}.",
-        "खाते का नाम '{payee}' {relative} के नाम से मेल नहीं खाता।",
+        "The account name ‘{payee}’ does not match {relative}.",
+        "खाते का नाम ‘{payee}’ {relative} के नाम से मेल नहीं खाता।",
     ),
     "burst_new_payees": (
         "You have started payments to several new people in the last 30 minutes.",
@@ -129,36 +129,36 @@ REASON_TEXT: dict[str, tuple[str, str]] = {
         "आपसे OTP या PIN माँगा गया। कोई भी असली कॉल करने वाला ये कभी नहीं माँगता।",
     ),
     "cue_arrest_threat": (
-        "You were told someone could be arrested. There is no 'digital arrest' in Indian law.",
-        "आपसे कहा गया कि किसी को गिरफ़्तार किया जा सकता है। भारतीय कानून में 'डिजिटल अरेस्ट' जैसा कुछ नहीं होता।",
+        "You were told someone could be arrested. There is no ‘digital arrest’ in Indian law.",
+        "आपसे कहा गया कि किसी को गिरफ़्तार किया जा सकता है। भारतीय कानून में ‘डिजिटल अरेस्ट’ जैसा कुछ नहीं होता।",
     ),
     "cue_remote_app": (
         "You were asked to install an app or share your screen.",
         "आपसे कोई ऐप डाउनलोड करने या स्क्रीन शेयर करने को कहा गया।",
     ),
     "cue_refund_verification": (
-        "You were told to pay to 'verify' your account or to get a refund.",
-        "आपसे कहा गया कि खाता 'वेरिफ़ाई' करने या रिफ़ंड पाने के लिए पैसे भेजें।",
+        "You were told to pay to ‘verify’ your account or to get a refund.",
+        "आपसे कहा गया कि खाता ‘वेरिफ़ाई’ करने या रिफ़ंड पाने के लिए पैसे भेजें।",
     ),
     # ---- O: Out-of-band verification
     "fv_denied": (
-        "{relative} said on their own phone that they did not ask for this money.",
+        "{relative} said on {their} own phone that {they} did not ask for this money.",
         "{relative} ने अपने फ़ोन पर बताया कि उन्होंने ये पैसे नहीं माँगे।",
     ),
     "fv_confirmed": (
-        "{relative} confirmed on their own phone that it really is them.",
+        "{relative} confirmed on {their} own phone that it really is {them}.",
         "{relative} ने अपने फ़ोन पर पक्का किया कि ये सच में वही हैं।",
     ),
     "fv_timeout": (
-        "{relative} has not answered on their phone yet.",
+        "{relative} has not answered on {their} phone yet.",
         "{relative} ने अभी तक अपने फ़ोन पर जवाब नहीं दिया।",
     ),
     "callback_denied": (
-        "When you called {relative}'s saved number, they said they did not ask for money.",
+        "When you called {relative}'s saved number, {they} said {they} did not ask for money.",
         "आपने {relative} के सेव किए नंबर पर कॉल किया, तो उन्होंने कहा कि उन्होंने पैसे नहीं माँगे।",
     ),
     "callback_confirmed": (
-        "You called {relative}'s saved number and they confirmed the request.",
+        "You called {relative}'s saved number and {they} confirmed the request.",
         "आपने {relative} के सेव किए नंबर पर कॉल किया और उन्होंने बात पक्की की।",
     ),
     "safeword_failed": (
@@ -182,6 +182,7 @@ REASON_TEXT: dict[str, tuple[str, str]] = {
 DEFAULTS_EN = {
     "payee": "this person", "relative": "Your family member", "caller": "this caller",
     "country": "an international number", "bank": "Your bank", "minutes": "15", "amount": "This amount",
+    "their": "their", "they": "they", "them": "them",
 }
 DEFAULTS_HI = {
     "payee": "इस व्यक्ति", "relative": "आपके परिवार के सदस्य", "caller": "इस नंबर",
@@ -202,12 +203,12 @@ COPY: dict[str, tuple[str, str]] = {
         "अगर कॉल पर कोई आपको बता रहा है कि क्या दबाना है, तो ये खतरे का संकेत है। फ़ोन काट देना बिल्कुल ठीक है।",
     ),
     "authority_fact": (
-        "There is no 'digital arrest' in Indian law. Police never ask for money on a call.",
-        "भारतीय कानून में 'डिजिटल अरेस्ट' नाम की कोई चीज़ नहीं है। पुलिस कभी फ़ोन पर पैसे नहीं माँगती।",
+        "There is no ‘digital arrest’ in Indian law. Police never ask for money on a call.",
+        "भारतीय कानून में ‘डिजिटल अरेस्ट’ नाम की कोई चीज़ नहीं है। पुलिस कभी फ़ोन पर पैसे नहीं माँगती।",
     ),
     "bank_fact": (
-        "Real bank calls come from numbers starting with 1600. Your bank will never ask you to move money to a 'safe account'.",
-        "असली बैंक की कॉल 1600 से शुरू होने वाले नंबर से आती है। आपका बैंक कभी 'सुरक्षित खाते' में पैसे भेजने को नहीं कहेगा।",
+        "Real bank calls come from numbers starting with 1600. Your bank will never ask you to move money to a ‘safe account’.",
+        "असली बैंक की कॉल 1600 से शुरू होने वाले नंबर से आती है। आपका बैंक कभी ‘सुरक्षित खाते’ में पैसे भेजने को नहीं कहेगा।",
     ),
     "hold_not_auto": (
         "When the 30 minutes end, we will not send the money on our own. You decide.",
