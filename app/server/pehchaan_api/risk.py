@@ -211,6 +211,7 @@ class CaseService:
             "top_reasons": [r.model_dump() for r in a.top_reasons(3)],
             "guardrails": [g.model_dump() for g in a.guardrails_applied],
             "ask_claim": ask, "config_version": a.config_version, "updated_at_ist": self.ts(),
+            "voice_mode": CFG.voice.mode,
         })
         done = {k for k in ("family_verify", "callback", "safeword", "bank_registry", "voice_check")
                 if (case["checks"].get(k.replace("_check", "")) or {}).get("result") or
@@ -341,7 +342,7 @@ class CaseService:
                 "claimed_bank", "checklist_done", "cues",
                 "reasons", "top_reasons", "actions", "guardrails", "families", "signals", "qualifying_families",
                 "ask_claim", "status", "hold", "copy", "claim", "relative", "checks", "trigger", "amount_display",
-                "context_tier",
+                "context_tier", "voice_mode",
                 "payee_name", "payee_vpa", "caller_display", "config_version"]
         out = {k: case.get(k) for k in keys}
         out["triggered"] = True
@@ -388,9 +389,12 @@ class CaseService:
 
     def _attach_voice(self, case: dict, v: dict) -> None:
         keep = {k: v.get(k) for k in ("p_synthetic", "band", "quality", "watermark", "model_version", "latency_ms", "mock")}
+        keep["voice_mode"] = CFG.voice.mode
+        keep["used_in_decision"] = CFG.voice.mode == "calibrated"
         case["checks"]["voice"] = keep
         self._event(case, "voice_scored", "voice_service", {
             "p_synthetic": v.get("p_synthetic"), "band": v.get("band"), "model_version": v.get("model_version"),
+            "voice_mode": CFG.voice.mode,
             "quality_ok": (v.get("quality") or {}).get("ok"), "audio_retained": False})
 
     def attach_voice(self, cid: str, v: dict) -> dict:

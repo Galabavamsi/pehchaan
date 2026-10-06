@@ -5,7 +5,10 @@ import pytest
 
 from pehchaan import assess, default_config
 from pehchaan.actions import actions_for
+from pehchaan.config import load_config
 from pehchaan.signals import DECISIVE_NEGATIVE, DECISIVE_POSITIVE, USER_REPORTED_NEGATIVE
+
+CAL = load_config(overrides={"voice": {"mode": "calibrated", "lr_source": "assumed"}})
 
 CFG = default_config()
 
@@ -84,7 +87,7 @@ def test_strict_g2_voice_cannot_be_what_tips_red():
     sig = ["claim_bank", "caller_unknown", "bank_claim_not_1600", "payee_new"]
     base = assess(sig)
     assert base.tier == "amber" and set(base.qualifying_families) >= {"C", "K"}
-    a = assess(sig + ["voice_likely_synthetic"])
+    a = assess(sig + ["voice_likely_synthetic"], cfg=CAL)
     assert a.raw_tier == "red" and a.tier == "amber"
     assert any(g.id == "G2" and "strict" in g.effect for g in a.guardrails_applied)
 
@@ -106,7 +109,7 @@ def test_voice_can_lift_green_to_amber():
     sig = ["caller_unknown", "caller_international", "payee_new"]
     a = assess(sig)
     assert a.tier == "green"
-    b = assess(sig + ["voice_likely_synthetic"])
+    b = assess(sig + ["voice_likely_synthetic"], cfg=CAL)
     assert b.p > a.p and b.tier == "amber"
 
 
@@ -125,7 +128,7 @@ def test_voice_never_creates_a_hold_alone():
                 ["claim_family", "caller_unknown", "caller_international", "payee_new", "amount_gt_p99"]):
         base = assess(sig)
         assert base.tier == "amber"
-        a = assess(sig + ["voice_likely_synthetic", "watermark_detected"])
+        a = assess(sig + ["voice_likely_synthetic", "watermark_detected"], cfg=CAL)
         assert a.tier == "amber" and a.p > base.p
 
 
@@ -207,3 +210,53 @@ def test_a19_auto_family_verify_rule():
     assert not should_auto_family_verify("amber", "bank", True)
     off = load_config(overrides={"actions": {"family_verify_auto": False}})
     assert not should_auto_family_verify("amber", "family", True, cfg=off)
+
+
+# ---------------------------------------------------------------- voice shadow mode (ML real-call result)
+def test_shadow_mode_is_the_default_and_bands_are_neutral():
+    cfg = default_config()
+    assert cfg.voice.mode == "shadow"
+    for b in ("likely_synthetic", "inconclusive", "no_strong_evidence"):
+        assert cfg.signals[f"voice_{b}"].lr == 1.0 and cfg.signals[f"voice_{b}"].basis == "shadow"
+    assert cfg.signals["watermark_detected"].lr > 1  # positive-only provenance stays active
+    assert cfg.voice.calibration_gate == {"real_call_false_flag_max": 0.05, "min_real_calls": 50}
+
+
+@pytest.mark.parametrize("prior", [1 / 2000, 1 / 400, 0.05, 0.3])
+def test_shadow_mode_never_changes_tier(prior):
+    import itertools
+    import random
+    from pehchaan.signals import ALL_SIGNALS
+    rng = random.Random(7)
+    pool = [c for c in ALL_SIGNALS if not c.startswith("voice_") and c != "watermark_detected"]
+    for _ in range(400):
+        base = rng.sample(pool, rng.randint(1, 7))
+        a = assess(base, prior=prior)
+        for band in ("voice_likely_synthetic", "voice_inconclusive", "voice_no_strong_evidence"):
+            b = assess(base + [band], prior=prior)
+            assert b.tier == a.tier and b.raw_tier == a.raw_tier and b.p == pytest.approx(a.p), (base, band)
+    del itertools
+
+
+def test_calibrated_mode_uses_the_measured_phone_heldout_slice():
+    cal = load_config(overrides={"voice": {"mode": "calibrated"}})
+    if not cal.voice.measured_from:
+        pytest.skip("ml/results/metrics.json not present")
+    assert "test_phone_channels_heldout_generators" in cal.voice.measured_from
+    assert cal.signals["voice_likely_synthetic"].basis == "measured" and cal.signals["voice_likely_synthetic"].lr > 8
+    assert cal.signals["voice_no_strong_evidence"].lr == 1.0  # floored (raw 0.093)
+    a = assess(["caller_unknown", "voice_likely_synthetic"], cfg=cal)
+    assert a.families["V"].capped and a.families["V"].ln_lr == pytest.approx(math.log(8))
+    # shadow keeps the same calibrated values for provenance only
+    assert default_config().voice.calibrated_lrs == {k[6:]: v.lr for k, v in cal.signals.items() if k.startswith("voice_")}
+
+
+
+def test_voice_result_copy_is_g6_safe():
+    from pehchaan.explain import copy_text, violates_g6
+    for key in ("voice_shadow_result", "voice_watermark_result"):
+        c = copy_text(key)
+        assert c["en"] and c["hi"] and not violates_g6(c["en"]) and not violates_g6(c["hi"])
+        assert "fake" not in c["en"].lower()
+    assert "can't yet confirm who is calling" in copy_text("voice_shadow_result")["en"]
+    assert copy_text("voice_watermark_result")["en"].startswith("This audio carries a marker used by AI voice tools.")

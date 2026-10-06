@@ -20,12 +20,12 @@
       "green_below": 0.15,
       "genuine_red_pct": 0.648,
       "genuine_saw_pause_and_verify_pct": 5.626,
-      "genuine_final_amber_pct": 2.283,
-      "scam_amber_plus_pct": 95.081,
+      "genuine_final_amber_pct": 2.282,
+      "scam_amber_plus_pct": 95.08,
       "scam_red_pct": 84.811,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.98,
+          "amber_plus_pct": 92.973,
           "red_pct": 77.397
         },
         "T2": {
@@ -44,12 +44,12 @@
       "green_below": 0.15,
       "genuine_red_pct": 0.323,
       "genuine_saw_pause_and_verify_pct": 5.626,
-      "genuine_final_amber_pct": 2.608,
-      "scam_amber_plus_pct": 95.081,
+      "genuine_final_amber_pct": 2.607,
+      "scam_amber_plus_pct": 95.08,
       "scam_red_pct": 79.961,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.98,
+          "amber_plus_pct": 92.973,
           "red_pct": 67.733
         },
         "T2": {
@@ -68,12 +68,12 @@
       "green_below": 0.15,
       "genuine_red_pct": 0.295,
       "genuine_saw_pause_and_verify_pct": 5.626,
-      "genuine_final_amber_pct": 2.636,
-      "scam_amber_plus_pct": 95.081,
+      "genuine_final_amber_pct": 2.635,
+      "scam_amber_plus_pct": 95.08,
       "scam_red_pct": 76.559,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.98,
+          "amber_plus_pct": 92.973,
           "red_pct": 64.897
         },
         "T2": {
@@ -92,12 +92,12 @@
       "green_below": 0.15,
       "genuine_red_pct": 0.232,
       "genuine_saw_pause_and_verify_pct": 5.626,
-      "genuine_final_amber_pct": 2.699,
-      "scam_amber_plus_pct": 95.081,
+      "genuine_final_amber_pct": 2.698,
+      "scam_amber_plus_pct": 95.08,
       "scam_red_pct": 74.087,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.98,
+          "amber_plus_pct": 92.973,
           "red_pct": 63.507
         },
         "T2": {
@@ -116,12 +116,12 @@
       "green_below": 0.15,
       "genuine_red_pct": 0.22,
       "genuine_saw_pause_and_verify_pct": 5.626,
-      "genuine_final_amber_pct": 2.711,
-      "scam_amber_plus_pct": 95.081,
+      "genuine_final_amber_pct": 2.71,
+      "scam_amber_plus_pct": 95.08,
       "scam_red_pct": 73.641,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.98,
+          "amber_plus_pct": 92.973,
           "red_pct": 62.127
         },
         "T2": {
@@ -140,12 +140,12 @@
       "green_below": 0.15,
       "genuine_red_pct": 0.211,
       "genuine_saw_pause_and_verify_pct": 5.626,
-      "genuine_final_amber_pct": 2.72,
-      "scam_amber_plus_pct": 95.081,
+      "genuine_final_amber_pct": 2.719,
+      "scam_amber_plus_pct": 95.08,
       "scam_red_pct": 72.842,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.98,
+          "amber_plus_pct": 92.973,
           "red_pct": 58.987
         },
         "T2": {
@@ -164,12 +164,12 @@
       "green_below": 0.15,
       "genuine_red_pct": 0.211,
       "genuine_saw_pause_and_verify_pct": 5.626,
-      "genuine_final_amber_pct": 2.72,
-      "scam_amber_plus_pct": 95.081,
+      "genuine_final_amber_pct": 2.719,
+      "scam_amber_plus_pct": 95.08,
       "scam_red_pct": 72.632,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.98,
+          "amber_plus_pct": 92.973,
           "red_pct": 58.657
         },
         "T2": {
@@ -188,12 +188,12 @@
       "green_below": 0.15,
       "genuine_red_pct": 0.21,
       "genuine_saw_pause_and_verify_pct": 5.626,
-      "genuine_final_amber_pct": 2.721,
-      "scam_amber_plus_pct": 95.081,
+      "genuine_final_amber_pct": 2.72,
+      "scam_amber_plus_pct": 95.08,
       "scam_red_pct": 72.609,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.98,
+          "amber_plus_pct": 92.973,
           "red_pct": 58.64
         },
         "T2": {
@@ -212,12 +212,12 @@
       "green_below": 0.15,
       "genuine_red_pct": 0.153,
       "genuine_saw_pause_and_verify_pct": 5.626,
-      "genuine_final_amber_pct": 2.778,
-      "scam_amber_plus_pct": 95.081,
+      "genuine_final_amber_pct": 2.777,
+      "scam_amber_plus_pct": 95.08,
       "scam_red_pct": 63.362,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.98,
+          "amber_plus_pct": 92.973,
           "red_pct": 46.357
         },
         "T2": {
@@ -236,12 +236,12 @@
       "green_below": 0.15,
       "genuine_red_pct": 0.153,
       "genuine_saw_pause_and_verify_pct": 5.626,
-      "genuine_final_amber_pct": 2.778,
-      "scam_amber_plus_pct": 95.081,
+      "genuine_final_amber_pct": 2.777,
+      "scam_amber_plus_pct": 95.08,
       "scam_red_pct": 62.891,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.98,
+          "amber_plus_pct": 92.973,
           "red_pct": 45.877
         },
         "T2": {
@@ -260,12 +260,12 @@
       "green_below": 0.15,
       "genuine_red_pct": 0.141,
       "genuine_saw_pause_and_verify_pct": 5.626,
-      "genuine_final_amber_pct": 2.79,
-      "scam_amber_plus_pct": 95.081,
+      "genuine_final_amber_pct": 2.789,
+      "scam_amber_plus_pct": 95.08,
       "scam_red_pct": 60.61,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.98,
+          "amber_plus_pct": 92.973,
           "red_pct": 44.593
         },
         "T2": {
@@ -284,12 +284,12 @@
       "green_below": 0.15,
       "genuine_red_pct": 0.13,
       "genuine_saw_pause_and_verify_pct": 5.626,
-      "genuine_final_amber_pct": 2.801,
-      "scam_amber_plus_pct": 95.081,
+      "genuine_final_amber_pct": 2.8,
+      "scam_amber_plus_pct": 95.08,
       "scam_red_pct": 57.893,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.98,
+          "amber_plus_pct": 92.973,
           "red_pct": 42.523
         },
         "T2": {
@@ -308,12 +308,12 @@
       "green_below": 0.15,
       "genuine_red_pct": 0.122,
       "genuine_saw_pause_and_verify_pct": 5.626,
-      "genuine_final_amber_pct": 2.809,
-      "scam_amber_plus_pct": 95.081,
+      "genuine_final_amber_pct": 2.808,
+      "scam_amber_plus_pct": 95.08,
       "scam_red_pct": 47.731,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.98,
+          "amber_plus_pct": 92.973,
           "red_pct": 38.907
         },
         "T2": {
@@ -334,7 +334,7 @@
       "green_below": 0.05,
       "genuine_red_pct": 0.272,
       "genuine_saw_pause_and_verify_pct": 17.879,
-      "genuine_final_amber_pct": 12.039,
+      "genuine_final_amber_pct": 12.038,
       "scam_amber_plus_pct": 98.807,
       "scam_red_pct": 73.003,
       "per_pattern": {
@@ -358,12 +358,12 @@
       "green_below": 0.08,
       "genuine_red_pct": 0.253,
       "genuine_saw_pause_and_verify_pct": 10.465,
-      "genuine_final_amber_pct": 5.531,
-      "scam_amber_plus_pct": 96.879,
+      "genuine_final_amber_pct": 5.53,
+      "scam_amber_plus_pct": 96.878,
       "scam_red_pct": 72.98,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 97.0,
+          "amber_plus_pct": 96.997,
           "red_pct": 60.023
         },
         "T2": {
@@ -382,12 +382,12 @@
       "green_below": 0.1,
       "genuine_red_pct": 0.243,
       "genuine_saw_pause_and_verify_pct": 9.426,
-      "genuine_final_amber_pct": 4.838,
-      "scam_amber_plus_pct": 96.414,
+      "genuine_final_amber_pct": 4.836,
+      "scam_amber_plus_pct": 96.413,
       "scam_red_pct": 72.956,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 96.443,
+          "amber_plus_pct": 96.437,
           "red_pct": 60.0
         },
         "T2": {
@@ -406,12 +406,12 @@
       "green_below": 0.12,
       "genuine_red_pct": 0.232,
       "genuine_saw_pause_and_verify_pct": 7.682,
-      "genuine_final_amber_pct": 3.96,
-      "scam_amber_plus_pct": 95.653,
+      "genuine_final_amber_pct": 3.959,
+      "scam_amber_plus_pct": 95.651,
       "scam_red_pct": 72.678,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 93.65,
+          "amber_plus_pct": 93.643,
           "red_pct": 58.78
         },
         "T2": {
@@ -430,12 +430,12 @@
       "green_below": 0.15,
       "genuine_red_pct": 0.211,
       "genuine_saw_pause_and_verify_pct": 5.626,
-      "genuine_final_amber_pct": 2.72,
-      "scam_amber_plus_pct": 95.081,
+      "genuine_final_amber_pct": 2.719,
+      "scam_amber_plus_pct": 95.08,
       "scam_red_pct": 72.632,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.98,
+          "amber_plus_pct": 92.973,
           "red_pct": 58.657
         },
         "T2": {
@@ -454,12 +454,12 @@
       "green_below": 0.2,
       "genuine_red_pct": 0.195,
       "genuine_saw_pause_and_verify_pct": 4.276,
-      "genuine_final_amber_pct": 1.897,
-      "scam_amber_plus_pct": 91.234,
+      "genuine_final_amber_pct": 1.896,
+      "scam_amber_plus_pct": 91.232,
       "scam_red_pct": 72.171,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 89.157,
+          "amber_plus_pct": 89.15,
           "red_pct": 57.97
         },
         "T2": {
@@ -478,12 +478,12 @@
       "green_below": 0.25,
       "genuine_red_pct": 0.175,
       "genuine_saw_pause_and_verify_pct": 3.157,
-      "genuine_final_amber_pct": 1.389,
-      "scam_amber_plus_pct": 90.02,
+      "genuine_final_amber_pct": 1.388,
+      "scam_amber_plus_pct": 90.018,
       "scam_red_pct": 71.956,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 87.583,
+          "amber_plus_pct": 87.573,
           "red_pct": 57.593
         },
         "T2": {
@@ -505,12 +505,12 @@
       "green_below": 0.15,
       "genuine_red_pct": 0.211,
       "genuine_saw_pause_and_verify_pct": 5.626,
-      "genuine_final_amber_pct": 2.72,
-      "scam_amber_plus_pct": 95.081,
+      "genuine_final_amber_pct": 2.719,
+      "scam_amber_plus_pct": 95.08,
       "scam_red_pct": 72.632,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.98,
+          "amber_plus_pct": 92.973,
           "red_pct": 58.657
         },
         "T2": {
@@ -529,12 +529,12 @@
       "green_below": 0.15,
       "genuine_red_pct": 0.239,
       "genuine_saw_pause_and_verify_pct": 4.079,
-      "genuine_final_amber_pct": 2.298,
-      "scam_amber_plus_pct": 95.032,
+      "genuine_final_amber_pct": 2.297,
+      "scam_amber_plus_pct": 95.03,
       "scam_red_pct": 73.975,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.98,
+          "amber_plus_pct": 92.973,
           "red_pct": 58.657
         },
         "T2": {

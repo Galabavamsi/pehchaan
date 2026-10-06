@@ -4,6 +4,7 @@
   "seed": 20261006,
   "prior": 0.0025,
   "voice_uptake": 0.3,
+  "voice_mode": "shadow",
   "rows": [
     {
       "level": "context_only",
@@ -84,14 +85,14 @@
       "level": "plus_voice",
       "label": "+ voice check (30% uptake; detector band + script cues heard in the call audio. Holds added here come from the cues: the band never creates or removes one)",
       "genuine_saw_pause_and_verify_pct": 5.626,
-      "genuine_final_amber_pct": 2.72,
+      "genuine_final_amber_pct": 2.719,
       "genuine_red_pct": 0.211,
-      "scam_amber_plus_pct": 95.081,
+      "scam_amber_plus_pct": 95.08,
       "scam_red_pct": 72.632,
-      "scam_stopped_pct": 71.128,
+      "scam_stopped_pct": 71.127,
       "per_pattern": {
         "T1": {
-          "amber_plus_pct": 92.98,
+          "amber_plus_pct": 92.973,
           "red_pct": 58.657
         },
         "T2": {
@@ -103,7 +104,7 @@
           "red_pct": 81.32
         }
       },
-      "inr_protected_per_100k": 9816880
+      "inr_protected_per_100k": 9816819
     }
   ]
 }

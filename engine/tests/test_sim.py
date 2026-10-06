@@ -74,7 +74,9 @@ def test_strict_g2_and_g7_paths_exercised():
         X[1, IDX[c]] = True  # G7 with p < theta
     for c in ["claim_bank", "caller_unknown", "bank_claim_not_1600", "payee_new", "bank_registry_unknown"]:
         X[2, IDX[c]] = True  # registry unknown: neutral
-    r = _check_parity(X, 1 / 400)
+    from pehchaan.config import load_config
+    cal = load_config(overrides={"voice": {"mode": "calibrated", "lr_source": "assumed"}})
+    r = _check_parity(X, 1 / 400, cfg=cal)
     assert bool(r.g2[0]) and r.tier[0] == 1
     assert bool(r.g7[1]) and r.tier[1] == 2
     assert r.tier[2] == 1 and not r.g7[2]
@@ -109,6 +111,8 @@ def test_sim_smoke(tmp_path):
     for k, v in d.items():  # flat, except the *_by_fv_enrolment maps and their grid
         if k.endswith("_by_fv_enrolment"):
             assert set(v) == {f"{e:g}" for e in d["fv_enrolment_grid"]} and all(isinstance(x, scalar) for x in v.values())
+        elif k in ("voice_engine_band_lrs", "voice_calibrated_band_lrs", "voice_calibration_gate"):
+            assert v is None or all(isinstance(x, scalar) for x in v.values())
         elif k == "fv_enrolment_grid":
             assert v == [0.2, 0.35, 0.5, 0.7, 0.9]
         else:
@@ -209,3 +213,22 @@ def test_a19_auto_family_verify_uptake():
     B["behaviour"]["family_verify_auto"]["value"] = False
     S2 = generate(B, {"T1": 500}, np.random.default_rng(2), A["detector"]["band_rates"])
     assert np.allclose(S2["fv_uptake"], A["scenarios"]["T1"]["fv"]["uptake"])
+
+
+def test_shadow_and_calibrated_voice_give_identical_decisions_in_the_flow():
+    """Voice is only offered on Pause & Verify, LRs are >= 1 and strict G2 caps V-tipped Reds, so turning the
+    detector on (calibrated) or off (shadow) never creates or removes a hold. The only possible tier change is
+    calibrated keeping a session Amber where a reassuring check would have cleared it to Green."""
+    from pehchaan.config import load_config
+    A = load_assumptions()
+    n_by = {k: 2000 for k in A["mix"]["genuine"] if k.startswith("G_")}
+    n_by.update({k: 3000 for k in A["mix"]["scam"] if k.startswith("T")})
+    S = generate(A, n_by, np.random.default_rng(9), A["detector"]["band_rates"])
+    cal = load_config(overrides={"voice": {"mode": "calibrated"}})
+    r_sh = run_flow(S, BatchEngine(CFG), 1 / 400, 1.0, 3, **_flow_kw(A))
+    r_ca = run_flow(S, BatchEngine(cal), 1 / 400, 1.0, 3, **_flow_kw(A))
+    assert CFG.voice.mode == "shadow" and cal.voice.mode == "calibrated"
+    assert ((r_sh["final"] == 2) == (r_ca["final"] == 2)).all()          # identical holds
+    assert (r_ca["final"] >= r_sh["final"]).all()                         # calibrated can only add Amber
+    assert (r_sh["final"] != r_ca["final"]).mean() < 0.001
+    assert (r_ca["p"] >= r_sh["p"] - 1e-12).all() and (r_ca["p"] > r_sh["p"] + 1e-9).any()

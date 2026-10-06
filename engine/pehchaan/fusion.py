@@ -22,7 +22,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from .config import Config, default_config
-from .explain import reason_text
+from .explain import copy_text, reason_text
 from .signals import (
     DECISIVE_NEGATIVE,
     DECISIVE_POSITIVE,
@@ -217,7 +217,9 @@ def assess(
                 code=c, family=f, family_name=FAMILIES[f], family_name_hi=FAMILY_NAMES_HI[f],
                 lr=cfg.signals[c].lr, ln_lr=ln, contribution=contrib,
                 direction="raises" if contrib > 1e-9 else ("lowers" if contrib < -1e-9 else "neutral"),
-                text=reason_text(c, params), basis=cfg.signals[c].basis,
+                # shadow-mode detector bands: the payer was told the score is saved, not a verdict (G6)
+                text=copy_text("voice_shadow_result") if cfg.signals[c].basis == "shadow" else reason_text(c, params),
+                basis=cfg.signals[c].basis,
             ))
     reasons.sort(key=lambda r: -abs(r.contribution))
 

@@ -11,6 +11,8 @@ from pehchaan.signals import ALL_SIGNALS
 from pehchaan.trigger import TriggerInput, evaluate_trigger
 
 CFG = default_config()
+# the detector's assumed LRs, as if it had passed the real-call gate (voice.mode: calibrated)
+CAL = load_config(overrides={"voice": {"mode": "calibrated", "lr_source": "assumed"}})
 GUARDS = lambda a: [g.id for g in a.guardrails_applied]  # noqa: E731
 
 
@@ -18,7 +20,7 @@ GUARDS = lambda a: [g.id for g in a.guardrails_applied]  # noqa: E731
 def test_config_covers_every_signal_with_basis_and_rationale():
     for code in ALL_SIGNALS:
         s = CFG.signals[code]
-        assert s.basis in ("assumed", "measured")
+        assert s.basis in ("assumed", "measured", "shadow")
         assert s.rationale.strip()
     assert CFG.prior.value == pytest.approx(1 / 400)
     assert {f: c.cap_lr for f, c in CFG.families.items()} == {"C": 60, "K": 30, "P": 30, "V": 8, "S": 30, "O": 300}
@@ -52,7 +54,7 @@ def test_voice_only_cannot_go_red_even_at_high_prior():
 
 def test_voice_cannot_be_the_second_family_for_red():
     # K qualifies, V qualifies; without V counting there is only one family -> Amber (G1 + G2)
-    a = assess(["caller_international", "caller_unknown", "voice_likely_synthetic"], prior=0.05)
+    a = assess(["caller_international", "caller_unknown", "voice_likely_synthetic"], prior=0.05, cfg=CAL)
     assert a.raw_tier == "red"
     assert a.tier == "amber"
     assert {"G1", "G2"} <= set(GUARDS(a))
@@ -244,7 +246,7 @@ def test_measured_voice_lr_swap(tmp_path):
         "bonafide": {"likely_synthetic": 0.05, "inconclusive": 0.20, "no_strong_evidence": 0.75}}}}
     mp = tmp_path / "metrics.json"
     mp.write_text(json.dumps(metrics))
-    cfg = load_config(overrides={"voice": {"lr_source": str(mp)}})
+    cfg = load_config(overrides={"voice": {"mode": "calibrated", "lr_source": str(mp)}})
     assert cfg.signals["voice_likely_synthetic"].basis == "measured"
     assert cfg.signals["voice_likely_synthetic"].lr == pytest.approx(11.0)
     assert cfg.signals["voice_inconclusive"].lr == pytest.approx(1.5)
@@ -252,14 +254,14 @@ def test_measured_voice_lr_swap(tmp_path):
     assert cfg.signals["voice_no_strong_evidence"].lr == pytest.approx(1.0)
     assert "floored at 1.0" in cfg.signals["voice_no_strong_evidence"].rationale
     assert cfg.voice.model_version == "xlsr-aasist-0.3"
-    # the default config is untouched
-    assert default_config().signals["voice_likely_synthetic"].basis == "assumed"
+    # the default config is untouched (shadow mode)
+    assert default_config().signals["voice_likely_synthetic"].basis == "shadow"
 
 
 def test_measured_voice_direct_band_lr(tmp_path):
     mp = tmp_path / "m.json"
     mp.write_text(json.dumps({"fusion": {"band_lr": {"voice_likely_synthetic": 6.5, "voice_no_strong_evidence": 0.9}}}))
-    cfg = load_config(overrides={"voice": {"lr_source": str(mp)}})
+    cfg = load_config(overrides={"voice": {"mode": "calibrated", "lr_source": str(mp)}})
     assert cfg.signals["voice_likely_synthetic"].lr == pytest.approx(6.5)
     assert cfg.signals["voice_no_strong_evidence"].lr == pytest.approx(1.0)  # 0.9 floored
 
@@ -268,7 +270,7 @@ def test_measured_voice_never_below_one_for_any_band(tmp_path):
     # even a badly inverted detector cannot make any voice band reassuring
     mp = tmp_path / "m.json"
     mp.write_text(json.dumps({"band_lr": {"likely_synthetic": 0.6, "inconclusive": 0.8, "no_strong_evidence": 0.1}}))
-    cfg = load_config(overrides={"voice": {"lr_source": str(mp)}})
+    cfg = load_config(overrides={"voice": {"mode": "calibrated", "lr_source": str(mp)}})
     for b in ("likely_synthetic", "inconclusive", "no_strong_evidence"):
         assert cfg.signals[f"voice_{b}"].lr >= 1.0
         assert cfg.signals[f"voice_{b}"].basis == "measured"

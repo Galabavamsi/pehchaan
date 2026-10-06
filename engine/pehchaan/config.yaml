@@ -114,14 +114,21 @@ actions:
   family_verify_auto: true
 
 voice:
-  # One-line swap: set lr_source to the ML results file to replace the three
-  # voice-band LRs with measured values (basis flips to 'measured').
-  #   lr_source: ../../ml/results/metrics.json
-  lr_source: assumed
+  # SPEC v0.2 (ML results, 2026-10-06): the detector reaches 4.8% EER on simulated
+  # channels, but flagged 91-95% of genuine chunks on one real cellular call
+  # (LR(likely_synthetic) on real-call bona fide = 0.93: no information).
+  #   shadow:     the score is computed, stored and shown to analysts ("shadow: not
+  #               used in decision"); all three band LRs are 1.0. watermark_detected
+  #               stays active (positive-only, capped by V).
+  #   calibrated: band LRs measured on lr_slice, floored at lr_floor, V cap 8, strict G2.
+  mode: shadow
+  # Promotion gate to calibrated (documentation only for now; checked by hand).
+  calibration_gate: {real_call_false_flag_max: 0.05, min_real_calls: 50}
+  lr_source: ../../ml/results/metrics.json
+  detector: ours                                    # served model (v1) in metrics.json
+  lr_slice: test_phone_channels_heldout_generators  # phone channels + held-out generators
   # One-directional voice: every voice-band LR (measured or assumed) is floored
-  # at 1.0, so the detector can raise suspicion but never lower it. Measured LRs
-  # on in-distribution generators overstate reassurance on unseen ones. With
-  # strict G2 this means voice can lift Green -> Amber but never create or
-  # remove a hold. See app/NOTES.md.
+  # at 1.0, so the detector can raise suspicion but never lower it. With strict
+  # G2 voice can lift Green -> Amber but never create or remove a hold.
   lr_floor: 1.0
-  band_thresholds: {likely_synthetic_at_or_above: 0.70, no_strong_evidence_below: 0.30}
+  band_thresholds: {likely_synthetic_at_or_above: 0.80, no_strong_evidence_below: 0.20}  # = ml bands (p_hi 0.8, p_lo 0.2, chosen on dev)

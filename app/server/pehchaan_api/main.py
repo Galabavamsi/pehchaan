@@ -23,6 +23,7 @@ REPO = SERVER_DIR.parents[1]
 sys.path.insert(0, str(REPO / "engine"))
 
 from pehchaan import default_config  # noqa: E402
+from pehchaan.explain import copy_text  # noqa: E402
 from pehchaan.evidence import ist_iso, render_pack_pdf, verify_chain, verify_pack  # noqa: E402
 
 from . import voice as voice_svc  # noqa: E402
@@ -198,6 +199,16 @@ def create_app(db_path: str | None = None, key_path: str | None = None) -> FastA
             data = data[: 12 * 16000 * 2 + 44]
         res = await voice_svc.score(data, file.filename or "clip.wav", demo_hint)
         res["audio_retained"] = False
+        mode = default_config().voice.mode
+        res["voice_mode"] = mode
+        res["used_in_decision"] = mode == "calibrated"   # watermark_detected is always used (positive-only)
+        wm = bool((res.get("watermark") or {}).get("detected"))
+        if wm:
+            res["user_message"] = copy_text("voice_watermark_result")
+        elif mode == "shadow":
+            res["user_message"] = copy_text("voice_shadow_result")
+        else:
+            res["user_message"] = None  # calibrated: the client shows the band explanation
         if case_id:
             case = svc.attach_voice(case_id, res)
             await publish(case)

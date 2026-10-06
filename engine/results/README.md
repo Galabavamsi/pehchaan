@@ -28,6 +28,7 @@ When `ml/results/metrics.json` appears, the next run uses its `band_rates` (spoo
 | `chart_fv_enrolment.svg` | T1 Amber+ / T1 Red / weighted scam Red against Family Verify enrolment. |
 | `chart_*_deck.svg` | Deck variants of ablation, friction_funnel, red_precision, catch_by_pattern and fv_enrolment: no in-chart title, all text ≥ 17 px, 14 px footnote, for placing about 420 px wide. |
 | `sim_v02pre_baseline.json` | Snapshot of `deck_numbers.json` from the previous report (commit 36e6653: green 0.15, one-directional voice, Family Verify offered, checklist at Amber only); copied into `deck_numbers.json` as `v02pre_*`. |
+| `sim_summary_calibrated.json` | The headline run with `voice.mode: calibrated` (measured band LRs). `deck_numbers.json` carries it as `calibrated_*`, plus `calibrated_realcall_*`, which uses real-call bona fide band rates (stress). |
 | `preview/*.png` | 1200 px layout previews (not for the deck). |
 
 The SVGs are 600 units wide. Placed at about 600 px on a 1280×720 slide, every label is ≥ 12 px. Text stays as text (Space Grotesk / Inter / JetBrains Mono); inline the SVGs so they pick up the deck's `@font-face`.
@@ -60,3 +61,10 @@ Final changes (after the v0.2 review):
 - **Scams held (Red):** T1 65 → 54 → 59%, T2 77 → 72 → 72%, T3 85 → 80.5 → 81%, weighted 77 → 71 → 73%. Amber+ stays about 95%.
 - **Genuine holds per scam held:** 4.8 → 1.2 → 1.2 at 1/400. ₹ protected per ₹ delayed: 1.19 → 2.88 → 2.98.
 - **FV enrolment 20 / 35 / 50 / 70 / 90%, T1 held:** offered 51 / 53 / 54 / 56 / 58% → auto-sent 53 / 56 / 59 / 62 / 66%.
+
+## Voice detector: shadow (default deck numbers) vs calibrated
+
+`ml/results/metrics.json` is used directly. Seen spoofs come from `test_seen_generators`, unseen from `test_phone_channels_heldout_generators`, and bona fide from `test_phone_channels`. Calibrated band LRs are 70.5 / 2.91 / 1.0 (floored).
+
+Holds are identical in both modes: scams held 72.6%, genuine held 0.211%, Pause & Verify 5.63%. That follows from three rules: the voice check is only offered on Pause & Verify, LRs are ≥ 1, and strict G2 applies. Calibrated changes p, and keeps genuine final Amber 0.005 pp higher.
+

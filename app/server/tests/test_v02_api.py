@@ -1,3 +1,4 @@
+import pytest
 """SPEC v0.2 through the API: G7, claim split, registry-unknown, cue checklist, Cancel-primary."""
 from conftest import ANALYST
 from test_api import fv_answer, start
@@ -138,3 +139,33 @@ def test_a19_family_verify_is_auto_sent_and_can_be_cancelled(client, device_fact
     # re-assessing the claim does not re-send on its own after a cancel
     r = client.post("/v1/risk/assess", json={"case_id": cid, "claim": "family", "claim_target": "rel_rahul"}).json()
     assert "auto_family_verify" not in r
+
+
+def test_voice_shadow_mode_saves_score_without_changing_the_decision(client):
+    sc, a1 = start(client, "T1")
+    cid = a1["case_id"]
+    a2 = client.post("/v1/risk/assess", json={"case_id": cid, "claim": "other"}).json()
+    wav = client.get("/v1/demo/audio/synthetic.wav").content
+    v = client.post("/v1/voice/score", files={"file": ("c.wav", wav, "audio/wav")},
+                    data={"demo_hint": "synthetic", "case_id": cid}).json()
+    assert v["voice_mode"] == "shadow" and v["used_in_decision"] is False and v["band"] == "likely_synthetic"
+    assert v["user_message"]["en"].startswith("Thanks — this is saved with your case.")
+    a3 = v["assessment"]
+    assert a3["tier"] == a2["tier"] and a3["p"] == pytest.approx(a2["p"])
+    r = next(x for x in a3["reasons"] if x["code"] == "voice_likely_synthetic")
+    assert r["basis"] == "shadow" and r["lr"] == 1.0 and r["direction"] == "neutral"
+    assert "voice_likely_synthetic" not in {x["code"] for x in a3["top_reasons"]}
+    case = client.get(f"/v1/cases/{cid}", headers=ANALYST).json()
+    assert case["checks"]["voice"]["voice_mode"] == "shadow" and case["checks"]["voice"]["p_synthetic"] > 0.8
+
+
+def test_watermark_stays_active_in_shadow_mode(client):
+    sc, a1 = start(client, "T1")
+    cid = a1["case_id"]
+    a2 = client.post("/v1/risk/assess", json={"case_id": cid, "claim": "other"}).json()
+    wav = client.get("/v1/demo/audio/synthetic.wav").content
+    v = client.post("/v1/voice/score", files={"file": ("c.wav", wav, "audio/wav")},
+                    data={"demo_hint": "watermark", "case_id": cid}).json()
+    assert v["watermark"]["detected"] is True
+    assert v["user_message"]["en"].startswith("This audio carries a marker used by AI voice tools.")
+    assert v["assessment"]["p"] > a2["p"] and "watermark_detected" in v["assessment"]["signals"]

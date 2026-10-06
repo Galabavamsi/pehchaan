@@ -6,7 +6,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-10-06T04:42:00.878461</dc:date>
+    <dc:date>2026-10-06T06:48:26.976256</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -64,8 +64,8 @@ z
     <g id="xtick_4">
      <g id="line2d_4"/>
      <g id="text_4">
-      <text style="fill: #1b1f24; font: 13px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(463.074933 335.4575)">+ voice check</text>
-      <text style="fill: #1b1f24; font: 13px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(464.261183 349.65218)">(30% uptake)</text>
+      <text style="fill: #1b1f24; font: 13px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(458.152199 335.768281)">+ voice capture</text>
+      <text style="fill: #1b1f24; font: 13px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif" transform="translate(459.223683 349.593883)">(30%, shadow)</text>
      </g>
     </g>
    </g>
@@ -74,7 +74,7 @@ z
      <g id="line2d_5">
       <path d="M 52 318 
 L 582 318 
-" clip-path="url(#p454a679664)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+" clip-path="url(#p0156abd4de)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
      </g>
      <g id="line2d_6"/>
      <g id="text_5">
@@ -85,7 +85,7 @@ L 582 318
      <g id="line2d_7">
       <path d="M 52 268 
 L 582 268 
-" clip-path="url(#p454a679664)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+" clip-path="url(#p0156abd4de)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
      </g>
      <g id="line2d_8"/>
      <g id="text_6">
@@ -96,7 +96,7 @@ L 582 268
      <g id="line2d_9">
       <path d="M 52 218 
 L 582 218 
-" clip-path="url(#p454a679664)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+" clip-path="url(#p0156abd4de)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
      </g>
      <g id="line2d_10"/>
      <g id="text_7">
@@ -107,7 +107,7 @@ L 582 218
      <g id="line2d_11">
       <path d="M 52 168 
 L 582 168 
-" clip-path="url(#p454a679664)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+" clip-path="url(#p0156abd4de)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
      </g>
      <g id="line2d_12"/>
      <g id="text_8">
@@ -118,7 +118,7 @@ L 582 168
      <g id="line2d_13">
       <path d="M 52 118 
 L 582 118 
-" clip-path="url(#p454a679664)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+" clip-path="url(#p0156abd4de)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
      </g>
      <g id="line2d_14"/>
      <g id="text_9">
@@ -137,7 +137,7 @@ Q 77.869048 147.394 77.869048 151.394
 L 77.869048 314 
 Q 77.869048 318 81.869048 318 
 z
-" clip-path="url(#p454a679664)" style="fill: #e0a526"/>
+" clip-path="url(#p0156abd4de)" style="fill: #e0a526"/>
    </g>
    <g id="patch_4">
     <path d="M 77.869048 318 
@@ -145,7 +145,7 @@ L 108.154762 318
 L 108.154762 151.394 
 L 77.869048 151.394 
 z
-" clip-path="url(#p454a679664)" style="fill: #e0a526"/>
+" clip-path="url(#p0156abd4de)" style="fill: #e0a526"/>
    </g>
    <g id="text_10">
     <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="93.011905" y="142.034" transform="rotate(-0 93.011905 142.034)">85%</text>
@@ -164,7 +164,7 @@ Q 147.27381 313.914 147.27381 315.957
 L 147.27381 315.957 
 Q 147.27381 318 149.31681 318 
 z
-" clip-path="url(#p454a679664)" style="fill: #6b7280"/>
+" clip-path="url(#p0156abd4de)" style="fill: #6b7280"/>
    </g>
    <g id="patch_6">
     <path d="M 147.27381 318 
@@ -172,7 +172,7 @@ L 177.559524 318
 L 177.559524 315.957 
 L 147.27381 315.957 
 z
-" clip-path="url(#p454a679664)" style="fill: #6b7280"/>
+" clip-path="url(#p0156abd4de)" style="fill: #6b7280"/>
    </g>
    <g id="text_12">
     <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="162.416667" y="308.554" transform="rotate(-0 162.416667 308.554)">2.0%</text>
@@ -191,7 +191,7 @@ Q 204.059524 127.532 204.059524 131.532
 L 204.059524 314 
 Q 204.059524 318 208.059524 318 
 z
-" clip-path="url(#p454a679664)" style="fill: #e0a526"/>
+" clip-path="url(#p0156abd4de)" style="fill: #e0a526"/>
    </g>
    <g id="patch_8">
     <path d="M 204.059524 318 
@@ -199,7 +199,7 @@ L 234.345238 318
 L 234.345238 131.532 
 L 204.059524 131.532 
 z
-" clip-path="url(#p454a679664)" style="fill: #e0a526"/>
+" clip-path="url(#p0156abd4de)" style="fill: #e0a526"/>
    </g>
    <g id="text_14">
     <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="219.202381" y="122.172" transform="rotate(-0 219.202381 122.172)">95%</text>
@@ -215,7 +215,7 @@ Q 238.761905 197.122 238.761905 201.122
 L 238.761905 314 
 Q 238.761905 318 242.761905 318 
 z
-" clip-path="url(#p454a679664)" style="fill: #c8372d"/>
+" clip-path="url(#p0156abd4de)" style="fill: #c8372d"/>
    </g>
    <g id="patch_10">
     <path d="M 238.761905 318 
@@ -223,7 +223,7 @@ L 269.047619 318
 L 269.047619 201.122 
 L 238.761905 201.122 
 z
-" clip-path="url(#p454a679664)" style="fill: #c8372d"/>
+" clip-path="url(#p0156abd4de)" style="fill: #c8372d"/>
    </g>
    <g id="text_15">
     <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="253.904762" y="191.762" transform="rotate(-0 253.904762 191.762)">60%</text>
@@ -239,7 +239,7 @@ Q 273.464286 306.748 273.464286 310.748
 L 273.464286 314 
 Q 273.464286 318 277.464286 318 
 z
-" clip-path="url(#p454a679664)" style="fill: #6b7280"/>
+" clip-path="url(#p0156abd4de)" style="fill: #6b7280"/>
    </g>
    <g id="patch_12">
     <path d="M 273.464286 318 
@@ -247,7 +247,7 @@ L 303.75 318
 L 303.75 310.748 
 L 273.464286 310.748 
 z
-" clip-path="url(#p454a679664)" style="fill: #6b7280"/>
+" clip-path="url(#p0156abd4de)" style="fill: #6b7280"/>
    </g>
    <g id="text_16">
     <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="288.607143" y="301.388" transform="rotate(-0 288.607143 301.388)">5.6%</text>
@@ -266,7 +266,7 @@ Q 330.25 127.844 330.25 131.844
 L 330.25 314 
 Q 330.25 318 334.25 318 
 z
-" clip-path="url(#p454a679664)" style="fill: #e0a526"/>
+" clip-path="url(#p0156abd4de)" style="fill: #e0a526"/>
    </g>
    <g id="patch_14">
     <path d="M 330.25 318 
@@ -274,7 +274,7 @@ L 360.535714 318
 L 360.535714 131.844 
 L 330.25 131.844 
 z
-" clip-path="url(#p454a679664)" style="fill: #e0a526"/>
+" clip-path="url(#p0156abd4de)" style="fill: #e0a526"/>
    </g>
    <g id="text_18">
     <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="345.392857" y="122.484" transform="rotate(-0 345.392857 122.484)">95%</text>
@@ -290,7 +290,7 @@ Q 364.952381 179.212 364.952381 183.212
 L 364.952381 314 
 Q 364.952381 318 368.952381 318 
 z
-" clip-path="url(#p454a679664)" style="fill: #c8372d"/>
+" clip-path="url(#p0156abd4de)" style="fill: #c8372d"/>
    </g>
    <g id="patch_16">
     <path d="M 364.952381 318 
@@ -298,7 +298,7 @@ L 395.238095 318
 L 395.238095 183.212 
 L 364.952381 183.212 
 z
-" clip-path="url(#p454a679664)" style="fill: #c8372d"/>
+" clip-path="url(#p0156abd4de)" style="fill: #c8372d"/>
    </g>
    <g id="text_19">
     <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="380.095238" y="173.852" transform="rotate(-0 380.095238 173.852)">69%</text>
@@ -314,7 +314,7 @@ Q 399.654762 306.748 399.654762 310.748
 L 399.654762 314 
 Q 399.654762 318 403.654762 318 
 z
-" clip-path="url(#p454a679664)" style="fill: #6b7280"/>
+" clip-path="url(#p0156abd4de)" style="fill: #6b7280"/>
    </g>
    <g id="patch_18">
     <path d="M 399.654762 318 
@@ -322,7 +322,7 @@ L 429.940476 318
 L 429.940476 310.748 
 L 399.654762 310.748 
 z
-" clip-path="url(#p454a679664)" style="fill: #6b7280"/>
+" clip-path="url(#p0156abd4de)" style="fill: #6b7280"/>
    </g>
    <g id="text_20">
     <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="414.797619" y="301.388" transform="rotate(-0 414.797619 301.388)">5.6%</text>
@@ -334,25 +334,25 @@ z
     <path d="M 460.440476 318 
 L 482.72619 318 
 Q 486.72619 318 486.72619 314 
-L 486.72619 131.838 
-Q 486.72619 127.838 482.72619 127.838 
-L 460.440476 127.838 
-Q 456.440476 127.838 456.440476 131.838 
+L 486.72619 131.84 
+Q 486.72619 127.84 482.72619 127.84 
+L 460.440476 127.84 
+Q 456.440476 127.84 456.440476 131.84 
 L 456.440476 314 
 Q 456.440476 318 460.440476 318 
 z
-" clip-path="url(#p454a679664)" style="fill: #e0a526"/>
+" clip-path="url(#p0156abd4de)" style="fill: #e0a526"/>
    </g>
    <g id="patch_20">
     <path d="M 456.440476 318 
 L 486.72619 318 
-L 486.72619 131.838 
-L 456.440476 131.838 
+L 486.72619 131.84 
+L 456.440476 131.84 
 z
-" clip-path="url(#p454a679664)" style="fill: #e0a526"/>
+" clip-path="url(#p0156abd4de)" style="fill: #e0a526"/>
    </g>
    <g id="text_22">
-    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="471.583333" y="122.478" transform="rotate(-0 471.583333 122.478)">95%</text>
+    <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="471.583333" y="122.48" transform="rotate(-0 471.583333 122.48)">95%</text>
    </g>
    <g id="patch_21">
     <path d="M 495.142857 318 
@@ -365,7 +365,7 @@ Q 491.142857 172.736 491.142857 176.736
 L 491.142857 314 
 Q 491.142857 318 495.142857 318 
 z
-" clip-path="url(#p454a679664)" style="fill: #c8372d"/>
+" clip-path="url(#p0156abd4de)" style="fill: #c8372d"/>
    </g>
    <g id="patch_22">
     <path d="M 491.142857 318 
@@ -373,7 +373,7 @@ L 521.428571 318
 L 521.428571 176.736 
 L 491.142857 176.736 
 z
-" clip-path="url(#p454a679664)" style="fill: #c8372d"/>
+" clip-path="url(#p0156abd4de)" style="fill: #c8372d"/>
    </g>
    <g id="text_23">
     <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="506.285714" y="167.376" transform="rotate(-0 506.285714 167.376)">73%</text>
@@ -389,7 +389,7 @@ Q 525.845238 306.748 525.845238 310.748
 L 525.845238 314 
 Q 525.845238 318 529.845238 318 
 z
-" clip-path="url(#p454a679664)" style="fill: #6b7280"/>
+" clip-path="url(#p0156abd4de)" style="fill: #6b7280"/>
    </g>
    <g id="patch_24">
     <path d="M 525.845238 318 
@@ -397,7 +397,7 @@ L 556.130952 318
 L 556.130952 310.748 
 L 525.845238 310.748 
 z
-" clip-path="url(#p454a679664)" style="fill: #6b7280"/>
+" clip-path="url(#p0156abd4de)" style="fill: #6b7280"/>
    </g>
    <g id="text_24">
     <text style="fill: #1b1f24; font: 12px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: middle" x="540.988095" y="301.388" transform="rotate(-0 540.988095 301.388)">5.6%</text>
@@ -446,14 +446,14 @@ z
    <text style="fill: #1b1f24; font: 13px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="396" y="81.532344" transform="rotate(-0 396 81.532344)">Genuine payments paused</text>
   </g>
   <g id="text_31">
-   <text style="fill: #1b1f24; font: 12px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="20" y="418" transform="rotate(-0 20 418)">Holds added by the voice layer come from script cues in the call audio, not the detector score</text>
+   <text style="fill: #1b1f24; font: 12px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="20" y="418" transform="rotate(-0 20 418)">Detector in shadow mode (not used): voice-layer holds are script cues heard in the call</text>
   </g>
   <g id="text_32">
-   <text style="fill: #6b7280; font: 12px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="20" y="442" transform="rotate(-0 20 442)">Assumption-driven projection · engine/sim_assumptions.yaml · voice band rates: placeholder</text>
+   <text style="fill: #6b7280; font: 12px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="20" y="442" transform="rotate(-0 20 442)">Assumption-driven projection · engine/sim_assumptions.yaml · voice band rates: measured</text>
   </g>
  </g>
  <defs>
-  <clipPath id="p454a679664">
+  <clipPath id="p0156abd4de">
    <rect x="52" y="118" width="530" height="200"/>
   </clipPath>
  </defs>

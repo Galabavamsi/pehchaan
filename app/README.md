@@ -60,7 +60,8 @@ python app/screenshots/shoot.py         # needs both servers running; writes the
    - Say: "Same context, one tap, done. Genuine families aren't punished for living abroad."
 6. **Voice is a clue, not the judge (30 s, optional).** On T1 at the Amber screen, tap **Check the caller's voice** and choose a demo clip, or upload a WAV / record from the speakerphone.
    - Show the quality gate and the "one clue, not proof" copy.
-   - Say: "The detector can raise suspicion, never lower it." A "no strong evidence" result changes nothing (LR 1.0), and under strict G2 the detector score can never create or remove a hold.
+   - The detector runs in **shadow mode**. The payer sees "Thanks — this is saved with your case. Voice checks can't yet confirm who is calling on a phone line…", and the console shows the score with a "shadow: not used in decision" badge.
+   - Say: "Our detector gets 4.8% EER on simulated phone lines, but a real cellular call fooled every detector, so it doesn't vote until it passes a real-call gate." 
 7. **Bank and police (40 s).**
    - Click **T2** and pick **My bank**, then **Bharat Demo Bank**, then **Check with Bharat Demo Bank**. Result: "Bharat Demo Bank is not calling you right now."
    - Click **T3** and pick **Police, CBI or Govt** to show the "no digital arrest" fact card.

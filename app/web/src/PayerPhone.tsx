@@ -807,11 +807,16 @@ function VoiceScreen({ caseId, head, onBack }: { caseId: string | null; head: Re
         </>)}
         {state === "listening" && <p className="lede" style={{ textAlign: "center", marginTop: 12 }}>{t("voice_listening", { s: left })}</p>}
         {state === "done" && res && (
-          <div className="vresult" data-testid="voice-result">
-            <div className="vb">{lang === "hi" ? txt[bandText][1] : txt[bandText][0]}</div>
-            <div className="meter"><span className="pin" style={{ left: `calc(${(res.p_synthetic * 100).toFixed(0)}% - 2px)` }} /></div>
-            <div className="vq mono">{t("voice_quality", { s: res.quality.speech_sec.toFixed(1), db: res.quality.snr_db.toFixed(0) })}{res.quality.ok ? " ✓" : " ✗"}</div>
-            <div className="vq mono" style={{ marginTop: 2 }}>p = {res.p_synthetic.toFixed(2)} · {res.model_version}</div>
+          <div className="vresult" data-testid="voice-result" data-mode={res.voice_mode ?? "calibrated"}>
+            {res.user_message ? (
+              // shadow mode (or a watermark hit): no verdict on the voice, just what happens next (G6)
+              <div className="vb">{bi(res.user_message)}</div>
+            ) : (<>
+              <div className="vb">{lang === "hi" ? txt[bandText][1] : txt[bandText][0]}</div>
+              <div className="meter"><span className="pin" style={{ left: `calc(${(res.p_synthetic * 100).toFixed(0)}% - 2px)` }} /></div>
+              <div className="vq mono">{t("voice_quality", { s: res.quality.speech_sec.toFixed(1), db: res.quality.snr_db.toFixed(0) })}{res.quality.ok ? " ✓" : " ✗"}</div>
+              <div className="vq mono" style={{ marginTop: 2 }}>p = {res.p_synthetic.toFixed(2)} · {res.model_version}</div>
+            </>)}
             {res.mock && <div className="mocktag">{t("voice_mock")}</div>}
             <span style={{ display: "none" }}>{bi(res.assessment?.copy?.title)}</span>
           </div>

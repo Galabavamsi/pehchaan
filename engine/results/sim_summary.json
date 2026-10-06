@@ -1,7 +1,7 @@
 {
   "assumption_driven_projection": true,
   "disclaimer": "Assumption-driven projection. These numbers come from a synthetic session simulator whose every distribution is listed in engine/sim_assumptions.yaml (public base rates where cited, team assumptions otherwise). They show how the Pehchaan decision logic behaves under those assumptions; they are not measured outcomes on real customers.",
-  "generated_at_ist": "2026-10-06T04:41:40+05:30",
+  "generated_at_ist": "2026-10-06T06:48:09+05:30",
   "engine_config_version": "0.2.0",
   "assumptions_file": "engine/sim_assumptions.yaml",
   "assumptions_version": "0.2.0",
@@ -32,23 +32,39 @@
   },
   "voice": {
     "check_uptake": 0.3,
-    "band_rates_source": "placeholder (ml/results/metrics.json not found)",
-    "engine_voice_lr_basis": "assumed",
+    "band_rates_source": "measured (ml/results/metrics.json, detectors.ours.band_LRs: seen=test_seen_generators, unseen=test_phone_channels_heldout_generators, bona fide=test_phone_channels)",
+    "mode": "shadow",
+    "engine_band_lrs": {
+      "likely_synthetic": 1.0,
+      "inconclusive": 1.0,
+      "no_strong_evidence": 1.0
+    },
+    "calibrated_band_lrs": {
+      "likely_synthetic": 70.513,
+      "inconclusive": 2.907,
+      "no_strong_evidence": 1.0
+    },
+    "lrs_measured_from": "D:\\hackathons\\amazon-raksham\\ml\\results\\metrics.json (detectors.ours.band_LRs.test_phone_channels_heldout_generators)",
+    "calibration_gate": {
+      "real_call_false_flag_max": 0.05,
+      "min_real_calls": 50.0
+    },
+    "engine_voice_lr_basis": "shadow",
     "band_rates_used": {
       "synthetic_seen": {
-        "likely_synthetic": 0.62,
-        "inconclusive": 0.26,
-        "no_strong_evidence": 0.12
+        "likely_synthetic": 0.95,
+        "inconclusive": 0.0309,
+        "no_strong_evidence": 0.0192
       },
       "synthetic_unseen": {
-        "likely_synthetic": 0.3,
-        "inconclusive": 0.35,
-        "no_strong_evidence": 0.35
+        "likely_synthetic": 0.8342,
+        "inconclusive": 0.076,
+        "no_strong_evidence": 0.0899
       },
       "bonafide": {
-        "likely_synthetic": 0.06,
-        "inconclusive": 0.26,
-        "no_strong_evidence": 0.68
+        "likely_synthetic": 0.0118,
+        "inconclusive": 0.0262,
+        "no_strong_evidence": 0.9621
       }
     }
   },
@@ -57,9 +73,9 @@
     "silent_green": 41.779,
     "one_tap_question_then_green": 52.595,
     "saw_pause_and_verify": 5.626,
-    "resolved_to_green_by_a_check": 2.695,
-    "final_green": 97.069,
-    "final_amber": 2.72,
+    "resolved_to_green_by_a_check": 2.696,
+    "final_green": 97.07,
+    "final_amber": 2.719,
     "final_red_hold": 0.211,
     "by_scenario": {
       "G_merchant": {
@@ -106,11 +122,11 @@
         "silent_green": 46.787,
         "question_then_green": 40.233,
         "saw_pause_and_verify": 12.98,
-        "final_green": 93.84,
-        "final_amber": 5.867,
+        "final_green": 93.847,
+        "final_amber": 5.86,
         "final_red": 0.293,
-        "amber_plus": 6.16,
-        "resolved_green_after_check": 6.82,
+        "amber_plus": 6.153,
+        "resolved_green_after_check": 6.827,
         "used_checklist": 0.173,
         "used_fv": 5.86,
         "used_callback": 2.867,
@@ -163,9 +179,9 @@
     "T1": {
       "label": "T1 Cloned relative",
       "mix_weight": 0.2,
-      "amber_plus": 92.98,
+      "amber_plus": 92.973,
       "red_hold": 58.657,
-      "stopped_expected": 64.284,
+      "stopped_expected": 64.281,
       "saw_pause_and_verify": 93.563,
       "used_checklist": 10.33,
       "used_fv": 34.67,
@@ -206,9 +222,9 @@
       "used_voice": 30.1
     },
     "all_scams_weighted": {
-      "amber_plus": 95.081,
+      "amber_plus": 95.08,
       "red_hold": 72.632,
-      "stopped_expected": 71.128
+      "stopped_expected": 71.127
     }
   },
   "per_100k_triggered_sessions": {
@@ -220,9 +236,9 @@
     "scams_held_red": 181.58,
     "scams_stopped_expected": 177.82,
     "inr_at_risk_without_pehchaan": 12991864,
-    "inr_protected_expected": 9816880,
+    "inr_protected_expected": 9816819,
     "inr_genuine_delayed_by_hold": 3297881,
-    "inr_genuine_abandoned_at_amber": 3978251,
+    "inr_genuine_abandoned_at_amber": 3972069,
     "protected_per_rupee_delayed": 2.98,
     "share_of_red_holds_that_are_scams": 0.4632,
     "genuine_holds_per_scam_held": 1.16,
@@ -238,7 +254,7 @@
     "inr_genuine_delayed_crore_per_month": 72.7,
     "genuine_holds_per_scam_held": 0.69
   },
-  "elapsed_sec": 19.81,
+  "elapsed_sec": 17.76,
   "alert_budget": {
     "budget": {
       "genuine_red_max_pct": 0.25,

@@ -6,7 +6,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-10-06T04:42:00.486108</dc:date>
+    <dc:date>2026-10-06T06:48:26.608699</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -36,7 +36,7 @@ L 484 42
 L 484 68 
 L 14 68 
 z
-" clip-path="url(#p84e124a600)" style="fill: #e2d9c6; opacity: 0.5"/>
+" clip-path="url(#pa593eeb1ad)" style="fill: #e2d9c6; opacity: 0.5"/>
    </g>
    <g id="patch_3">
     <path d="M 14 146 
@@ -44,7 +44,7 @@ L 484 146
 L 484 172 
 L 14 172 
 z
-" clip-path="url(#p84e124a600)" style="fill: #e2d9c6; opacity: 0.5"/>
+" clip-path="url(#pa593eeb1ad)" style="fill: #e2d9c6; opacity: 0.5"/>
    </g>
    <g id="patch_4">
     <path d="M 14 250 
@@ -52,7 +52,7 @@ L 484 250
 L 484 276 
 L 14 276 
 z
-" clip-path="url(#p84e124a600)" style="fill: #e2d9c6; opacity: 0.5"/>
+" clip-path="url(#pa593eeb1ad)" style="fill: #e2d9c6; opacity: 0.5"/>
    </g>
    <g id="patch_5">
     <path d="M 14 354 
@@ -60,7 +60,7 @@ L 484 354
 L 484 380 
 L 14 380 
 z
-" clip-path="url(#p84e124a600)" style="fill: #e2d9c6; opacity: 0.5"/>
+" clip-path="url(#pa593eeb1ad)" style="fill: #e2d9c6; opacity: 0.5"/>
    </g>
    <g id="text_1">
     <text style="fill: #1b1f24; font: 600 18px 'Inter', 'Noto Sans Devanagari', 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="14" y="30" transform="rotate(-0 14 30)">Genuine triggered payments</text>
@@ -76,7 +76,7 @@ Q 14 68 14 64
 L 14 46 
 Q 14 42 18 42 
 z
-" clip-path="url(#p84e124a600)" style="fill: #6b7280"/>
+" clip-path="url(#pa593eeb1ad)" style="fill: #6b7280"/>
    </g>
    <g id="patch_7">
     <path d="M 14 42 
@@ -84,7 +84,7 @@ L 480 42
 L 480 68 
 L 14 68 
 z
-" clip-path="url(#p84e124a600)" style="fill: #6b7280"/>
+" clip-path="url(#pa593eeb1ad)" style="fill: #6b7280"/>
    </g>
    <g id="text_2">
     <text style="fill: #1b1f24; font: 18px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="494" y="59.95" transform="rotate(-0 494 59.95)">100%</text>
@@ -106,7 +106,7 @@ Q 14 172 14 168
 L 14 150 
 Q 14 146 18 146 
 z
-" clip-path="url(#p84e124a600)" style="fill: #e8742a"/>
+" clip-path="url(#pa593eeb1ad)" style="fill: #e8742a"/>
    </g>
    <g id="patch_9">
     <path d="M 14 146 
@@ -114,7 +114,7 @@ L 283.6387 146
 L 283.6387 172 
 L 14 172 
 z
-" clip-path="url(#p84e124a600)" style="fill: #e8742a"/>
+" clip-path="url(#pa593eeb1ad)" style="fill: #e8742a"/>
    </g>
    <g id="text_5">
     <text style="fill: #1b1f24; font: 18px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="494" y="163.95" transform="rotate(-0 494 163.95)">58%</text>
@@ -136,7 +136,7 @@ Q 14 276 14 272
 L 14 254 
 Q 14 250 18 250 
 z
-" clip-path="url(#p84e124a600)" style="fill: #e0a526"/>
+" clip-path="url(#pa593eeb1ad)" style="fill: #e0a526"/>
    </g>
    <g id="patch_11">
     <path d="M 14 250 
@@ -144,7 +144,7 @@ L 36.4422 250
 L 36.4422 276 
 L 14 276 
 z
-" clip-path="url(#p84e124a600)" style="fill: #e0a526"/>
+" clip-path="url(#pa593eeb1ad)" style="fill: #e0a526"/>
    </g>
    <g id="text_8">
     <text style="fill: #1b1f24; font: 18px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="494" y="267.95" transform="rotate(-0 494 267.95)">5.6%</text>
@@ -166,7 +166,7 @@ Q 14 380 14 379.50415
 L 14 354.49585 
 Q 14 354 14.49585 354 
 z
-" clip-path="url(#p84e124a600)" style="fill: #c8372d"/>
+" clip-path="url(#pa593eeb1ad)" style="fill: #c8372d"/>
    </g>
    <g id="patch_13">
     <path d="M 14 354 
@@ -174,7 +174,7 @@ L 14.49585 354
 L 14.49585 380 
 L 14 380 
 z
-" clip-path="url(#p84e124a600)" style="fill: #c8372d"/>
+" clip-path="url(#pa593eeb1ad)" style="fill: #c8372d"/>
    </g>
    <g id="text_11">
     <text style="fill: #1b1f24; font: 18px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="494" y="371.95" transform="rotate(-0 494 371.95)">0.21%</text>
@@ -188,7 +188,7 @@ z
   </g>
  </g>
  <defs>
-  <clipPath id="p84e124a600">
+  <clipPath id="pa593eeb1ad">
    <rect x="0" y="0" width="600" height="470"/>
   </clipPath>
  </defs>

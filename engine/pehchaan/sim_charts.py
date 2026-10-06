@@ -221,7 +221,8 @@ def chart_catch_by_pattern(summary: dict, out: Path):
 def chart_ablation(ablation: dict, summary: dict, out: Path):
     rows = ablation["rows"]
     labels = ["Context only\n(call + payment)", "+ claim &\nchecklist", "+ out-of-band\nchecks",
-              f"+ voice check\n({ablation['voice_uptake']:.0%} uptake)"]
+              (f"+ voice capture\n({ablation['voice_uptake']:.0%}, shadow)" if ablation.get("voice_mode") == "shadow"
+               else f"+ voice check\n({ablation['voice_uptake']:.0%} uptake)")]
     series = [("scam_amber_plus_pct", AMBER, "Scams paused (Amber+)"),
               ("scam_red_pct", RED, "Scams held (Red)"),
               ("genuine_saw_pause_and_verify_pct", SLATE, "Genuine payments paused")]
@@ -254,8 +255,10 @@ def chart_ablation(ablation: dict, summary: dict, out: Path):
             ax.text(x, v + 1.6, _fmt_pct(v), family=MONO, size=12, color=INK, ha="center", va="bottom")
         ax.text(i, -36, f"genuine held {_fmt_pct(r['genuine_red_pct'])}", family=BODY, size=12, color=SLATE,
                 ha="center", va="top", clip_on=False)
-    fig.text(*_px(fig, 20, H - 34), "Holds added by the voice layer come from script cues in the call audio, "
-             "not the detector score", family=BODY, size=12, color=INK)
+    fig.text(*_px(fig, 20, H - 34), ("Detector in shadow mode (not used): voice-layer holds are script cues heard in the call"
+                                     if ablation.get("voice_mode") == "shadow" else
+                                     "Holds added by the voice layer come from script cues in the call audio, not the detector score"),
+             family=BODY, size=12, color=INK)
     _footer(fig, f"voice band rates: {summary['voice']['band_rates_source'].split(' (')[0]}")
     _save(fig, out, "chart_ablation")
 
@@ -626,7 +629,8 @@ def chart_catch_by_pattern_deck(summary: dict, out: Path):
 
 def chart_ablation_deck(ablation: dict, summary: dict, out: Path):
     rows = ablation["rows"]
-    labels = ["Context\nonly", "+ claim &\nchecklist", "+ out-of-\nband checks", "+ voice\ncheck"]
+    labels = ["Context\nonly", "+ claim &\nchecklist", "+ out-of-\nband checks",
+              "+ voice\ncapture" if ablation.get("voice_mode") == "shadow" else "+ voice\ncheck"]
     series = [("scam_amber_plus_pct", AMBER, "Scams paused (Amber+)"), ("scam_red_pct", RED, "Scams held (Red)")]
     H = 540
     fig = _fig(H)
@@ -655,7 +659,9 @@ def chart_ablation_deck(ablation: dict, summary: dict, out: Path):
             ax.text(x, v + 1.8, f"{v:.0f}%", family=MONO, size=DS, color=INK, ha="center", va="bottom")
         ax.text(i, -74 * 100 / ax_h, f"{_fmt_pct(r['genuine_saw_pause_and_verify_pct'])} · {_fmt_pct(r['genuine_red_pct'])}",
                 family=BODY, size=DS, color=SLATE, ha="center", va="top", clip_on=False)
-    fig.text(*_px(fig, 14, H - 40), "Voice-layer holds come from script cues, not the detector",
+    fig.text(*_px(fig, 14, H - 40), ("Detector in shadow mode; voice-layer holds are script cues"
+                                     if ablation.get("voice_mode") == "shadow" else
+                                     "Voice-layer holds come from script cues, not the detector"),
              family=BODY, size=DS, color=INK, va="baseline")
     _footer_deck(fig, f"voice band rates: {summary['voice']['band_rates_source'].split(' (')[0]}")
     _save(fig, out, "chart_ablation_deck")

@@ -116,8 +116,8 @@ REASON_TEXT: dict[str, tuple[str, str]] = {
         "आवाज़ की जाँच में कंप्यूटर से बनी आवाज़ के पक्के संकेत नहीं मिले। पर सिर्फ़ इससे ये पक्का नहीं होता कि बात कौन कर रहा है।",
     ),
     "watermark_detected": (
-        "The audio carries a hidden marker that some AI voice tools add.",
-        "इस आवाज़ में एक छिपा निशान मिला है, जो कुछ AI आवाज़ वाले टूल लगाते हैं।",
+        "This audio carries a marker used by AI voice tools.",
+        "इस आवाज़ में एक निशान है जो AI आवाज़ वाले टूल इस्तेमाल करते हैं।",
     ),
     # ---- S: Script cues
     "cue_secrecy": (
@@ -199,6 +199,19 @@ DEFAULTS_HI = {
 
 # Fixed UI copy the API returns with a decision (so the app, deck and tests share one source).
 COPY: dict[str, tuple[str, str]] = {
+    # voice-check result shown to the payer (G6). Shadow mode: the score is saved, not used.
+    "voice_shadow_result": (
+        "Thanks — this is saved with your case. Voice checks can't yet confirm who is calling on a phone line, "
+        "so please use the checks above.",
+        "धन्यवाद — ये आपके केस के साथ सेव हो गया है। फ़ोन लाइन पर आवाज़ की जाँच अभी ये पक्का नहीं कर सकती कि "
+        "कॉल कौन कर रहा है, इसलिए ऊपर दी गई जाँचों का इस्तेमाल करें।",
+    ),
+    "voice_watermark_result": (
+        "This audio carries a marker used by AI voice tools. There's no rush: before you pay, confirm who is "
+        "asking with one of the checks above.",
+        "इस आवाज़ में एक निशान है जो AI आवाज़ वाले टूल इस्तेमाल करते हैं। कोई जल्दी नहीं है: पेमेंट से पहले ऊपर दी "
+        "गई किसी जाँच से पक्का करें कि कौन माँग रहा है।",
+    ),
     "tier_green_title": ("You're good to go", "आप पेमेंट कर सकते हैं"),
     "tier_green_body": ("Nothing here needs a second look.", "यहाँ दोबारा जाँचने जैसा कुछ नहीं है।"),
     "tier_amber_title": ("Ruko, pehle pehchaan karo", "रुको, पहले पहचान करो"),

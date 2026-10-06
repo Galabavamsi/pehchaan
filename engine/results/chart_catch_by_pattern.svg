@@ -6,7 +6,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-10-06T04:42:00.623258</dc:date>
+    <dc:date>2026-10-06T06:48:26.742496</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -49,7 +49,7 @@ L 542 302.634146
      <g id="line2d_2">
       <path d="M 182 368 
 L 182 100 
-" clip-path="url(#p15974f520a)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
      </g>
      <g id="line2d_3"/>
      <g id="text_1">
@@ -60,7 +60,7 @@ L 182 100
      <g id="line2d_4">
       <path d="M 272 368 
 L 272 100 
-" clip-path="url(#p15974f520a)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
      </g>
      <g id="line2d_5"/>
      <g id="text_2">
@@ -71,7 +71,7 @@ L 272 100
      <g id="line2d_6">
       <path d="M 362 368 
 L 362 100 
-" clip-path="url(#p15974f520a)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
      </g>
      <g id="line2d_7"/>
      <g id="text_3">
@@ -82,7 +82,7 @@ L 362 100
      <g id="line2d_8">
       <path d="M 452 368 
 L 452 100 
-" clip-path="url(#p15974f520a)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
      </g>
      <g id="line2d_9"/>
      <g id="text_4">
@@ -93,7 +93,7 @@ L 452 100
      <g id="line2d_10">
       <path d="M 542 368 
 L 542 100 
-" clip-path="url(#p15974f520a)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: none; stroke: #e2d9c6; stroke-linecap: square"/>
      </g>
      <g id="line2d_11"/>
      <g id="text_5">
@@ -138,7 +138,7 @@ Q 182 133.336585 182 129.336585
 L 182 120.341463 
 Q 182 116.341463 186 116.341463 
 z
-" clip-path="url(#p15974f520a)" style="fill: #e0a526"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: #e0a526"/>
    </g>
    <g id="patch_4">
     <path d="M 182 116.341463 
@@ -146,7 +146,7 @@ L 514.8268 116.341463
 L 514.8268 133.336585 
 L 182 133.336585 
 z
-" clip-path="url(#p15974f520a)" style="fill: #e0a526"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: #e0a526"/>
    </g>
    <g id="patch_5">
     <path d="M 186 138.565854 
@@ -159,7 +159,7 @@ Q 182 155.560976 182 151.560976
 L 182 142.565854 
 Q 182 138.565854 186 138.565854 
 z
-" clip-path="url(#p15974f520a)" style="fill: #c8372d"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: #c8372d"/>
    </g>
    <g id="patch_6">
     <path d="M 182 138.565854 
@@ -167,7 +167,7 @@ L 389.1652 138.565854
 L 389.1652 155.560976 
 L 182 155.560976 
 z
-" clip-path="url(#p15974f520a)" style="fill: #c8372d"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: #c8372d"/>
    </g>
    <g id="text_10">
     <text style="fill: #1b1f24; font: 13px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="523.1468" y="128.414024" transform="rotate(-0 523.1468 128.414024)">94%</text>
@@ -186,7 +186,7 @@ Q 182 198.702439 182 194.702439
 L 182 185.707317 
 Q 182 181.707317 186 181.707317 
 z
-" clip-path="url(#p15974f520a)" style="fill: #e0a526"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: #e0a526"/>
    </g>
    <g id="patch_8">
     <path d="M 182 181.707317 
@@ -194,7 +194,7 @@ L 515.6908 181.707317
 L 515.6908 198.702439 
 L 182 198.702439 
 z
-" clip-path="url(#p15974f520a)" style="fill: #e0a526"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: #e0a526"/>
    </g>
    <g id="patch_9">
     <path d="M 186 203.931707 
@@ -207,7 +207,7 @@ Q 182 220.926829 182 216.926829
 L 182 207.931707 
 Q 182 203.931707 186 203.931707 
 z
-" clip-path="url(#p15974f520a)" style="fill: #c8372d"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: #c8372d"/>
    </g>
    <g id="patch_10">
     <path d="M 182 203.931707 
@@ -215,7 +215,7 @@ L 437.5132 203.931707
 L 437.5132 220.926829 
 L 182 220.926829 
 z
-" clip-path="url(#p15974f520a)" style="fill: #c8372d"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: #c8372d"/>
    </g>
    <g id="text_12">
     <text style="fill: #1b1f24; font: 13px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="524.0108" y="193.779878" transform="rotate(-0 524.0108 193.779878)">94%</text>
@@ -234,7 +234,7 @@ Q 182 264.068293 182 260.068293
 L 182 251.073171 
 Q 182 247.073171 186 247.073171 
 z
-" clip-path="url(#p15974f520a)" style="fill: #e0a526"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: #e0a526"/>
    </g>
    <g id="patch_12">
     <path d="M 182 247.073171 
@@ -242,7 +242,7 @@ L 534.4 247.073171
 L 534.4 264.068293 
 L 182 264.068293 
 z
-" clip-path="url(#p15974f520a)" style="fill: #e0a526"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: #e0a526"/>
    </g>
    <g id="patch_13">
     <path d="M 186 269.297561 
@@ -255,7 +255,7 @@ Q 182 286.292683 182 282.292683
 L 182 273.297561 
 Q 182 269.297561 186 269.297561 
 z
-" clip-path="url(#p15974f520a)" style="fill: #c8372d"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: #c8372d"/>
    </g>
    <g id="patch_14">
     <path d="M 182 269.297561 
@@ -263,7 +263,7 @@ L 470.752 269.297561
 L 470.752 286.292683 
 L 182 286.292683 
 z
-" clip-path="url(#p15974f520a)" style="fill: #c8372d"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: #c8372d"/>
    </g>
    <g id="text_14">
     <text style="fill: #1b1f24; font: 13px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="542.72" y="259.145732" transform="rotate(-0 542.72 259.145732)">99%</text>
@@ -282,7 +282,7 @@ Q 182 329.434146 182 325.434146
 L 182 316.439024 
 Q 182 312.439024 186 312.439024 
 z
-" clip-path="url(#p15974f520a)" style="fill: #e0a526"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: #e0a526"/>
    </g>
    <g id="patch_16">
     <path d="M 182 312.439024 
@@ -290,7 +290,7 @@ L 198.2536 312.439024
 L 198.2536 329.434146 
 L 182 329.434146 
 z
-" clip-path="url(#p15974f520a)" style="fill: #e0a526"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: #e0a526"/>
    </g>
    <g id="patch_17">
     <path d="M 182.3798 334.663415 
@@ -303,7 +303,7 @@ Q 182 351.658537 182 351.278737
 L 182 335.043215 
 Q 182 334.663415 182.3798 334.663415 
 z
-" clip-path="url(#p15974f520a)" style="fill: #c8372d"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: #c8372d"/>
    </g>
    <g id="patch_18">
     <path d="M 182 334.663415 
@@ -311,7 +311,7 @@ L 182.3798 334.663415
 L 182.3798 351.658537 
 L 182 351.658537 
 z
-" clip-path="url(#p15974f520a)" style="fill: #c8372d"/>
+" clip-path="url(#p54e6c60ad6)" style="fill: #c8372d"/>
    </g>
    <g id="text_16">
     <text style="fill: #1b1f24; font: 13px 'JetBrains Mono', 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Computer Modern Typewriter', 'Andale Mono', 'Nimbus Mono L', 'Courier New', 'Courier', 'Fixed', 'Terminal', monospace; text-anchor: start" x="206.5736" y="324.511585" transform="rotate(-0 206.5736 324.511585)">5.6%</text>
@@ -353,7 +353,7 @@ z
   </g>
  </g>
  <defs>
-  <clipPath id="p15974f520a">
+  <clipPath id="p54e6c60ad6">
    <rect x="182" y="100" width="360" height="268"/>
   </clipPath>
  </defs>

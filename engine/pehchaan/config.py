@@ -24,7 +24,7 @@ DEFAULT_CONFIG_PATH = PKG_DIR / "config.yaml"
 REPO_ROOT = PKG_DIR.parent.parent
 DEFAULT_ML_METRICS = REPO_ROOT / "ml" / "results" / "metrics.json"
 
-Basis = Literal["assumed", "measured"]
+Basis = Literal["assumed", "measured", "shadow"]
 
 
 class SignalCfg(BaseModel):
@@ -87,8 +87,14 @@ class ActionsCfg(BaseModel):
 
 
 class VoiceCfg(BaseModel):
+    mode: Literal["shadow", "calibrated"] = "shadow"
+    calibration_gate: dict[str, float] = {"real_call_false_flag_max": 0.05, "min_real_calls": 50}
     lr_source: str = "assumed"
+    detector: str | None = None
+    lr_slice: str | None = None
     lr_floor: float | None = 1.0  # one-directional: no voice band may lower suspicion
+    calibrated_lrs: dict[str, float] | None = None   # what calibrated mode would use (floored), for provenance
+    measured_raw_lrs: dict[str, float] | None = None
     band_thresholds: dict[str, float] = {
         "likely_synthetic_at_or_above": 0.70,
         "no_strong_evidence_below": 0.30,
@@ -224,16 +230,49 @@ def load_measured_voice_lrs(path: Path) -> tuple[dict[str, float], dict]:
     return lrs, {"file": str(path), "json_path": where, "model_version": version}
 
 
+def _slice_lrs(path: Path, detector: str | None, slice_: str | None) -> tuple[dict[str, float], dict] | None:
+    """detectors.<detector>.band_LRs.<slice>.<band>.LR (the ml/results/metrics.json layout)."""
+    if not detector or not slice_:
+        return None
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    node = (((data.get("detectors") or {}).get(detector) or {}).get("band_LRs") or {}).get(slice_)
+    if not isinstance(node, dict):
+        return None
+    lrs = {b: float(node[b]["LR"]) for b in VOICE_BANDS if isinstance(node.get(b), dict) and "LR" in node[b]}
+    if len(lrs) != len(VOICE_BANDS):
+        return None
+    return lrs, {"file": str(path), "json_path": f"detectors.{detector}.band_LRs.{slice_}",
+                 "model_version": f"{detector} ({data.get('generated_at', 'n/a')})"}
+
+
+SHADOW_RATIONALE = ("Shadow mode: the detector score is computed, stored and shown to analysts but not used in the "
+                    "decision. It has not passed the real-call gate (one real cellular call: 91-95% of genuine "
+                    "chunks flagged; LR(likely_synthetic) on real-call bona fide = 0.93).")
+
+
 def _apply_measured_voice(cfg: Config, base_dir: Path) -> Config:
     src = cfg.voice.lr_source
-    if not src or src == "assumed":
-        return cfg
-    path = (base_dir / src).resolve() if not Path(src).is_absolute() else Path(src)
-    if not path.exists():
-        warnings.warn(f"voice.lr_source {path} not found; keeping assumed voice LRs")
-        return cfg
-    lrs, prov = load_measured_voice_lrs(path)
+    lrs = prov = None
+    if src and src != "assumed":
+        path = (base_dir / src).resolve() if not Path(src).is_absolute() else Path(src)
+        if not path.exists():
+            warnings.warn(f"voice.lr_source {path} not found; keeping assumed voice LRs")
+        else:
+            got = _slice_lrs(path, cfg.voice.detector, cfg.voice.lr_slice)
+            lrs, prov = got if got else load_measured_voice_lrs(path)
     floor = cfg.voice.lr_floor
+    if lrs:
+        cfg.voice.measured_raw_lrs = dict(lrs)
+        cfg.voice.calibrated_lrs = {b: (max(lr, floor) if floor is not None else lr) for b, lr in lrs.items()}
+        cfg.voice.measured_from = f"{prov['file']} ({prov['json_path']})"
+        cfg.voice.model_version = prov["model_version"]
+    if cfg.voice.mode == "shadow":
+        for band in VOICE_BANDS:
+            cfg.signals[f"voice_{band}"] = SignalCfg(lr=1.0, basis="shadow", rationale=SHADOW_RATIONALE, family="V",
+                                                     source=prov["file"] if prov else None)
+        return cfg
+    if not lrs:
+        return cfg
     for band, lr in lrs.items():
         code = f"voice_{band}"
         note = f"measured from {prov['file']} ({prov['json_path']})"
@@ -241,8 +280,6 @@ def _apply_measured_voice(cfg: Config, base_dir: Path) -> Config:
             note += f"; raw {lr:.3f} floored at {floor} (one-directional voice: can raise suspicion, never lower it)"
             lr = floor
         cfg.signals[code] = SignalCfg(lr=lr, basis="measured", rationale=note, family="V", source=prov["file"])
-    cfg.voice.measured_from = prov["file"]
-    cfg.voice.model_version = prov["model_version"]
     return cfg
 
 

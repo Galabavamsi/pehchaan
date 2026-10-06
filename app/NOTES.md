@@ -56,6 +56,13 @@ The SPEC is implemented as written. The prototype has to make some choices the S
 22. **A20 checklist on an Amber context (adopted).** `checklist_offered` shows the three questions for `claim_none` / `claim_other` when the result is Amber, or when the stage-1 (K+P) tier was Amber and the claim brought it to Green. It is never shown at Red, never twice, and never once a cue is known.
     - On that Green-with-checklist screen the server shows the context reasons (international caller, unsaved number), not the reassuring claim.
     - The simulator counts the screen as Pause & Verify friction: +0.16 pp of genuine payments (5.47% → 5.63%, still within the 6% budget).
+23. **Voice detector in shadow mode (ML results, 2026-10-06).** `voice.mode: shadow` is the default.
+    - **Shadow:** the three band LRs are 1.0 (basis `shadow`). The score is stored in `checks.voice` with `voice_mode` and shown in the console with a "shadow: not used in decision" badge. `watermark_detected` stays active (LR 50, capped by V at 8).
+    - **Calibrated:** uses `detectors.ours.band_LRs.test_phone_channels_heldout_generators` from `ml/results/metrics.json` (70.5 / 2.91 / 0.093 → floored to 1.0), with the V cap of 8 and strict G2.
+    - **Promotion gate** `voice.calibration_gate: {real_call_false_flag_max: 0.05, min_real_calls: 50}` is documentation only. Today it fails: one real cellular call had 91–95% of genuine chunks flagged.
+    - Band thresholds now match the ML bands (0.80 / 0.20).
+    - **Payer copy (G6):** "Thanks — this is saved with your case. Voice checks can't yet confirm who is calling on a phone line, so please use the checks above." A watermark hit says "This audio carries a marker used by AI voice tools", followed by a calm next step. EN and HI. In shadow mode the payer sees no meter and no p.
+    - **Simulator:** shadow and calibrated give identical holds by construction. The voice check is only offered on Pause & Verify, LRs are ≥ 1, and strict G2 applies. Calibrated can only keep a session Amber where a reassuring check would have cleared it (genuine final Amber +0.005 pp; +0.02 pp with real-call bona fide band rates).
 20. **Green 0.15 and coached "No one" on T1 (superseded by A20 above: the T1 checklist demo is back).** T1's demo context (stage-1 p 0.158) answered "No one" (LR 0.8) falls to p 0.13 and now proceeds Green. That is the accepted Amber+ cost. "Someone else" (LR 1.0) stays Amber with the checklist. The checklist demo and screenshot 13 therefore use T3 (digital arrest), where coaching to say "no one" is the pattern itself.
     - Possible follow-up: show the checklist whenever stage-1 context was Amber and the answer is "No one", even if the claim drops p below green_below.
 

@@ -30,6 +30,7 @@ export interface VoiceResult {
   p_synthetic: number; band: string; quality: { speech_sec: number; snr_db: number; ok: boolean; duration_sec?: number };
   watermark: { detected: boolean; scheme: string | null }; model_version: string; latency_ms: number; mock?: boolean;
   mock_notice?: string; assessment?: Assessment;
+  voice_mode?: "shadow" | "calibrated"; used_in_decision?: boolean; user_message?: Bi | null;
 }
 export interface Assessment {
   case_id: string | null; triggered: boolean; stage?: string; tier: Tier; raw_tier?: Tier; p: number | null;
@@ -41,7 +42,7 @@ export interface Assessment {
   copy: { title: Bi; body: Bi }; claim?: string | null; relative?: Relative | null;
   checks?: Record<string, any>; amount_display?: string; payee_name?: string; payee_vpa?: string;
   caller_display?: string; latency_ms?: number; utr?: string; release_requested?: boolean;
-  context_tier?: Tier; auto_family_verify?: FvSent;
+  context_tier?: Tier; auto_family_verify?: FvSent; voice_mode?: "shadow" | "calibrated";
 }
 export interface Payer {
   id: string; name: string; name_hi?: string; gender?: string; age_band?: string; city?: string; phone: string;

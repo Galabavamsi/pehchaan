@@ -171,7 +171,7 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
                   {sortedReasons.map((r) => (
                     <tr key={r.code}>
                       <td><span className="fam" style={{ background: FAMILY_COLOR[r.family] }} title={famName(r.family)}>{r.family}</span></td>
-                      <td><div style={{ fontWeight: 600 }}>{SHORT[r.code]?.[0] ?? r.code}</div><div className="mono" style={{ fontSize: 11.5, color: "var(--slate)" }}>{r.code} · {r.basis}</div></td>
+                      <td><div style={{ fontWeight: 600 }}>{SHORT[r.code]?.[0] ?? r.code}</div><div className="mono" style={{ fontSize: 11.5, color: "var(--slate)" }}>{r.code} · {r.basis}</div>{r.basis === "shadow" && <span className="shadow-badge">shadow: not used in decision</span>}</td>
                       <td>{r.text.en}<div className="hi" lang="hi">{r.text.hi}</div></td>
                       <td className="num">{r.lr < 1 ? r.lr.toFixed(2) : r.lr.toFixed(r.lr < 10 ? 1 : 0)}</td>
                       <td className="num" style={{ color: r.contribution > 0 ? "#b4531a" : "var(--teal)", fontWeight: 600 }}>{r.contribution > 0 ? "+" : "−"}{Math.abs(r.contribution).toFixed(2)}</td>
@@ -209,7 +209,7 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
               <dt>Family Verify</dt><dd>{fvr ? <>{fvr.result ?? fvr.status}{fvr.sig_ok && <> · <SealCheck size={13} weight="fill" style={{ color: "var(--teal)", verticalAlign: -2 }} /> device signature</>}</> : "–"}</dd>
               <dt>Bank registry</dt><dd>{d.checks?.bank_registry ? `${d.checks.bank_registry.result.replaceAll("_", " ")}${d.claimed_bank ? ` (${d.claimed_bank.name}${d.claimed_bank.integrated ? ", integrated" : ", not integrated"})` : ""}` : "–"}</dd>
               <dt>Callback</dt><dd>{d.checks?.callback?.result ?? "–"}</dd>
-              <dt>Voice</dt><dd>{voice ? <>{voice.band.replaceAll("_", " ")} · p <span className="mono">{voice.p_synthetic.toFixed(2)}</span> · speech <span className="mono">{voice.quality.speech_sec}s</span> · SNR <span className="mono">{voice.quality.snr_db} dB</span>{voice.quality.ok ? "" : " (below gate)"}<div className="mono" style={{ fontSize: 11.5, color: "var(--slate)" }}>{voice.model_version}</div></> : "not performed"}</dd>
+              <dt>Voice</dt><dd>{voice ? <>{voice.voice_mode === "shadow" && <span className="shadow-badge" data-testid="voice-shadow-badge">shadow: not used in decision</span>}{voice.band.replaceAll("_", " ")} · p <span className="mono">{voice.p_synthetic.toFixed(2)}</span> · speech <span className="mono">{voice.quality.speech_sec}s</span> · SNR <span className="mono">{voice.quality.snr_db} dB</span>{voice.quality.ok ? "" : " (below gate)"}{voice.watermark?.detected ? <> · <b>watermark</b> (used)</> : null}<div className="mono" style={{ fontSize: 11.5, color: "var(--slate)" }}>{voice.model_version}</div></> : (d.voice_mode === "shadow" ? <>not performed <span className="shadow-badge">detector in shadow mode</span></> : "not performed")}</dd>
             </dl>
           </section>
           <section className="panel">

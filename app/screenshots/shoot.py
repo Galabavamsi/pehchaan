@@ -164,6 +164,28 @@ def main() -> None:
             settle(page, 500)
             shot(page, "13_cue_checklist.png", "payer-device")
 
+        # ---------------------------------------------------------------- voice check in shadow mode
+        if want("14"):
+            load(page, "T1")
+            pay_and_claim(page, "other")
+            p = payer(page)
+            p.get_by_test_id("screen-options").wait_for()
+            settle(page, 400)
+            p.get_by_test_id("act-voice_check").click()
+            p.get_by_test_id("screen-voice").wait_for()
+            p.get_by_test_id("clip-synthetic").click()
+            p.get_by_test_id("voice-result").wait_for()
+            settle(page, 900)
+            shot(page, "14_voice_shadow.png", "payer-device")
+            cpage = ctx.new_page()
+            cpage.set_viewport_size({"width": 1440, "height": 900})
+            cpage.goto(f"{WEB}/#/console")
+            cpage.get_by_test_id("case-detail").wait_for()
+            cpage.get_by_test_id("voice-shadow-badge").wait_for()
+            settle(cpage, 1000)
+            shot(cpage, "15_console_voice_shadow.png", full=True)
+            cpage.close()
+
         # ---------------------------------------------------------------- L2 genuine
         if want("12"):
             load(page, "L2")

@@ -182,14 +182,37 @@ def _probs(d: dict, keys: list[str]) -> np.ndarray:
     return v / s
 
 
-def measured_band_rates(path: Path = DEFAULT_ML_METRICS) -> tuple[dict | None, str]:
-    """Look for P(band | spoof) and P(band | bona fide) in the ML metrics file."""
+REAL_CALL_SLICE = "real_call_stress_heldout_clones_vs_real_call_bonafide"
+
+
+def measured_band_rates(path: Path = DEFAULT_ML_METRICS, detector: str = "ours",
+                        bonafide_slice: str = "test_phone_channels") -> tuple[dict | None, str]:
+    """P(band | spoof) for seen and unseen generators and P(band | bona fide) from the ML metrics file.
+
+    ml/results/metrics.json layout: detectors.<detector>.band_LRs.<slice>.<band>.P_band_given_{spoof,bonafide}.
+    seen = test_seen_generators, unseen = test_phone_channels_heldout_generators, bona fide = bonafide_slice
+    (test_phone_channels; REAL_CALL_SLICE for the real-call stress what-if).
+    """
     if not Path(path).exists():
         return None, "placeholder (ml/results/metrics.json not found)"
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
     except Exception as exc:  # pragma: no cover
         return None, f"placeholder (could not parse metrics.json: {exc})"
+    bl = (((data.get("detectors") or {}).get(detector) or {}).get("band_LRs")) or {}
+
+    def rates(slice_, which):
+        node = bl.get(slice_) or {}
+        out = {b: float(node[b][f"P_band_given_{which}"]) for b in VOICE_BANDS
+               if isinstance(node.get(b), dict) and f"P_band_given_{which}" in node[b]}
+        return out if len(out) == len(VOICE_BANDS) else None
+
+    seen, unseen = rates("test_seen_generators", "spoof"), rates("test_phone_channels_heldout_generators", "spoof")
+    bona = rates(bonafide_slice, "bonafide")
+    if seen and unseen and bona:
+        return ({"synthetic_seen": seen, "synthetic_unseen": unseen, "bonafide": bona},
+                f"measured (ml/results/metrics.json, detectors.{detector}.band_LRs: seen=test_seen_generators, "
+                f"unseen=test_phone_channels_heldout_generators, bona fide={bonafide_slice})")
     found = []
     for p, node in _walk(data):
         if not isinstance(node, dict):
@@ -793,6 +816,9 @@ def deck_numbers(summary: dict, ablation: dict, sensitivity: dict, sweep: dict, 
         "theta_red": cfg.tiers.red_at_or_above, "green_below": cfg.tiers.green_below,
         "voice_check_uptake": summary["voice"]["check_uptake"],
         "voice_band_rates_source": summary["voice"]["band_rates_source"],
+        "voice_mode": summary["voice"]["mode"], "voice_engine_band_lrs": summary["voice"]["engine_band_lrs"],
+        "voice_calibrated_band_lrs": summary["voice"]["calibrated_band_lrs"],
+        "voice_calibration_gate": summary["voice"]["calibration_gate"],
         "genuine_silent_pct": f["silent_green"], "genuine_one_tap_pct": f["one_tap_question_then_green"],
         "genuine_pause_and_verify_pct": f["saw_pause_and_verify"], "genuine_final_amber_pct": f["final_amber"],
         "genuine_final_red_pct": f["final_red_hold"], "genuine_resolved_green_by_a_check_pct": f["resolved_to_green_by_a_check"],
@@ -854,7 +880,8 @@ def deck_numbers(summary: dict, ablation: dict, sensitivity: dict, sweep: dict, 
 def simulate(n_genuine: int | None = None, n_scam: int | None = None, seed: int | None = None,
              prior: float | None = None, voice_uptake: float | None = None, cfg: Config | None = None,
              assumptions: dict | None = None, out_dir: Path | None = RESULTS_DIR, charts: bool = True,
-             verbose: bool = True) -> dict:
+             verbose: bool = True, band_rates_override: dict | None = None, band_src_override: str | None = None,
+             calibrated: dict | None = None) -> dict:
     t0 = time.time()
     cfg = cfg or default_config()
     A = assumptions or load_assumptions()
@@ -873,8 +900,10 @@ def simulate(n_genuine: int | None = None, n_scam: int | None = None, seed: int 
               checklist_uptake=beh["checklist_uptake"]["value"],
               amber_cancel_user_neg=beh["amber_cancel_if_user_reported_negative"]["value"])
 
-    measured, band_src = measured_band_rates()
-    band_rates = measured or A["detector"]["band_rates"]
+    measured, band_src = measured_band_rates(detector=cfg.voice.detector or "ours")
+    band_rates = band_rates_override or measured or A["detector"]["band_rates"]
+    if band_rates_override:
+        band_src = band_src_override or "override"
 
     mixg = {k: v for k, v in A["mix"]["genuine"].items() if k.startswith("G_")}
     zg = sum(mixg.values())
@@ -925,7 +954,10 @@ def simulate(n_genuine: int | None = None, n_scam: int | None = None, seed: int 
         "n_sessions": {k: int(v) for k, v in n_by.items()},
         "prior": {"value": prior, "as_fraction": _frac(prior), "basis": "SPEC default (engine config)",
                   "base_rate_anchor": anchor},
-        "voice": {"check_uptake": uptake, "band_rates_source": band_src,
+        "voice": {"check_uptake": uptake, "band_rates_source": band_src, "mode": cfg.voice.mode,
+                  "engine_band_lrs": {b: cfg.signals[f"voice_{b}"].lr for b in VOICE_BANDS},
+                  "calibrated_band_lrs": cfg.voice.calibrated_lrs, "lrs_measured_from": cfg.voice.measured_from,
+                  "calibration_gate": cfg.voice.calibration_gate,
                   "engine_voice_lr_basis": cfg.signals["voice_likely_synthetic"].basis,
                   "band_rates_used": band_rates},
         "flow": ("stage 1 context (K,P) -> one-tap claim question unless clearly benign (p < "
@@ -1011,7 +1043,7 @@ def simulate(n_genuine: int | None = None, n_scam: int | None = None, seed: int 
             "inr_protected_per_100k": h["per_100k"]["inr_protected_expected"],
         })
     ablation = {"assumption_driven_projection": True, "disclaimer": DISCLAIMER, "seed": seed,
-                "prior": prior, "voice_uptake": uptake, "rows": abl_rows}
+                "prior": prior, "voice_uptake": uptake, "voice_mode": cfg.voice.mode, "rows": abl_rows}
 
     # sensitivity: Family Verify enrolment (all other assumptions fixed)
     sensitivity["fv_enrolment"] = fv_enrolment_sweep(A, n_by, seed, band_rates, eng, prior, uptake, kw)
@@ -1029,6 +1061,13 @@ def simulate(n_genuine: int | None = None, n_scam: int | None = None, seed: int 
                                                     "config_meets_red_budget", "config_meets_pause_verify_budget")}
     summary["red_precision_vs_prior"] = precision
     deck = deck_numbers(summary, ablation, sensitivity, sweep, precision, baseline, cfg, pre)
+    if calibrated:  # the same run with voice.mode: calibrated (measured band LRs)
+        deck["calibrated_source"] = calibrated.get("source", "voice.mode: calibrated")
+        for k in V02PRE_KEYS + ["genuine_saw_pause_and_verify_pct"]:
+            if k in calibrated.get("deck", {}):
+                deck[f"calibrated_{k}"] = calibrated["deck"][k]
+        for k, v in (calibrated.get("extra") or {}).items():
+            deck[k] = v
 
     summary["elapsed_sec"] = round(time.time() - t0, 2)
     if out_dir is not None:
@@ -1096,8 +1135,29 @@ def main(argv: list[str] | None = None) -> None:
             print("[pehchaan.sim] v0.1 baseline written to", base)
         except Exception as exc:  # git not available etc.
             print("[pehchaan.sim] v0.1 baseline skipped:", exc)
-    simulate(n_genuine=a.n_genuine, n_scam=a.n_scam, seed=a.seed, prior=a.prior, voice_uptake=a.voice_uptake,
-             out_dir=a.out, charts=not a.no_charts)
+    kw = dict(n_genuine=a.n_genuine, n_scam=a.n_scam, seed=a.seed, prior=a.prior, voice_uptake=a.voice_uptake)
+    # 1) calibrated mode (measured band LRs, phone channels + held-out generators), 2) the same with real-call
+    # bona fide band rates (stress), 3) shadow mode = the default deck number set (writes every file and chart).
+    from .config import load_config
+    cal_cfg = load_config(overrides={"voice": {"mode": "calibrated"}})
+    cal = simulate(cfg=cal_cfg, out_dir=None, charts=False, verbose=False, **kw)
+    extra = {}
+    stress_rates, stress_src = measured_band_rates(detector=cal_cfg.voice.detector or "ours", bonafide_slice=REAL_CALL_SLICE)
+    if stress_rates:
+        st = simulate(cfg=cal_cfg, out_dir=None, charts=False, verbose=False, band_rates_override=stress_rates,
+                      band_src_override=stress_src, **kw)["deck_numbers"]
+        extra = {f"calibrated_realcall_{k}": st[k] for k in (
+            "genuine_pause_and_verify_pct", "genuine_final_amber_pct", "genuine_final_red_pct", "scam_weighted_red_pct",
+            "scam_weighted_amber_plus_pct", "scam_T1_red_pct") if k in st}
+        extra["calibrated_realcall_source"] = stress_src
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "sim_summary_calibrated.json").write_text(json.dumps(cal["summary"], indent=2, ensure_ascii=False),
+                                                     encoding="utf-8")
+    simulate(out_dir=a.out, charts=not a.no_charts, calibrated={
+        "deck": cal["deck_numbers"], "extra": extra,
+        "source": f"voice.mode: calibrated, band LRs {cal_cfg.voice.calibrated_lrs} from {cal_cfg.voice.measured_from}"},
+        **kw)
 
 
 if __name__ == "__main__":
