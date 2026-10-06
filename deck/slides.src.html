@@ -277,11 +277,11 @@
       <div><img src="../app/screenshots/07_bank_claim.png" style="width:100%;height:auto;display:block"><p class="cap"><b>5 · Bank claim</b>"Bharat Demo Bank is not calling you right now." 1600 + call registry.</p></div>
       <div><img src="../app/screenshots/08_authority_fact.png" style="width:100%;height:auto;display:block"><p class="cap"><b>6 · Police claim</b>"There is no 'digital arrest' in Indian law." Cooling-off.</p></div>
     </div>
-    <div class="row" style="gap:10px;margin-top:16px">
-      <div class="panel fill"><div class="lbl">Never accuse</div><p class="sm" style="margin-top:3px">"What we noticed", never "this is a scam" or a raw score</p></div>
-      <div class="panel fill"><div class="lbl">Always a next step</div><p class="sm" style="margin-top:3px">Every screen offers a check, a human, or "continue"</p></div>
-      <div class="panel fill"><div class="lbl">Coaching-aware</div><p class="sm" style="margin-top:3px">"If someone on the call is telling you what to tap, hang up"</p></div>
-      <div class="panel fill"><div class="lbl">Built for elders</div><p class="sm" style="margin-top:3px">Hindi/English, large text, 5-second minimum before "continue"</p></div>
+    <div class="row" style="gap:10px;margin-top:6px">
+      <div class="panel fill" style="padding:7px 11px"><div class="lbl">Never accuse</div><p class="sm" style="margin-top:3px">"What we noticed", never "this is a scam" or a raw score</p></div>
+      <div class="panel fill" style="padding:7px 11px"><div class="lbl">Always a next step</div><p class="sm" style="margin-top:3px">Every screen offers a check, a human, or "continue"</p></div>
+      <div class="panel fill" style="padding:7px 11px"><div class="lbl">Coaching-aware</div><p class="sm" style="margin-top:3px">"If someone on the call is telling you what to tap, hang up"</p></div>
+      <div class="panel fill" style="padding:7px 11px"><div class="lbl">Built for elders</div><p class="sm" style="margin-top:3px">Hindi/English, large text, 5-second minimum before "continue"</p></div>
     </div>
   </div>
 <div class="foot"><span class="src">Screens from our working prototype ("DemoPay", a fictional bank app; no real brands). Hindi and large-text elderly modes on every screen. More screens and the live three-surface demo: appendix A1–A2.</span><span class="pg">05 / 10</span></div>
@@ -623,7 +623,7 @@
   <div class="kicker">Architecture 2 / 3 <span class="tag">detection &amp; decision flow · escalation · human review · evidence path</span></div>
   <h1 class="t">Decision flow: a question, a claim-specific check, a tier, and a human before anything high-impact.</h1>
   <div class="body row" style="gap:16px">
-    <div class="dia" style="width:760px;height:520px" data-sketch="false">
+    <div class="dia" style="width:760px;height:510px" data-sketch="false">
       <div class="an box node" data-n="f1" style="left:0;top:30px;width:150px"><div class="bt">Pay tapped</div><div class="bd">payee · amount · call state</div></div>
       <div class="an box node" data-n="f2" style="left:190px;top:6px;width:170px;border-color:var(--saff)"><div class="bt">Trigger?</div><div class="bd">on call / ≤10 min AND (new payee OR &gt;p95 OR ≥₹10k), not a trusted payee</div></div>
       <div class="an box node out" data-n="f2n" style="left:410px;top:30px;width:150px"><div class="bt teal">GO · no screen</div><div class="bd">anonymous counter only</div></div>
@@ -762,7 +762,7 @@
   <div class="kicker">Appendix A2 <span class="tag">more prototype screens</span></div>
   <h1 class="t" style="font-size:24px">The rest of the flow: the moment of payment, the report pack, Hindi mode, the genuine path, and the analyst's view.</h1>
   <div class="body row" style="gap:14px;align-items:flex-start">
-    <div style="width:180px"><img src="../app/screenshots/01_call_and_pay.png" style="width:100%"><p class="cap"><b>Call + pay</b>A +44 call is live while she enters ₹50,000 to a new payee.</p></div>
+    <div style="width:180px"><img src="../app/screenshots/14_voice_shadow.png" style="width:100%"><p class="cap"><b>Voice check, shadow mode</b>No meter, no verdict: "saved with your case; use the checks above".</p></div>
     <div style="width:180px"><img src="../app/screenshots/06_evidence_pack.png" style="width:100%"><p class="cap"><b>Report pack</b>Signed evidence; pre-filled for 1930 / NCRP and Chakshu. The user submits.</p></div>
     <div style="width:180px"><img src="../app/screenshots/11_hindi_amber.png" style="width:100%"><p class="cap"><b>Hindi PAUSE</b>Every screen in Hindi or English, with a large-text mode.</p></div>
     <div style="width:180px"><img src="../app/screenshots/12_green_legit.png" style="width:100%"><p class="cap"><b>Genuine path</b>The real son confirms from his own phone → GO.</p></div>
@@ -948,15 +948,15 @@
       <div class="lbl" style="margin-top:12px">Data</div>
       <ul class="tight" style="margin-top:6px">
         <li class="sm">No bank, customer or platform data was used. Payments, callers and registry lookups in the prototype are synthetic or mocked.</li>
-        <li class="sm">Public datasets: [pending ML data card, with licences].</li>
+        <li class="sm"><b>Public datasets</b>: Google FLEURS (CC-BY-4.0) as genuine speech; ASVspoof 2019 LA (ODC-By) for training and sanity checks; IndicSynth (CC-BY-NC-4.0, <b>non-commercial</b>) as published spoofs. Team recordings: 2 consenting members plus one real phone call between them.</li>
       </ul>
     </div>
     <div class="card fill">
       <div class="lbl">Models, tools and assets (licence)</div>
-      <p class="xs" style="margin-top:6px"><b>Detection:</b> SSL_Anti-spoofing XLS-R + AASIST (MIT code) · [pending] </p>
-      <p class="xs" style="margin-top:4px"><b>Voice generation (attack corpus):</b> [pending ML data card]</p>
-      <p class="xs" style="margin-top:4px"><b>Speech / LLM services:</b> Deepgram · Sarvam AI · Amazon Bedrock (planned for the finale) · Vapi / Bolna (finale demo).</p>
-      <p class="xs" style="margin-top:4px"><b>Deck tooling:</b> Playwright (Apache-2.0) · rough.js (MIT) · rough-notation (MIT) · ELK.js (EPL-2.0) · perfect-freehand (MIT) · matplotlib (PSF) · Phosphor Icons (MIT).</p>
+      <p class="xs" style="margin-top:6px"><b>Detection:</b> SSL_Anti-spoofing XLS-R-300M + AASIST (code MIT; checkpoint licence unstated), fine-tuned by us · wav2vec2-XLS-R (Apache-2.0) · baseline NII MMS-300M AntiDeepfake (CC-BY-NC-SA-4.0, <b>evaluation only</b>) · resemble-perth watermark (MIT) · silero-vad, faster-whisper (MIT).</p>
+      <p class="xs" style="margin-top:4px"><b>Voice generation (attack corpus):</b> F5-TTS (weights CC-BY-NC) · F5-Hindi, IIT Madras (CC-BY-4.0) · XTTS-v2 (CPML, NC) · Chatterbox (MIT) · CosyVoice2 (Apache-2.0) · Seed-VC (GPL-3.0) · MMS-TTS (CC-BY-NC) · Kokoro (Apache-2.0) · Indic Parler-TTS (Apache-2.0) · stock voices from Sarvam Bulbul, OpenAI TTS, Deepgram Aura (their API terms). Channel simulation: ffmpeg, libopus, opencore-amrnb, sox, pyroomacoustics.</p>
+      <p class="xs" style="margin-top:4px"><b>Speech / LLM services:</b> Sarvam AI, OpenAI and Deepgram (stock-voice generation only); planned for the finale: Deepgram / Sarvam ASR, Amazon Bedrock, Vapi / Bolna telephony. <b>Compute:</b> AWS EC2 g5.2xlarge (A10G), about $15–20 total.</p>
+      <p class="xs" style="margin-top:4px"><b>Prototype and deck tooling:</b> FastAPI, React, Vite (MIT) · Playwright (Apache-2.0) · rough.js, rough-notation (MIT) · matplotlib (PSF) · Phosphor Icons (MIT).</p>
       <p class="xs" style="margin-top:4px"><b>Fonts:</b> Inter, Space Grotesk, JetBrains Mono, Noto Sans Devanagari (all SIL OFL 1.1).</p>
       <p class="xs" style="margin-top:4px"><b>Research:</b> web sources gathered with Firecrawl; every figure is cited to its original publisher in A1.</p>
       <p class="xs" style="margin-top:4px"><b>Brands:</b> the prototype uses a fictional "DemoPay / Bharat Demo Bank"; Amazon, AWS and other names are referenced descriptively; no endorsement implied.</p>

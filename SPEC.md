@@ -86,6 +86,7 @@ Initial LRs (scam vs genuine, given the trigger fired):
 
   Otherwise the result is capped at Amber.
 - **G2 (voice is supporting evidence):** V never counts toward G1, and if removing V would drop the tier below Red, the result is capped at Amber (strict). `voice_no_strong_evidence` has LR 1.0: the detector can raise suspicion but **never lower it**, because detectors miss unseen generators. "Sounds real" is not proof.
+- **Voice shadow mode (default, v0.2 final):** on one real cellular call, every detector we tested, ours included, flagged 91–95% of genuine speech as synthetic (measured LR on real-call genuine speech = 0.93). The detector score is therefore logged and shown to analysts but uses LR 1.0 in decisions, until it passes a real-call gate (≤ 5% false flags on ≥ 50 consented real calls). `watermark_detected` stays active. See `ml/results/SUMMARY.md`.
 - **G3 (quality gate):** speech < 4 s or SNR < 10 dB means `voice_inconclusive`.
 - **G4 (decisive positive):** `fv_confirmed`, `callback_confirmed` or `bank_active_call_1600` (the bank's own registry confirms a live 1600 call) put the result at Green, unless `payee_flagged_high` is present (then Amber).
 - **G5 (trusted bypass):** see §2.

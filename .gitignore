@@ -35,3 +35,4 @@ app/web/dist/
 
 # exported transcripts (share manually)
 session-export/
+submission/*.pdf
