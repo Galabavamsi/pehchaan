@@ -36,3 +36,5 @@ app/web/dist/
 # exported transcripts (share manually)
 session-export/
 submission/*.pdf
+deck/slides.html
+*participant-brief.pdf
