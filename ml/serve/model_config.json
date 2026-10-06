@@ -1,9 +1,9 @@
 {
- "model_version": "pehchaan-xlsr-aasist-ft-v0+d550584a1ef8",
- "weights": "weights/pehchaan-xlsr-aasist-ft-v0.safetensors",
+ "model_version": "pehchaan-xlsr-aasist-ft-v1+819e67f7f86e",
+ "weights": "weights/pehchaan-xlsr-aasist-ft-v1.safetensors",
  "platt": {
-  "a": 0.5357485881825909,
-  "b": -0.10692847755084052
+  "a": 0.6383198918309464,
+  "b": -1.2793927961864417
  },
  "bands": {
   "p_lo": 0.2,
@@ -11,34 +11,39 @@
  },
  "band_LRs_measured": {
   "test_all": {
-   "likely_synthetic": 110.252,
-   "inconclusive": 1.735,
-   "no_strong_evidence": 0.112
+   "likely_synthetic": 60.221,
+   "inconclusive": 2.631,
+   "no_strong_evidence": 0.063
   },
   "test_seen_generators": {
-   "likely_synthetic": 119.243,
-   "inconclusive": 0.906,
-   "no_strong_evidence": 0.059
+   "likely_synthetic": 64.796,
+   "inconclusive": 1.434,
+   "no_strong_evidence": 0.02
   },
   "test_heldout_generators": {
-   "likely_synthetic": 102.845,
-   "inconclusive": 2.421,
-   "no_strong_evidence": 0.156
+   "likely_synthetic": 56.862,
+   "inconclusive": 3.511,
+   "no_strong_evidence": 0.094
   },
   "test_phone_channels": {
-   "likely_synthetic": 153.75,
-   "inconclusive": 1.613,
-   "no_strong_evidence": 0.111
+   "likely_synthetic": 74.566,
+   "inconclusive": 2.208,
+   "no_strong_evidence": 0.063
   },
   "test_phone_channels_heldout_generators": {
-   "likely_synthetic": 143.911,
-   "inconclusive": 2.182,
-   "no_strong_evidence": 0.153
+   "likely_synthetic": 70.513,
+   "inconclusive": 2.907,
+   "no_strong_evidence": 0.093
+  },
+  "real_call_stress_heldout_clones_vs_real_call_bonafide": {
+   "likely_synthetic": 0.927,
+   "inconclusive": 1.369,
+   "no_strong_evidence": 1.618
   }
  },
  "quality_gate": {
   "min_speech_sec": 4.0,
   "min_snr_db": 10.0
  },
- "note": "Calibrated on dev (seen generators). Held-out-generator LRs are the conservative ones for fusion."
+ "note": "Calibrated on dev (seen generators). Held-out-generator LRs are the conservative ones for fusion. WARNING: on one REAL cellular call 91-95% of genuine speech chunks scored likely_synthetic (LR ~0.93, i.e. no information); the engine should cap the voice LR (e.g. treat likely_synthetic as weak, supporting evidence only) until real-call calibration exists."
 }

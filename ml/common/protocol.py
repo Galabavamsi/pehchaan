@@ -16,7 +16,10 @@ the FLEURS split of the sentence they read.
 
 HELDOUT_GENERATORS = {"seedvc", "chatterbox", "sarvam", "openai", "deepgram",
                       # added later as EXTRA held-out generators (never in any training run):
-                      "parler", "indicf5"}
+                      "parler", "indicf5",
+                      # MLAAD (published spoof data, test only): Indic TTS systems we never trained on
+                      "mlaad_indri", "mlaad_omnivoice", "mlaad_ringg", "mlaad_veena", "mlaad_voxcpm2", "mlaad_voxtral",
+                      "mlaad_bark", "mlaad_vits_bn", "mlaad_edgetts", "mlaad_svara"}
 HELDOUT_SPEAKERS = {"S02"}
 CHANNELS = ["clean", "pstn", "amr", "opus", "replay"]
 
@@ -26,6 +29,10 @@ GEN_FAMILY = {
     "seedvc": "voice conversion", "mms": "stock TTS (VITS)", "kokoro": "stock TTS (StyleTTS2-like)",
     "sarvam": "commercial TTS", "openai": "commercial TTS", "deepgram": "commercial TTS",
     "parler": "stock TTS (Parler, description-controlled)",
+    "mlaad_indri": "MLAAD: Indri TTS", "mlaad_omnivoice": "MLAAD: OmniVoice", "mlaad_ringg": "MLAAD: Ringg Squirrel TTS",
+    "mlaad_veena": "MLAAD: Veena", "mlaad_voxcpm2": "MLAAD: VoxCPM2", "mlaad_voxtral": "MLAAD: Voxtral TTS",
+    "mlaad_bark": "MLAAD: Bark", "mlaad_vits_bn": "MLAAD: Coqui VITS (bn)", "mlaad_edgetts": "MLAAD: Microsoft Edge TTS",
+    "mlaad_svara": "MLAAD: SvaraTTS",
 }
 
 

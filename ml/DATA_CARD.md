@@ -34,7 +34,7 @@ Gated values: `false` = open; `auto` = must log in, accept the conditions on the
 | resemble-perth | watermark detection in the service | MIT | |
 | libopus, libopencore-amrnb, ffmpeg, sox, pyroomacoustics | channel simulation | BSD / Apache-2.0 / LGPL-GPL / GPL / MIT | |
 | RawBoost (from SSL_Anti-spoofing) | augmentation | MIT | |
-Not used (access or time): IndicF5 and MLAAD (gated downloads still returned 403 with the team token), IndicVoices, Kathbath, ASVspoof 5, In-the-Wild, Gemini TTS (no key).
+Not used (access or time): IndicF5 and MLAAD (gated: IndicF5 returns 403; MLAAD lets the token list files and read the README, but every audio file returns 403, re-checked 2026-10-06 ~06:00 IST; `data_prep/fetch_mlaad.py` is ready for a test-only Indic subset once access works), IndicVoices, Kathbath, ASVspoof 5, In-the-Wild, Gemini TTS (no key).
 **Production note:** a commercial deployment would have to drop every NC item above (NII weights, F5-TTS weights, XTTS, MMS-TTS, IndicSynth) and retrain on permissive data plus the team's own consented corpus.
 
 ## 1. Datasets

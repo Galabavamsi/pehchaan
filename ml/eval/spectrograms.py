@@ -51,11 +51,15 @@ def main():
             axes = np.atleast_1d(axes)
             for ax, r in zip(axes, rows.itertuples()):
                 if ch == "clean":
-                    p = r.src16
+                    x = load_any(r.src16)
                 else:
                     e = ev[ev.utt_id == f"{r.utt_id}__{ch}"]
-                    p = e.path.iloc[0] if len(e) else r.src16
-                x = load_any(p)[: 16000 * 6]
+                    if len(e):
+                        x = load_any(e.path.iloc[0])
+                    else:  # train-split line: no pre-rendered eval copy, so apply the same channel here
+                        from channel.channels import apply, seeded_rng
+                        x = apply(load_any(r.src16), ch, seeded_rng(r.utt_id, ch))
+                x = x[: 16000 * 6]
                 ax.imshow(logmel(x), origin="lower", aspect="auto", cmap="magma", extent=[0, len(x) / 16000, 0, 96])
                 ax.set_title(GEN.get(r.generator, r.generator), fontsize=13, loc="left")
                 ax.set_xlabel("seconds")

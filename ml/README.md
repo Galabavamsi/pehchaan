@@ -41,15 +41,23 @@ Licences of everything used: `DATA_CARD.md` (non-commercial items are flagged **
 8. **Zero-shot baselines.** `bash eval/score_all.sh ssl_la ssl_df nii_mms300m`.
 9. **Fine-tune.** `python train/finetune.py --src_manifest ~/work/manifests/corpus_src.csv --eval_manifest ~/work/manifests/corpus_eval.csv --out ~/runs/ours`
    then `bash eval/score_all.sh ckpt:$HOME/runs/ours/best.pt`.
-10. **Evaluate.** `python eval/run_eval.py --eval_manifest ... --scores ssl_la=... nii=... ours=... --out results/metrics.json --dump_scores results/test_scores.csv`;
-    figures: `python eval/make_figures.py --metrics results/metrics.json --scores results/test_scores.csv --out results/figures`.
-11. **Serve.** `cd ml && uvicorn serve.app:app --port 8090` (weights in `serve/weights/`, config `serve/model_config.json`);
-    `curl -F file=@clip.wav localhost:8090/v1/voice/score`.
+10. **Evaluate.** `bash eval/final.sh` on the box (run_eval -> assemble_metrics -> write_summary; needs the score CSVs,
+    `eval/latency.py` outputs, `eval/watermark_eval.py` and `eval/asv_sanity.py` JSONs in `~/work/results/`).
+    Figures (laptop or box): `python eval/make_figures.py --metrics results/metrics.json --scores test_scores.csv --out results/figures`;
+    spectrograms: `python eval/spectrograms.py --speaker S01 --lines E06 H05 E12 --channels clean amr --out results/figures`.
+11. **Export + serve.** `python eval/export_serving.py --ckpt ~/runs/ours_v1/best.pt --metrics metrics.json --name ours --version pehchaan-xlsr-aasist-ft-v1 --out_dir serve`
+    (also in `s3://pehchaan-ml-301745146083-use1/models/pehchaan-xlsr-aasist-ft-v1/`). Then `cd ml && uvicorn serve.app:app --port 8090`
+    (`PEHCHAAN_DEVICE=cpu|cuda`; CPU uses int8 dynamic quantisation) and `curl -F file=@clip.wav localhost:8090/v1/voice/score`.
+    Latency of the full service path: `python serve/bench.py --wav clip_10s.wav --out latency.json`.
+
+Runs reported in `results/metrics.json`: `ours` = v1 (main, served); `ours_v2_telaug` = `--aug_set v2` (extra telephony
+augmentation, designed after the real-call failure, stopped by OOM at epoch 3 of 6); `ours_v0_noteam` = no team audio.
 
 ## Protocol (fixed before fine-tuning; see `common/protocol.py`)
 
 - Held-out generators (never trained on, never used for calibration or thresholds): **Seed-VC** (voice conversion),
-  **Chatterbox** (also watermarked, so the model cannot learn the watermark), **Sarvam, OpenAI, Deepgram** (commercial).
+  **Chatterbox** (also watermarked, so the model cannot learn the watermark), **Sarvam, OpenAI, Deepgram** (commercial),
+  plus **Indic Parler-TTS** (added later, test only).
 - Held-out speaker: **S02**. S01 lines 01-08 train, 09-10 dev, 11-15 test; real and cloned versions of a line share a split.
 - Same silence trimming and loudness normalisation for real and fake audio; channels applied identically to both.
 - Clones whose Whisper transcript misses the intended text (CER > 0.5) are dropped rather than counted as easy catches.

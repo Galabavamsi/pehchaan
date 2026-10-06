@@ -152,6 +152,12 @@ def main():
         team = test[test.source.isin(["team", "team_clone"])]
         if len(team) and team.y.nunique() == 2:
             r["team_subset"] = slice_metrics(team)
+            ts = team[~team.channel.str.startswith("real_")]
+            r["team_subset_simulated_channels_only"] = slice_metrics(ts)
+            for spk in ("S01", "S02"):
+                tsp = ts[ts.speaker.astype(str) == spk]
+                if tsp.y.nunique() == 2:
+                    r[f"team_{spk}_simulated_channels"] = slice_metrics(tsp)
         tb = test[test.source == "team"]
         if len(tb):
             r["team_bonafide_flag_rate_at_dev_threshold"] = {"by_speaker": frr_at(tb, thr, "speaker"), "by_section": frr_at(tb, thr, "section"),

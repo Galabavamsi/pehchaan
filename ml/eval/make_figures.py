@@ -36,7 +36,8 @@ SHORT_CH = {"clean": "Clean", "pstn": "PSTN" + NL + "G.711", "amr": "AMR-NB" + N
 CH_NAMES = {"clean": "Clean 16 kHz", "pstn": "PSTN G.711", "amr": "AMR-NB 12.2k", "opus": "Opus (WhatsApp-like)", "replay": "Speaker→mic replay"}
 GEN_NAMES = {"f5": "F5-TTS", "f5hi": "F5-Hindi", "indicf5": "IndicF5", "xtts": "XTTS-v2", "cosyvoice2": "CosyVoice2", "mms": "MMS-TTS",
              "kokoro": "Kokoro", "seedvc": "Seed-VC (VC) †", "chatterbox": "Chatterbox †", "sarvam": "Sarvam Bulbul †",
-             "openai": "OpenAI TTS †", "deepgram": "Deepgram Aura †"}
+             "openai": "OpenAI TTS †", "deepgram": "Deepgram Aura †",
+             "parler": "Indic Parler-TTS †", "indicsynth_freevc24": "IndicSynth FreeVC", "indicsynth_xttsv2": "IndicSynth XTTS"}
 
 
 def save(fig, out, name):
@@ -74,7 +75,7 @@ def fig_det(sc, metrics, out, baselines):
             handles.append(h)
             i = np.argmin(np.abs(x - yv))
             ax.scatter([x[i]], [yv[i]], s=46, color=ORANGE if is_ours else SLATE, zorder=5, edgecolor=PAPER, linewidth=1.5)
-            ax.annotate(f"{e * 100:.1f}%", (x[i], yv[i]), xytext=(7, -14), textcoords="offset points", fontsize=13,
+            ax.annotate(f"{e * 100:.1f}%", (x[i], yv[i]), xytext=(-9, -17), textcoords="offset points", fontsize=13, ha="right",
                         color=INK, fontweight="bold" if is_ours else "normal")
         ax.plot(norm.ppf([1e-3, 0.6]), norm.ppf([1e-3, 0.6]), color="#cfc8b8", lw=1, ls=":")
         ax.set_xticks(norm.ppf(ticks), [f"{t * 100:g}%" for t in ticks])
@@ -106,7 +107,7 @@ def fig_heatmap(metrics, out, det_names):
                 if np.isfinite(M[i, j]):
                     ax.text(j, i, f"{M[i, j] * 100:.0f}", ha="center", va="center", fontsize=12.5,
                             color="white" if M[i, j] > 0.33 else INK)
-        ax.set_xticks(range(len(chans)), [CH_NAMES[c].replace(" (", "\n(").replace(" ", "\n", 1) if len(CH_NAMES[c]) > 12 else CH_NAMES[c] for c in chans], fontsize=12)
+        ax.set_xticks(range(len(chans)), [SHORT_CH[c] for c in chans], fontsize=12)
         ax.set_yticks(range(len(gens)), [GEN_NAMES.get(g, g) for g in gens], fontsize=13)
         ax.grid(False)
         for s in ax.spines.values():
@@ -153,7 +154,9 @@ def fig_gap(metrics, out, base):
     ax2.set_yticks(y, [GEN_NAMES.get(g, g).replace(" †", "") for g in gens])
     ax2.invert_yaxis()
     ax2.set_xlabel("EER (%), all channels pooled")
-    ax2.set_title("Per held-out generator (grey: baseline, hatched: ours)", loc="left", fontweight="bold", fontsize=13.5)
+    ax2.set_title("Per held-out generator", loc="left", fontweight="bold")
+    ax2.legend(handles=[Patch(facecolor=SLATE, edgecolor=SLATE, label=NAMES[base].split(" (")[0]),
+                        Patch(facecolor=PAPER, edgecolor=ORANGE, hatch="///", label="Ours")], frameon=False, loc="upper right", fontsize=12)
     ax2.grid(axis="y", visible=False)
     fig.suptitle("The held-out-generator gap: unseen cloners are harder, on every channel", x=0.01, ha="left", fontsize=16)
     fig.tight_layout()
