@@ -42,3 +42,14 @@ verifying the person out of band.
   (`settings system record_calls_automatically_on_off` stays 0).
 - Splits are pre-registered (`protocol.py`): S02 and `sarvam_ivc` are test-only, everything else by call hash.
   Current QC-ok split: train 112, dev 30, test 236 items.
+
+## Learned speakerphone channel (for retraining)
+
+`learned_channel.py` estimates the real path's magnitude response, noise and SNR from aligned
+(tape reference, real capture) pairs: **train-split calls only** (112 items, 24 calls), so test calls and S02
+never shape it. Shape: −24 dB at 300 Hz and −36 dB at 200 Hz (small phone speaker), +7 dB resonance near 3 kHz,
+cut-off above ~4 kHz; real noise bank 111 s; SNR 15–29 dB.
+
+Validation: the same detector on 30 clean team pairs pushed through the learned channel catches **27 %** of
+clones at p ≥ 0.8 (clean: median p 0.97) and flags **0 %** of genuine. The real calls showed 28 % and 0 %, so the
+channel reproduces the failure and can turn the whole corpus into realistic training data (`--aug_set v3`).
