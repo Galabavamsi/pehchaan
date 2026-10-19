@@ -10,6 +10,12 @@ Tak et al.) -> random gain -> 64600-sample window. Sampling is balanced: 50 % bo
 within each class every (source, generator) group gets equal mass, so the few team clips are not drowned
 by FLEURS/ASVspoof.
 Model selection: mean EER over channels on the dev split (seen generators only) after every epoch.
+
+Real-call data (v3, 2026-10-17): --realcall_manifest adds real phone-call captures (realcall/ingest.py). Train rows
+are used as they are (no simulated channel or RawBoost on top: they already went through a real network) and get
+a fixed share of each class's sampling mass (--realcall_weight). Dev rows are scored as an extra "realcall" channel
+in model selection. --aug_set v3 adds the speakerphone channel learned from real calls (realcall/learned_channel.py).
+Held-out speakers and generators stay out of training exactly as before.
 """
 import argparse
 import json
@@ -36,6 +42,8 @@ CH_P = {"clean": 0.2, "pstn": 0.2, "amr": 0.2, "opus": 0.2, "replay": 0.2}
 # v2: adds training-only telephony variety (low AMR modes, codec tandems, handset NS/AGC, codec->speakerphone)
 CH_P_V2 = {"clean": 0.12, "pstn": 0.10, "amr": 0.10, "opus": 0.12, "replay": 0.10, "amr_lowrate": 0.12,
            "tandem": 0.12, "narrowband_dsp": 0.12, "codec_replay": 0.10}
+# v3: v2 scaled to 70 % plus 30 % of the speakerphone channel learned from real calls
+CH_P_V3 = {**{k: v * 0.7 for k, v in CH_P_V2.items()}, "speakerphone_learned": 0.30}
 
 
 def rawboost(x, rng):
@@ -56,6 +64,7 @@ def rawboost(x, rng):
 class TrainSet(Dataset):
     def __init__(self, df, channel_aug=True, rawboost_p=0.3, seed=0, ch_p=None):
         self.paths = df.src16.tolist()
+        self.native = (df["native"].fillna(False).astype(bool) if "native" in df else pd.Series(False, index=df.index)).tolist()
         self.y = (df.label == "spoof").astype(int).tolist()
         self.channel_aug = channel_aug
         self.rawboost_p = rawboost_p
@@ -73,14 +82,19 @@ class TrainSet(Dataset):
         if len(x) > n:
             s = int(rng.integers(0, len(x) - n + 1))
             x = x[s:s + n]
-        if self.channel_aug:
-            from channel.channels import apply
+        if self.channel_aug and not self.native[i]:
+            from channel.channels import FUNCS, apply
             ch = rng.choice(list(self.ch_p), p=list(self.ch_p.values()))
+            if ch == "speakerphone_learned" and ch not in FUNCS:
+                # DataLoader workers started with "spawn" (Windows, macOS) import a fresh channels module, so the
+                # registration done in the parent process isn't there: register in this worker too.
+                from realcall.learned_channel import register
+                register()
             try:
                 x = apply(x, ch, rng)
             except Exception:
                 pass
-        if rng.random() < self.rawboost_p:
+        if not self.native[i] and rng.random() < self.rawboost_p:
             try:
                 x = rawboost(x, rng)
             except Exception:
@@ -90,15 +104,36 @@ class TrainSet(Dataset):
         return torch.from_numpy(x.astype(np.float32)), self.y[i]
 
 
-def balanced_weights(df):
+def balanced_weights(df, realcall_weight=None):
     g = df.label + "|" + df.source.astype(str) + "|" + df.generator.astype(str)
     counts = g.value_counts()
     w = np.array(g.map(lambda k: 1.0 / counts[k]).values, dtype=np.float64)
-    # equal total mass per class
+    # equal total mass per class; real-call rows (if any) get exactly realcall_weight of each class's mass
+    rc = (df.source == "realcall").values
     for lab in ("bonafide", "spoof"):
         m = (df.label == lab).values
-        w[m] = w[m] / w[m].sum() * 0.5
+        if realcall_weight and (m & rc).any() and (m & ~rc).any():
+            w[m & rc] = w[m & rc] / w[m & rc].sum() * 0.5 * realcall_weight
+            w[m & ~rc] = w[m & ~rc] / w[m & ~rc].sum() * 0.5 * (1 - realcall_weight)
+        else:
+            w[m] = w[m] / w[m].sum() * 0.5
     return w
+
+
+def load_realcall(path):
+    """Real-call rows from realcall/ingest.py: QC-ok, paths made absolute relative to the manifest's folder."""
+    rc = pd.read_csv(path)
+    rc = rc[(rc.qc == "ok") & rc.path.notna() & rc.label.isin(["bonafide", "spoof"])]
+    if "gate_window" in rc:
+        rc = rc[rc.gate_window.astype(str) != "True"]       # gate windows duplicate live chunks
+    base = os.path.dirname(os.path.abspath(path))
+    rc = rc.copy()
+    rc["path"] = [p if os.path.isabs(p) else os.path.join(base, p) for p in rc.path]
+    rc["src16"] = rc["path"]
+    rc["source"] = "realcall"
+    rc["native"] = True
+    rc["channel"] = "realcall"
+    return rc
 
 
 @torch.no_grad()
@@ -145,7 +180,10 @@ def main():
     ap.add_argument("--lr_head", type=float, default=3e-5)
     ap.add_argument("--no_channel_aug", action="store_true")
     ap.add_argument("--rawboost_p", type=float, default=0.3)
-    ap.add_argument("--aug_set", default="v1", choices=["v1", "v2"])
+    ap.add_argument("--aug_set", default="v1", choices=["v1", "v2", "v3"])
+    ap.add_argument("--realcall_manifest", default="", help="realcall.csv from realcall/ingest.py (paths relative to it)")
+    ap.add_argument("--realcall_weight", type=float, default=0.25, help="share of each class's sampling mass for real-call rows")
+    ap.add_argument("--dry_run", action="store_true", help="build the data, draw a few samples, print composition, exit")
     ap.add_argument("--exclude_sources", default="")
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--dev_max", type=int, default=3000)
@@ -161,8 +199,32 @@ def main():
         tr = tr[~tr.source.isin(a.exclude_sources.split(","))]
     ev = pd.read_csv(a.eval_manifest)
     dev = ev[(ev.split == "dev") & (ev.source != "asv19") & (~ev.generator.isin(HELDOUT_GENERATORS)) & (~ev.speaker.astype(str).isin(HELDOUT_SPEAKERS))]
+    rc_dev = pd.DataFrame()
+    if a.realcall_manifest:
+        rc = load_realcall(a.realcall_manifest)
+        keep = lambda d: d[(~d.generator.isin(HELDOUT_GENERATORS)) & (~d.speaker.astype(str).isin(HELDOUT_SPEAKERS))]
+        rc_tr, rc_dev = keep(rc[rc.split == "train"]), keep(rc[rc.split == "dev"])
+        tr = pd.concat([tr.assign(native=False), rc_tr], ignore_index=True)
+        print("realcall train", len(rc_tr), rc_tr.groupby("label").size().to_dict(), "| dev", len(rc_dev), flush=True)
+    if a.aug_set == "v3":
+        from realcall.learned_channel import _params, register
+        register()
+        _params()   # fail here, not inside a worker, if learned_channel.npz is missing
     print("train", len(tr), tr.groupby(["label", "source"]).size().to_dict(), flush=True)
     print("dev", len(dev), flush=True)
+    ch_p = {"v1": CH_P, "v2": CH_P_V2, "v3": CH_P_V3}[a.aug_set]
+    if a.dry_run:
+        w = balanced_weights(tr, a.realcall_weight if a.realcall_manifest else None)
+        mass = pd.Series(w).groupby((tr.label + "|" + tr.source.astype(str)).values).sum().round(3).to_dict()
+        print("sampling mass by class|source:", mass, flush=True)
+        ds = TrainSet(tr, channel_aug=not a.no_channel_aug, rawboost_p=a.rawboost_p, seed=a.seed, ch_p=ch_p)
+        rng = np.random.default_rng(a.seed)
+        for i in rng.choice(len(tr), size=min(12, len(tr)), replace=False, p=w / w.sum()):
+            x, y = ds[int(i)]
+            print(f"  sample {tr.source.iloc[i]:10s} {tr.label.iloc[i]:8s} native={ds.native[i]} len={len(x)} "
+                  f"rms={float(x.pow(2).mean().sqrt()):.3f}", flush=True)
+        print("dry run ok", flush=True)
+        return
 
     from models.ssl_aasist import Model, convert_fairseq_state_dict
     device = torch.device("cuda")
@@ -183,15 +245,20 @@ def main():
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: min(1.0, (s + 1) / 200) * 0.5 * (1 + math.cos(math.pi * min(1.0, s / total))))
     crit = nn.CrossEntropyLoss()
 
-    w = balanced_weights(tr)
+    w = balanced_weights(tr, a.realcall_weight if a.realcall_manifest else None)
     sampler = WeightedRandomSampler(torch.as_tensor(w, dtype=torch.double), num_samples=a.steps_per_epoch * a.bs, replacement=True)
-    ds = TrainSet(tr, channel_aug=not a.no_channel_aug, rawboost_p=a.rawboost_p, seed=a.seed,
-                  ch_p=CH_P_V2 if a.aug_set == "v2" else CH_P)
+    ds = TrainSet(tr, channel_aug=not a.no_channel_aug, rawboost_p=a.rawboost_p, seed=a.seed, ch_p=ch_p)
     dl = DataLoader(ds, batch_size=a.bs, sampler=sampler, num_workers=a.workers, drop_last=True, persistent_workers=True,
                     prefetch_factor=4)
 
     # epoch-0 reference (pretrained model on our dev set)
-    res0, _ = evaluate(model, dev, device, max_items=a.dev_max)
+    def dev_eval():
+        res, _ = evaluate(model, dev, device, max_items=a.dev_max)
+        if len(rc_dev) and rc_dev.label.nunique() == 2:
+            res.update(evaluate(model, rc_dev, device)[0])    # always all real-call dev rows, as channel "realcall"
+        return res
+
+    res0 = dev_eval()
     log = [{"epoch": 0, "dev_eer": res0, "dev_eer_mean": float(np.mean(list(res0.values())))}]
     print("epoch 0 dev EER", {k: round(v, 4) for k, v in res0.items()}, flush=True)
     best = float("inf")  # best fine-tuned epoch (epoch 0 = pretrained reference only)
@@ -215,7 +282,7 @@ def main():
             step += 1
             if step % 100 == 0:
                 print(f"ep {ep} step {step} loss {tot_loss / (step - (ep - 1) * a.steps_per_epoch):.4f} {time.time() - t0:.0f}s", flush=True)
-        res, _ = evaluate(model, dev, device, max_items=a.dev_max)
+        res = dev_eval()
         m = float(np.mean(list(res.values())))
         log.append({"epoch": ep, "loss": tot_loss / a.steps_per_epoch, "dev_eer": res, "dev_eer_mean": m, "time_s": time.time() - t0})
         print(f"epoch {ep} dev EER mean {m:.4f}", {k: round(v, 4) for k, v in res.items()}, flush=True)

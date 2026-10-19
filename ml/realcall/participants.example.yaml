@@ -1,0 +1,23 @@
+# Copy to participants.yaml (gitignored) and fill in. Every number dial.py may call must be a device
+# here, owned by a participant whose consent covers recording. Clones only of participants with clone: true.
+participants:
+  S01:
+    name: Galaba Vamsi
+    langs: [te, hi, en]
+    consent:
+      record: true          # genuine speech may be recorded on calls
+      clone: true           # voice may be cloned (hackathon only, no public release)
+      evidence: data/raw/recordings/S01_consent.png
+      expires: 2026-12-31
+  S02:
+    name: Varun Rai
+    langs: [hi, en]
+    consent: {record: true, clone: true, evidence: data/raw/recordings/S02_consent.png, expires: 2026-12-31}
+  V01:
+    name: Volunteer One     # genuine-only volunteer: record, never clone
+    langs: [hi, en]
+    consent: {record: true, clone: false, evidence: data/raw/consent/V01.png, expires: 2026-12-31}
+
+devices:
+  D1: {owner: S01, phone: "+91XXXXXXXXXX", model: "phone model", carrier: jio, network: volte}
+  D2: {owner: S02, phone: "+91XXXXXXXXXX", model: "phone model", carrier: airtel, network: volte}

@@ -1,0 +1,8 @@
+# Copy to config.yaml (gitignored). Secrets (VOBIZ_AUTH_ID, VOBIZ_AUTH_TOKEN, SARVAM_API_KEY) go in the repo-root .env.
+public_base_url: https://your-tunnel.trycloudflare.com   # cloudflared tunnel --url http://127.0.0.1:8600
+server_port: 8600
+vobiz_number: "+91XXXXXXXXXX"                              # caller ID owned by the Vobiz account
+record_session: true
+call_time_limit_s: 600
+gap_between_calls_s: 15
+hash_salt: change-me-to-a-random-string

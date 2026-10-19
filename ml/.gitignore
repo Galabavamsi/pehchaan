@@ -23,3 +23,7 @@ work/
 cache/
 __pycache__/
 infra/known_hosts
+
+# real-call collection: phone numbers, local config
+realcall/participants.yaml
+realcall/config.yaml
