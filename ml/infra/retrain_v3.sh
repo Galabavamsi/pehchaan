@@ -25,6 +25,7 @@ train() {  # name aug_set use_realcall
   echo "=== train $name ($(date -Is))"
   if [ -f ~/runs/$name/DONE ]; then echo "already finished, skipping"; return; fi
   rm -rf ~/runs/$name
+  rm -f $OUT/real__$name.csv $OUT/sim__$name.csv     # scores of the old weights must never survive a retrain
   if $PY train/finetune.py --src_manifest $W/manifests/corpus_src.csv --eval_manifest $W/manifests/corpus_eval.csv \
       --out ~/runs/$name --init la --epochs 6 --steps_per_epoch 600 --bs 16 --dev_max 2500 --seed 0 \
       --aug_set $aug $extra > ~/logs/tr_$name.log 2>&1 \
@@ -59,6 +60,9 @@ EOF
 then FAILED+=("score:manifests"); fi
 for m in ours_v1 ours_v3_rc ours_v1_rc ours_v3; do
   if [ "$m" != "ours_v1" ] && [ ! -f ~/runs/$m/DONE ]; then echo "skip scoring $m (not finished)"; continue; fi
+  # Always score from scratch: eval/score.py resumes from an existing file, which would keep scores of older
+  # weights next to new ones. A few minutes per model is cheaper than a mixed result.
+  rm -f $OUT/real__$m.csv $OUT/sim__$m.csv
   $PY eval/score.py --manifest $OUT/realcall_eval.csv --root $RC --detector ckpt:$HOME/runs/$m/best.pt \
       --out $OUT/real__$m.csv > ~/logs/score_real_$m.log 2>&1 || FAILED+=("score_real:$m")
   $PY eval/score.py --manifest $OUT/sim_test.csv --limit 6000 --detector ckpt:$HOME/runs/$m/best.pt \
