@@ -53,3 +53,19 @@ cut-off above ~4 kHz; real noise bank 111 s; SNR 15–29 dB.
 Validation: the same detector on 30 clean team pairs pushed through the learned channel catches **27 %** of
 clones at p ≥ 0.8 (clean: median p 0.97) and flags **0 %** of genuine. The real calls showed 28 % and 0 %, so the
 channel reproduces the failure and can turn the whole corpus into realistic training data (`--aug_set v3`).
+
+## Retraining results (2026-10-19, g5.2xlarge, single seed, same v1 recipe, `infra/retrain_v3.sh`)
+
+Real-call test split: 236 clips from 41 calls (S02 held-out speaker + S01 calls hashed to test), never trained on.
+"Caught / flagged" use each model's EER threshold from the simulated test sample, applied unchanged to real calls.
+
+| Model | Real-call EER | S02 EER | AUC | Clones caught | Genuine flagged | Sim EER | Sim held-out gens EER |
+|---|---|---|---|---|---|---|---|
+| v1 (Round 1, served) | 24.6 % | 21.7 % | 0.844 | 48 % | 3 % | 4.8 % | 18.1 % |
+| B: + real-call clips | 9.3 % | 9.8 % | 0.963 | 69 % | 0 % | 5.7 % | 14.0 % |
+| C: + learned channel | 18.6 % | 18.5 % | 0.907 | 67 % | 6 % | 5.7 % | 15.1 % |
+| **A: both** | **6.8 %** | **8.7 %** | **0.988** | **75 %** | **0 %** | 6.1 % | 14.8 % |
+
+Held-out generators stay hardest on real calls for A: Chatterbox 43 %, Seed-VC 62 % caught (XTTS 94 %, F5-Hindi 94 %,
+CosyVoice2 88 %, F5 58 %). Caveats: one handset, carrier and room in both train and test; same script lines;
+41 calls; one seed. Not yet shown: another handset (D2), live genuine callers, the gate (≥ 50 live calls).
