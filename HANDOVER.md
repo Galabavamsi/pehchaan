@@ -171,6 +171,11 @@ real calls, so it reproduces the real failure.
      ```bash
      aws s3 sync s3://pehchaan-ml-301745146083-use1/work/realcall_laptop ml/realcall/work
      ```
+     The ledger and manifest store the original laptop's absolute paths, so point them at your checkout once
+     (run from `ml/`):
+     ```bash
+     python -m realcall.relocate
+     ```
    - staged training bundle: `…/work/realcall`; retrain scores: `…/work/scores_rc`.
 7. **AWS:** you use the account's **root** login (Galaba's decision, 20 Oct). Run `aws configure` with a root
    access key or use the console. Region `ap-south-1` (Mumbai) for deployment; GPU work lives in `us-east-1`.

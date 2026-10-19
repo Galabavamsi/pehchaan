@@ -247,3 +247,11 @@ def test_phone_answers_only_our_caller(monkeypatch):
     assert phone.ringing_caller_matches() == (True, "screen")  # our Vobiz number on the ringing screen
     screens["reg"] = "mCallState=1\n mCallIncomingNumber=08064260325\n"
     assert phone.ringing_caller_matches() == (True, "telephony")
+
+
+def test_relocate_paths():
+    from realcall.relocate import relocate_path
+    assert relocate_path(r"D:\old\laptop\ml\realcall\work\capture\live_ab.wav") == str(settings.WORK / "capture/live_ab.wav")
+    assert relocate_path("/home/v/pehchaan/ml/realcall/work/segments/x/00.wav") == str(settings.WORK / "segments/x/00.wav")
+    assert relocate_path("segments/x/00.wav") == "segments/x/00.wav"       # relative paths are left alone
+    assert relocate_path(None) is None
