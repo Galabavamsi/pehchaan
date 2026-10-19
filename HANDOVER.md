@@ -143,12 +143,14 @@ real calls, so it reproduces the real failure.
    gh repo clone Galabavamsi/pehchaan
    ```
    Then `git switch realcall-collection`, or `master` once the PR is merged.
-3. **Secrets:** get these from Galaba **privately** (never in git):
+3. **Secrets and private files** (gitignored; Galaba gives them to you directly):
    - `.env` in the repo root: `VOBIZ_AUTH_ID`, `VOBIZ_AUTH_TOKEN`, `SARVAM_API_KEY`, `DEEPGRAM_API_KEY`,
      `OPENAI_API_KEY`, `HF_TOKEN`, `CLOUDFLARE_API_TOKEN`;
    - `ml/realcall/participants.yaml`, `ml/realcall/config.yaml`;
    - `ml/infra/pehchaan-ml` (the SSH key for the GPU box);
-   - `data/raw/` (consent evidence and team recordings).
+   - the Cloudflare tunnel files from `%USERPROFILE%\.cloudflared\` (`cert.pem`, `fe923565-…json`, `config.yml`);
+     put them in yours and fix the credentials path in `config.yml`;
+   - `data/raw/` (consent evidence and team recordings, 20 MB).
 4. **Python packages:**
    ```bash
    pip install -r app/server/requirements.txt -r ml/serve/requirements.txt -r ml/realcall/requirements.txt
@@ -161,11 +163,17 @@ real calls, so it reproduces the real failure.
    ```bash
    cd app/web && npm install
    ```
-6. **Model weights:** `ml/serve/weights/` is gitignored. Copy the v1 weights from
-   `s3://pehchaan-ml-301745146083-use1/models/pehchaan-xlsr-aasist-ft-v1/weights/`, and model A's checkpoint
-   from `…/runs/ours_v3_rc/best.pt`.
-7. **AWS:** use an IAM user Galaba creates for you, run `aws configure`, region `ap-south-1` (Mumbai) for
-   deployment. The GPU work lives in `us-east-1`.
+6. **Model weights and data from S3** (all large files live in S3, not git):
+   - v1 serving weights: `s3://pehchaan-ml-301745146083-use1/models/pehchaan-xlsr-aasist-ft-v1/weights/`
+     → `ml/serve/weights/`;
+   - model A: `…/runs/ours_v3_rc/best.pt` (also `ours_v1_rc`, `ours_v3`, `ours_v1`);
+   - real-call working folder (captures, segments, tapes, ledger, manifests, reports, retrain scores), 883 MB:
+     ```bash
+     aws s3 sync s3://pehchaan-ml-301745146083-use1/work/realcall_laptop ml/realcall/work
+     ```
+   - staged training bundle: `…/work/realcall`; retrain scores: `…/work/scores_rc`.
+7. **AWS:** you use the account's **root** login (Galaba's decision, 20 Oct). Run `aws configure` with a root
+   access key or use the console. Region `ap-south-1` (Mumbai) for deployment; GPU work lives in `us-east-1`.
 8. **Check everything works:**
    ```bash
    cd engine && python -m pytest -q
@@ -257,9 +265,9 @@ python deck/build.py
 |---|---|
 | AWS account | `301745146083`. Currently used as root; Business Support+ ($101 in Oct, paid by credits). Credits ≈ $10k. |
 | S3 | `pehchaan-ml-301745146083-use1` (models, runs, corpus, real-call data under `work/realcall`, scores) and `…-apse1`. Private, encrypted, **auto-delete on 31 Dec 2026** (consent promise). |
-| GPU | AMI `ami-02d874e711bfbc4e4`, launch template `pehchaan-ml`, SG `pehchaan-ml-ssh` (SSH from one IP: update it), key `pehchaan-ml`. Instance `i-0fa3f0f58693b173e` is **stopped** (600 GB disk ≈ $48/month; terminate if not needed). |
+| GPU | AMI `ami-02d874e711bfbc4e4`, launch template `pehchaan-ml`, SG `pehchaan-ml-ssh` (SSH from one IP: update it), key `pehchaan-ml`. Instance `i-0fa3f0f58693b173e` is **stopped and kept** (Galaba's decision, 20 Oct): its 600 GB disk (≈ $48/month) still holds the corpus, envs and runs, so retraining can restart without re-staging. |
 | Quotas (us-east-1) | On-demand G/VT 96 vCPU, P 128 vCPU; SageMaker p5.4xlarge ×2, p5.48xlarge ×1, p4d ×1, g6e.12xlarge ×2. Pending: SageMaker g5.2xlarge ×4, g5.12xlarge ×3 (replied 19 Oct), p5.48xlarge in Mumbai. |
-| Other instances in the account | m7i.8xlarge (us-east-1), t3.large and t4g.small (Mumbai): **not Pehchaan**, don't touch |
+| Other instances in the account | **Not Pehchaan. Paused (stopped) on 20 Oct** at Galaba's request, both with Elastic IPs so their addresses survive: `urumi-vps` `i-03f0fb3c44dba37de` (t3.large, 13.207.251.41, serves `*.urumi.humanslop.in`) and `t9984-speech-recorder` `i-030f4cdcddd8dce47` (t4g.small, 3.109.169.75), both in ap-south-1. Restart with `aws ec2 start-instances --region ap-south-1 --instance-ids <id>`. The m7i.8xlarge in us-east-1 no longer exists. |
 | Cloudflare | `humanslop.in` DNS. Tunnel `pehchaan` (id `fe923565…`, credentials in `~/.cloudflared/` on Galaba's laptop) → `calls.humanslop.in`. Other records (jalsakshi, charter, urumi, mail) belong to other projects: **don't touch**. |
 | Vobiz | Number +91 80 6426 0325, KYC-verified, 1 call/s, 3 concurrent. Keys in `.env`. Check the balance in the console. |
 | Sarvam | API key in `.env` (≈ $1,000 credits). Voice cloning via `realcall/sarvam_clone.py` (not run yet). |

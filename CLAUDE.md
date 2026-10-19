@@ -32,8 +32,8 @@ The voice detector is a supporting clue in **shadow mode**; it can never hold mo
 - **Spec first:** product or detection-logic changes go into `SPEC.md` before code.
 - **Cloud:**
   - Stop GPU instances when idle (the retrain script stops itself).
-  - Don't touch resources that aren't Pehchaan's: the m7i/t3/t4g instances, and the jalsakshi, charter and
-    urumi DNS records.
+  - Don't touch resources that aren't Pehchaan's: the `urumi-vps` and `t9984-speech-recorder` instances (paused),
+    and the jalsakshi, charter and urumi DNS records.
   - Ask before anything that costs real money or is visible outside (support cases, posts, DNS changes).
 
 ## Where things are

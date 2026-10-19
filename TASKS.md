@@ -56,10 +56,11 @@ Owners: **G** = Galaba, **V** = Varun. Tick boxes as you go and commit this file
 - [ ] **G:** share keys with Varun **privately** (never in git): `.env` (Vobiz, Sarvam, Deepgram, OpenAI, HF,
       Cloudflare), the `ml/infra/pehchaan-ml` SSH key, `participants.yaml`, `config.yaml`, the consent files
       in `data/raw/`
-- [ ] **G:** create an AWS IAM user for Varun (admin, MFA), or keep the AWS work on Galaba's laptop
+- [x] **AWS access:** Varun uses the root login (decided 20 Oct); no IAM user needed
 - [ ] **V:** clone, set up (`HANDOVER.md` §6), run all tests green
-- [ ] **G:** decide on the stopped GPU instance `i-0fa3f0f58693b173e` (600 GB disk ≈ $48/month; everything is
-      in S3), then terminate it
+- [x] GPU instance `i-0fa3f0f58693b173e`: **keep** it stopped with its disk (decided 20 Oct)
+- [x] Other projects' instances (`urumi-vps`, `t9984-speech-recorder`) paused on 20 Oct; Elastic IPs kept
+- [x] Large real-call audio backed up to `s3://…/work/realcall_laptop` (883 MB); see `HANDOVER.md` §6
 - [ ] **G:** downgrade AWS Business Support+ to Basic if not needed (console, root)
 
 ### Tue 21 Oct: deployment and the live attack call
