@@ -121,6 +121,34 @@ def speaker_on(serial=None, timeout_s=15) -> bool:
     return on_speaker(serial)
 
 
+def _digits(x) -> str:
+    return "".join(ch for ch in str(x or "") if ch.isdigit())
+
+
+def expected_caller() -> str:
+    """Last 10 digits of our Vobiz caller ID: the only number this helper will ever answer."""
+    from realcall.settings import config
+    return _digits(config().get("vobiz_number"))[-10:]
+
+
+def ringing_caller_matches(serial=None, expected=None) -> tuple:
+    """(True, how) only if the ringing number is positively our test caller: from telephony's incoming number,
+    or from the number shown on the ringing screen. Unknown or withheld counts as no match."""
+    expected = expected or expected_caller()
+    if len(expected) < 10:
+        return False, "no expected caller configured"
+    reg = adb("shell", "dumpsys", "telephony.registry", serial=serial)
+    for num in re.findall(r"mCallIncomingNumber=([^\s]*)", reg):
+        if _digits(num)[-10:] == expected:
+            return True, "telephony"
+    adb("shell", "uiautomator", "dump", "/sdcard/rc_ui.xml", serial=serial, timeout=30)
+    xml = adb("shell", "cat", "/sdcard/rc_ui.xml", serial=serial)
+    for label in re.findall(r'(?:text|content-desc)="([^"]*)"', xml):
+        if len(_digits(label)) >= 10 and _digits(label)[-10:] == expected:
+            return True, "screen"
+    return False, "caller not confirmed"
+
+
 def _wait_offhook(serial, wait_s=2.0) -> bool:
     t = time.time()
     while time.time() - t < wait_s:
@@ -151,6 +179,16 @@ def answer_and_speaker(serial=None, ring_timeout=60, call_id=None) -> dict:
         return {"answered": False, "speaker": False, "reason": "no ring"}
     log["ring_s"] = round(time.time() - t0, 1)
     adb("shell", "input", "keyevent", "KEYCODE_WAKEUP", serial=serial)
+    # Never answer anyone but our own test caller: an unrelated call must not be picked up on speaker.
+    ok, how = False, ""
+    for _ in range(6):
+        ok, how = ringing_caller_matches(serial)
+        if ok or call_state(serial) != 1:
+            break
+        time.sleep(0.5)
+    log["caller_check"] = how
+    if not ok:
+        return {"answered": False, "speaker": False, "reason": "ringing caller is not our test number; not answered", **log}
     method = None
     # 1) the on-screen Answer button (heads-up banner or full-screen), 2) headset key, 3) call key, 4) swipe
     hit = _find_button(serial, ["answer", "accept"])

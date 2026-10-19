@@ -197,6 +197,7 @@ def ingest_live(c):
         a = regs[0][0]
         y = x[int(a * SR): int((a + protocol.GATE_WINDOW_S) * SR)]
         path = SEGMENTS / c["call_id"] / "live" / "gate.wav"
+        path.parent.mkdir(parents=True, exist_ok=True)
         save(path, y, SR)
         q = quality(y)
         rows.append({**base, "utt_id": f"rc_{c['call_id'][:8]}_gate", "path": str(path), **q,

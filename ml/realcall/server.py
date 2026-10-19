@@ -47,10 +47,18 @@ async def _form(request: Request) -> dict:
     return {k: str(v) for k, v in d.items()}
 
 
+MAX_EVENTS_PER_CALL = 60   # a real call produces ~10 webhook events; anything beyond is noise or abuse
+TAPE_URL_TTL_S = 1800      # a tape can be fetched only while its call is live, at most 30 min after registration
+
+
 def _call(call_id: str) -> dict:
+    """The registered call, or 404. Call IDs are 128-bit random, minted by dial.py; webhooks for anything else are
+    rejected before they touch the ledger, and each call's event count is capped so the ledger can't be flooded."""
     c = calls().get(call_id)
     if not c or "kind" not in c:
         raise HTTPException(404, "unknown call")
+    if len(c.get("events", [])) >= MAX_EVENTS_PER_CALL:
+        raise HTTPException(429, "too many events for this call")
     return c
 
 
@@ -64,7 +72,7 @@ async def answer(call_id: str, request: Request):
            f'callbackUrl="{b}/record/{call_id}" callbackMethod="POST"/>') if cfg.get("record_session") else ""
     if c["kind"] == "tape":
         # 6 s before the tape: time for the phone (by hand or realcall.phone) to switch to speaker before the start chirp
-        return _xml(f'{rec}\n<Wait length="6"/>\n<Play>{escape(b)}/tapes/{c["tape_id"]}.wav</Play>\n<Wait length="2"/>\n<Hangup/>')
+        return _xml(f'{rec}\n<Wait length="6"/>\n<Play>{escape(b)}/tape/{call_id}.wav</Play>\n<Wait length="2"/>\n<Hangup/>')
     if c["kind"] == "uplink":
         ws = b.replace("https://", "wss://") + f"/ws/uplink/{call_id}"
         return _xml(f'<Stream bidirectional="true" audioTrack="inbound" contentType="audio/x-l16;rate={SR_UP}" keepCallAlive="true" '
@@ -74,6 +82,7 @@ async def answer(call_id: str, request: Request):
 
 @app.api_route("/hangup/{call_id}", methods=["GET", "POST"])
 async def hangup(call_id: str, request: Request):
+    _call(call_id)
     f = await _form(request)
     log_event("hangup", call_id=call_id, call_uuid=f.get("CallUUID"), cause=f.get("HangupCause") or f.get("HangupCauseName"),
               duration_s=f.get("Duration"), status=f.get("CallStatus"))
@@ -82,6 +91,7 @@ async def hangup(call_id: str, request: Request):
 
 @app.api_route("/ring/{call_id}", methods=["GET", "POST"])
 async def ring(call_id: str, request: Request):
+    _call(call_id)
     f = await _form(request)
     log_event("ring", call_id=call_id, call_uuid=f.get("CallUUID"))
     return {"ok": True}
@@ -89,6 +99,7 @@ async def ring(call_id: str, request: Request):
 
 @app.api_route("/record/{call_id}", methods=["GET", "POST"])
 async def record(call_id: str, request: Request):
+    _call(call_id)
     f = await _form(request)
     log_event("recording", call_id=call_id, recording_id=f.get("RecordingID"), url=f.get("RecordFile") or f.get("RecordUrl"),
               duration_ms=f.get("RecordingDurationMs"), reason=f.get("RecordingEndReason"))
@@ -97,16 +108,23 @@ async def record(call_id: str, request: Request):
 
 @app.api_route("/stream/{call_id}", methods=["GET", "POST"])
 async def stream_status(call_id: str, request: Request):
+    _call(call_id)
     f = await _form(request)
     log_event("stream_status", call_id=call_id, event=f.get("Event"), stream_id=f.get("StreamID"))
     return {"ok": True}
 
 
-@app.api_route("/tapes/{name}", methods=["GET", "HEAD"])
+@app.api_route("/tape/{name}", methods=["GET", "HEAD"])
 def tape_file(name: str):
-    if not name.endswith(".wav") or "/" in name or "\\" in name or ".." in name:
+    """The 8 kHz playback tape for one registered call, addressed by its unguessable call ID (never by tape ID),
+    and only while that call is live. Reference (.ref.wav) files are never served."""
+    call_id = name[:-4] if name.endswith(".wav") else ""
+    c = calls().get(call_id)
+    if not c or c.get("kind") != "tape" or not c.get("tape_id"):
         raise HTTPException(404)
-    p = TAPES / name
+    if "hangup_t" in c or time.time() - c.get("registered_t", 0) > TAPE_URL_TTL_S:
+        raise HTTPException(404)
+    p = TAPES / f"{c['tape_id']}.wav"
     if not p.exists():
         raise HTTPException(404)
     return FileResponse(p, media_type="audio/wav")

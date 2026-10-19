@@ -1,6 +1,7 @@
 """Compare v1 and the real-call retraining runs on real calls (test split) and on the simulated test sample.
 
-  python -m realcall.compare_models [--dir realcall/work/retrain_v3]
+  aws s3 sync s3://pehchaan-ml-301745146083-use1/work/scores_rc realcall/work/retrain_v3/scores
+  python -m realcall.compare_models [--dir realcall/work/retrain_v3/scores]
 
 Scores are spoof logit differences from eval/score.py (higher = more synthetic). Real-call metrics use the
 pre-registered test split only (S02 = held-out speaker; S01 calls hashed to test). "Deployed" numbers use each
@@ -39,22 +40,38 @@ def auc(y, s):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dir", default="realcall/work/retrain_v3")
+    ap.add_argument("--dir", default="realcall/work/retrain_v3/scores",
+                    help="folder synced from s3://.../work/scores_rc (scores + labelled manifests, flat)")
     a = ap.parse_args()
     d = Path(a.dir)
-    rc = pd.read_csv(MANIFESTS / "realcall.csv")
-    rc = rc[(rc.qc == "ok") & rc.path.notna()][["utt_id", "label", "generator", "speaker", "split", "call_id"]]
-    ce = pd.read_csv(d / "corpus_eval.csv", usecols=lambda c: c in ("utt_id", "label", "generator", "channel", "heldout"))
+    if not (d / "realcall_eval.csv").exists() and (d / "scores").is_dir():
+        d = d / "scores"                      # also accept the parent folder
+    lab_cols = ("utt_id", "label", "generator", "speaker", "split", "call_id")
+    rce = d / "realcall_eval.csv"
+    if rce.exists() and set(lab_cols) <= set(pd.read_csv(rce, nrows=1).columns):
+        rc = pd.read_csv(rce, usecols=lambda c: c in lab_cols)
+    else:                                     # older uploads carried no labels: fall back to the local manifest
+        rc = pd.read_csv(MANIFESTS / "realcall.csv")
+        rc = rc[(rc.qc == "ok") & rc.path.notna()][list(lab_cols)]
+    sim_cols = ("utt_id", "label", "generator", "channel", "heldout")
+    st = d / "sim_test.csv"
+    if st.exists() and "label" in pd.read_csv(st, nrows=1).columns:
+        ce = pd.read_csv(st, usecols=lambda c: c in sim_cols)
+    elif (d / "corpus_eval.csv").exists() or (d.parent / "corpus_eval.csv").exists():
+        f = d / "corpus_eval.csv" if (d / "corpus_eval.csv").exists() else d.parent / "corpus_eval.csv"
+        ce = pd.read_csv(f, usecols=lambda c: c in sim_cols)
+    else:
+        raise SystemExit(f"no simulated-test labels in {d}: need sim_test.csv with a label column, or corpus_eval.csv")
     rows, out = [], {}
     for m, name in MODELS.items():
-        if not (d / "scores" / f"real__{m}.csv").exists():
+        if not (d / f"real__{m}.csv").exists() or not (d / f"sim__{m}.csv").exists():
             continue
-        sim = pd.read_csv(d / "scores" / f"sim__{m}.csv").merge(ce, on="utt_id")
+        sim = pd.read_csv(d / f"sim__{m}.csv").merge(ce, on="utt_id")
         ys, ss = (sim.label == "spoof").astype(int).values, sim.score.values
         sim_eer, thr = eer_thr(ys, ss)
         ho = sim[sim.heldout.astype(str) == "True"]
         sim_ho = eer_thr((ho.label == "spoof").astype(int).values, ho.score.values)[0] if ho.label.nunique() == 2 else np.nan
-        real = pd.read_csv(d / "scores" / f"real__{m}.csv").merge(rc, on="utt_id")
+        real = pd.read_csv(d / f"real__{m}.csv").merge(rc, on="utt_id")
         t = real[real.split == "test"]
         yt, st = (t.label == "spoof").astype(int).values, t.score.values
         r_eer, _ = eer_thr(yt, st)

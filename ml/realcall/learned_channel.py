@@ -68,7 +68,9 @@ def fit(splits=("train",), min_ncc=0.5):
     H -= np.median(H[:, (f > 500) & (f < 2500)], axis=1, keepdims=True)   # level-free shape: 0 dB around 0.5-2.5 kHz
     med, lo, hi = np.median(H, 0), np.percentile(H, 10, 0), np.percentile(H, 90, 0)
     bank = np.concatenate(noise).astype(np.float32) if noise else np.zeros(SR, np.float32)
+    # contributors: whose calls the noise bank and response were cut from (staging re-checks their consent)
     np.savez(NPZ, f=f, med=med, lo=lo, hi=hi, noise=bank, snrs=np.array(snrs), n_items=len(H),
+             contributors=np.array(sorted({str(x) for x in t.speaker})),
              calls=t.call_id.nunique(), splits=np.array(list(splits)))
     print(f"fitted on {len(H)} items from {t.call_id.nunique()} calls ({','.join(splits)}); noise bank {len(bank) / SR:.1f} s; "
           f"SNR {np.percentile(snrs, 10):.1f}-{np.percentile(snrs, 90):.1f} dB")

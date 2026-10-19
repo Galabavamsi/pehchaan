@@ -169,10 +169,21 @@ def test_server_answer_and_uplink_ws(sources):
     meta = load_tape(sorted(settings.TAPES.glob("*.json"))[0].stem)
     settings.log_event("call_registered", call_id="c" * 32, kind="tape", tape_id=meta["tape_id"], device="D2")
     r = cl.post("/answer/" + "c" * 32, data={"CallUUID": "u1"})
-    assert r.status_code == 200 and f"/tapes/{meta['tape_id']}.wav</Play>" in r.text and "recordSession" in r.text
+    assert r.status_code == 200 and f"/tape/{'c' * 32}.wav</Play>" in r.text and "recordSession" in r.text
     assert cl.post("/answer/" + "z" * 32).status_code == 404
-    assert cl.get(f"/tapes/{meta['tape_id']}.wav").status_code == 200
-    assert cl.get("/tapes/..%2Fledger.jsonl").status_code == 404
+    # tapes: only by the live call's ID, never by tape ID, never the .ref reference
+    assert cl.get(f"/tape/{'c' * 32}.wav").status_code == 200
+    assert cl.get(f"/tapes/{meta['tape_id']}.wav").status_code == 404
+    assert cl.get(f"/tape/{meta['tape_id']}.ref.wav").status_code == 404
+    assert cl.get("/tape/..%2Fledger.jsonl").status_code == 404
+    # webhooks for unregistered calls never reach the ledger
+    n0 = len(settings.read_ledger())
+    for route in ("hangup", "ring", "record", "stream"):
+        assert cl.post(f"/{route}/" + "y" * 32, data={"CallUUID": "x"}).status_code == 404
+    assert len(settings.read_ledger()) == n0
+    # once the call has hung up its tape URL stops working
+    cl.post("/hangup/" + "c" * 32, data={"CallUUID": "u1", "HangupCause": "NORMAL_CLEARING"})
+    assert cl.get(f"/tape/{'c' * 32}.wav").status_code == 404
 
     plan = [{"type": "read", "line_id": "E01", "text": "one", "speaker": "S01"},
             {"type": "read", "line_id": "E02", "text": "two", "speaker": "S01"}]
@@ -200,8 +211,39 @@ def test_server_answer_and_uplink_ws(sources):
     assert len(up) == 2 and set(up.label) == {"bonafide"}
 
 
+def test_protocol_live_callers_stay_in_one_split():
+    from realcall import protocol
+    old = set(protocol.TEST_DEVICES)
+    protocol.TEST_DEVICES.clear()
+    protocol.TEST_DEVICES.add("DT")
+    try:
+        for caller in ("V01", "V02", "V03", "V04", "V05", "V06"):
+            on_train_device = protocol.split_for("live", "x", "D1", caller, "bonafide", caller)
+            on_test_device = protocol.split_for("live", "y", "DT", caller, "bonafide", caller)
+            # a caller is test everywhere, or never reaches test through the test-only device
+            assert on_test_device == ("test" if on_train_device == "test" else "excluded")
+    finally:
+        protocol.TEST_DEVICES.clear()
+        protocol.TEST_DEVICES.update(old)
+
+
 def test_gate_math():
     from realcall.gate import eer, wilson_upper
     assert abs(wilson_upper(0, 50) - 0.0713) < 0.001
     assert eer(np.array([0.1, 0.2, 0.3]), np.array([0.7, 0.8, 0.9])) == 0.0
     assert abs(eer(np.random.default_rng(0).random(2000), np.random.default_rng(1).random(2000)) - 0.5) < 0.05
+
+
+def test_phone_answers_only_our_caller(monkeypatch):
+    from realcall import phone
+    monkeypatch.setattr(phone, "expected_caller", lambda: "8064260325")
+    screens = {"reg": "", "ui": "<hierarchy></hierarchy>"}
+    monkeypatch.setattr(phone, "adb", lambda *a, **k: screens["reg"] if "telephony.registry" in a else (screens["ui"] if "cat" in a else ""))
+    screens["reg"] = "mCallState=1\n mCallIncomingNumber=+919999999999\n"
+    assert phone.ringing_caller_matches()[0] is False          # a stranger: never answered
+    screens["reg"] = "mCallState=1\n mCallIncomingNumber=\n"
+    assert phone.ringing_caller_matches()[0] is False          # withheld and not on screen: never answered
+    screens["ui"] = '<hierarchy><node text="+91 80 6426 0325" /></hierarchy>'
+    assert phone.ringing_caller_matches() == (True, "screen")  # our Vobiz number on the ringing screen
+    screens["reg"] = "mCallState=1\n mCallIncomingNumber=08064260325\n"
+    assert phone.ringing_caller_matches() == (True, "telephony")

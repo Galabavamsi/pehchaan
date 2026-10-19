@@ -73,6 +73,8 @@ def main():
     a = ap.parse_args()
     ensure_dirs()
     df = pd.read_csv(MANIFESTS / "realcall.csv")
+    if "gate_window" not in df:          # tape-only manifests have no live rows, hence no gate_window column
+        df["gate_window"] = False
     df = df[(df.qc == "ok") & (df.split == a.split) & df.path.notna()]
     if df.empty:
         raise SystemExit(f"no qc-ok rows in split {a.split}")
@@ -80,7 +82,10 @@ def main():
     flag = df.band == "likely_synthetic"
 
     live = df[df.kind == "live"]
-    gw = live[live.gate_window.astype(str) == "True"]
+    gw_all = live[live.gate_window.astype(str) == "True"]
+    # Only windows the service actually judged count towards the gate: quality-rejected windows come back
+    # "inconclusive" and would otherwise count as unflagged, letting 50 rejected calls "pass".
+    gw = gw_all[gw_all.quality_ok.astype(str) == "True"]
     k, n = int((gw.band == "likely_synthetic").sum()), len(gw)
     by_spk = {s: {"calls": int(len(g)), "flagged": int((g.band == "likely_synthetic").sum())} for s, g in gw.groupby("speaker")}
     by_route = {s: {"calls": int(len(g)), "flagged": int((g.band == "likely_synthetic").sum())} for s, g in gw.groupby("route")}
@@ -99,6 +104,7 @@ def main():
         "gate": {"live_calls": n, "flagged": k, "rate": round(k / n, 4) if n else None,
                  "wilson95_upper": round(wilson_upper(k, n), 4),
                  "inconclusive_share": round(float((gw.band == "inconclusive").mean()), 4) if n else None,
+                 "quality_rejected_windows": int(len(gw_all) - len(gw)),
                  "min_calls": protocol.GATE_MIN_LIVE_CALLS, "max_rate": protocol.GATE_MAX_FLAG_RATE,
                  "pass": bool(n >= protocol.GATE_MIN_LIVE_CALLS and k / max(n, 1) <= protocol.GATE_MAX_FLAG_RATE),
                  "by_speaker": by_spk, "by_route": by_route},

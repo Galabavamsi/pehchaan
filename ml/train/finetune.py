@@ -83,8 +83,13 @@ class TrainSet(Dataset):
             s = int(rng.integers(0, len(x) - n + 1))
             x = x[s:s + n]
         if self.channel_aug and not self.native[i]:
-            from channel.channels import apply
+            from channel.channels import FUNCS, apply
             ch = rng.choice(list(self.ch_p), p=list(self.ch_p.values()))
+            if ch == "speakerphone_learned" and ch not in FUNCS:
+                # DataLoader workers started with "spawn" (Windows, macOS) import a fresh channels module, so the
+                # registration done in the parent process isn't there: register in this worker too.
+                from realcall.learned_channel import register
+                register()
             try:
                 x = apply(x, ch, rng)
             except Exception:

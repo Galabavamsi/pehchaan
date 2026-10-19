@@ -19,8 +19,10 @@ def main():
     p = MANIFESTS / "realcall.csv"
     if p.exists():
         m = pd.read_csv(p)
+        if "gate_window" not in m:       # tape-only manifests have no live rows
+            m["gate_window"] = False
         live = m[(m.kind == "live") & (m.gate_window.astype(str) == "True") & (m.qc == "ok")]
-        lt, ltr = int((live.split == "test").sum()), int((live.split != "test").sum())
+        lt, ltr = int((live.split == "test").sum()), int(live.split.isin(["train", "dev"]).sum())
         spk = m[(m.label == "bonafide") & (m.qc == "ok")].speaker.nunique()
         rows = [("live genuine calls, test", lt, TARGETS["live_test"]), ("live genuine calls, train/dev", ltr, TARGETS["live_train"]),
                 ("tape calls", m[m.kind == "tape"].call_id.nunique(), TARGETS["tape"]),

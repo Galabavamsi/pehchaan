@@ -31,12 +31,18 @@ def _bucket(key: str) -> str:
 
 
 def split_for(kind: str, call_id: str, device: str, speaker: str = "", generator: str = "", caller: str = "") -> str:
+    # 2026-10-20 (before any live call was collected): live calls are split by CALLER first, so one caller is never
+    # in both training and the gate. A non-test caller's live call on a test-only device is "excluded" (used by
+    # neither side) instead of being pulled into test by the device rule.
+    if kind == "live":
+        cs = "test" if (caller in TEST_CALLERS or speaker in HELDOUT_SPEAKERS) else _bucket("caller:" + caller)
+        if device in TEST_DEVICES and cs != "test":
+            return "excluded"
+        return cs
     if device in TEST_DEVICES:
         return "test"
     if speaker in HELDOUT_SPEAKERS or generator in REALCALL_HELDOUT_GENERATORS:
         return "test"
-    if kind == "live":
-        return "test" if caller in TEST_CALLERS else _bucket("caller:" + caller)
     return _bucket("call:" + call_id)
 
 

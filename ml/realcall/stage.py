@@ -41,6 +41,15 @@ def build():
     m["path"] = rel
     drop = [c for c in ("device_hash",) if c in m]
     m.drop(columns=drop).to_csv(STAGE / "realcall.csv", index=False)
+    # The learned channel's noise bank is cut from real call audio, so it may only travel while every contributor's
+    # consent is still valid. Files fitted before contributors were recorded are rejected: refit them.
+    import numpy as np
+    npz = np.load(WORK / "learned_channel.npz")
+    if "contributors" not in npz.files:
+        raise SystemExit("learned_channel.npz has no contributor list: refit it (python -m realcall.learned_channel fit)")
+    lapsed = [s for s in npz["contributors"] if not _consented(reg, str(s))]
+    if lapsed:
+        raise SystemExit(f"learned_channel.npz contains audio from {lapsed}, whose consent is no longer valid: refit it")
     shutil.copy2(WORK / "learned_channel.npz", STAGE / "learned_channel.npz")
     size = sum(f.stat().st_size for f in STAGE.rglob("*") if f.is_file()) / 1e6
     print(f"staged {len(m)} segments from {m.call_id.nunique()} calls ({size:.0f} MB) -> {STAGE}")
