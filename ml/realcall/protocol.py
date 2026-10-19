@@ -11,7 +11,8 @@ REALCALL_HELDOUT_GENERATORS = {"sarvam_ivc"}
 
 # Fill in before the first session: one whole handset/carrier kept out of training, and the live callers
 # whose calls form the gate set. Edit only before data from them exists.
-TEST_DEVICES: set = set()
+# 2026-10-19: D2 (Varun's Redmi, Jio) made test-only before any D2 call existed, to test a held-out handset.
+TEST_DEVICES: set = {"D2"}
 TEST_CALLERS: set = set()
 
 SPLIT_FRACTIONS = (0.60, 0.15, 0.25)  # train, dev, test

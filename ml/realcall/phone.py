@@ -59,68 +59,127 @@ def _find_button(serial, patterns):
     return None
 
 
-def speaker_on(serial=None, tries=6) -> bool:
-    """Tap the in-call Speaker button. The label is read from the screen, so no fixed coordinates."""
-    for _ in range(tries):
+def foreground(serial=None) -> str:
+    out = adb("shell", "dumpsys", "window", serial=serial)
+    m = re.search(r"mCurrentFocus=Window\{[^ ]+ [^ ]+ ([^}]+)\}", out)
+    return m.group(1) if m else ""
+
+
+def locked(serial=None) -> bool:
+    return "isKeyguardShowing=true" in adb("shell", "dumpsys", "window", serial=serial)
+
+
+def audio_route(serial=None) -> str:
+    """Telecom's live audio route, e.g. ActiveSpeakerRoute / ActiveEarpieceRoute / QuiescentEarpieceRoute.
+    This is the ground truth for 'is the call on speaker', independent of what the screen shows."""
+    out = adb("shell", "dumpsys", "telecom", serial=serial)
+    m = re.search(r"CallAudioRouteStateMachine:\s*\n\s*Current state:\s*(\w+)", out)
+    if m:
+        return m.group(1)
+    m = re.search(r"Active communication device: AudioDeviceAttributes: role:output type:(\w+)", adb("shell", "dumpsys", "audio", serial=serial))
+    return f"device:{m.group(1)}" if m else "unknown"
+
+
+def on_speaker(serial=None) -> bool:
+    return "speaker" in audio_route(serial).lower()
+
+
+def bring_call_screen(serial=None) -> bool:
+    """If the call runs as a floating window / notification (Xiaomi, Google Phone over another app), open the
+    ongoing-call notification so the full call screen with the Speaker button is in front."""
+    if "incall" in foreground(serial).lower():
+        return True
+    adb("shell", "cmd", "statusbar", "expand-notifications", serial=serial)
+    time.sleep(0.8)
+    hit = _find_button(serial, ["ongoing call", "return to call", "current call", "+91"])
+    if hit:
+        adb("shell", "input", "tap", *map(str, hit[1]), serial=serial)
+        time.sleep(1.0)
+    if "incall" not in foreground(serial).lower():
+        adb("shell", "cmd", "statusbar", "collapse", serial=serial)
+    return "incall" in foreground(serial).lower()
+
+
+def speaker_on(serial=None, timeout_s=15) -> bool:
+    """Turn the call onto speaker and VERIFY it via telecom's audio route; retry until timeout."""
+    t0 = time.time()
+    while time.time() - t0 < timeout_s:
+        if on_speaker(serial):
+            return True
+        if not bring_call_screen(serial):
+            time.sleep(0.5)
         hit = _find_button(serial, ["speaker"])
         if hit:
             node, (x, y) = hit
-            if node.get("checked") == "true" or node.get("selected") == "true":
-                return True
             adb("shell", "input", "tap", str(x), str(y), serial=serial)
-            time.sleep(0.8)
-            hit = _find_button(serial, ["speaker"])
-            if hit and (hit[0].get("checked") == "true" or hit[0].get("selected") == "true"):
-                return True
-            return True   # some dialers don't expose the checked state; the tap went to the Speaker button
-        time.sleep(1.0)
+            for _ in range(6):
+                time.sleep(0.4)
+                if on_speaker(serial):
+                    return True
+        else:
+            time.sleep(0.5)
+    return on_speaker(serial)
+
+
+def _wait_offhook(serial, wait_s=2.0) -> bool:
+    t = time.time()
+    while time.time() - t < wait_s:
+        if call_state(serial) == 2:
+            return True
+        time.sleep(0.2)
     return False
 
 
 def answer_and_speaker(serial=None, ring_timeout=60, call_id=None) -> dict:
+    """Wait for the ring, answer, put the call on speaker. Every step is checked against the phone's real state
+    (call state from telephony, audio route from telecom); the result records which method worked and when."""
+    log = {}
+    if locked(serial):
+        adb("shell", "input", "keyevent", "KEYCODE_WAKEUP", serial=serial)
+        adb("shell", "wm", "dismiss-keyguard", serial=serial)
+        time.sleep(0.8)
+    log["locked_at_start"] = locked(serial)
     t0 = time.time()
     while time.time() - t0 < ring_timeout:
         st = call_state(serial)
         if st == 1:
             break
         if st == 2:
-            return {"answered": False, "reason": "already in a call"}
-        time.sleep(0.5)
+            return {"answered": False, "speaker": False, "reason": "already in a call"}
+        time.sleep(0.3)
     else:
-        return {"answered": False, "reason": "no ring"}
-    tried = []
-
-    def offhook(wait_s=1.5):
-        t = time.time()
-        while time.time() - t < wait_s:
-            if call_state(serial) == 2:
-                return True
-            time.sleep(0.25)
-        return False
-
+        return {"answered": False, "speaker": False, "reason": "no ring"}
+    log["ring_s"] = round(time.time() - t0, 1)
     adb("shell", "input", "keyevent", "KEYCODE_WAKEUP", serial=serial)
-    for key in ("KEYCODE_HEADSETHOOK", "KEYCODE_CALL"):        # headset button answers on most dialers
-        adb("shell", "input", "keyevent", key, serial=serial)
-        tried.append(key)
-        if offhook():
+    method = None
+    # 1) the on-screen Answer button (heads-up banner or full-screen), 2) headset key, 3) call key, 4) swipe
+    hit = _find_button(serial, ["answer", "accept"])
+    if hit:
+        adb("shell", "input", "tap", *map(str, hit[1]), serial=serial)
+        if _wait_offhook(serial):
+            method = "tap_answer"
+    for key in ("KEYCODE_HEADSETHOOK", "KEYCODE_CALL"):
+        if method:
             break
-    else:                                                     # Samsung: swipe the Answer button
-        hit = _find_button(serial, ["answer", "accept"])
-        adb("pull", "/sdcard/rc_ui.xml", str(UPLOADS.parent / "phone_ring_ui.xml"), serial=serial)
+        adb("shell", "input", "keyevent", key, serial=serial)
+        if _wait_offhook(serial):
+            method = key
+    if not method:
+        hit = _find_button(serial, ["answer", "accept", "swipe"])
         if hit:
             x, y = hit[1]
-            for dx, dy in ((500, 0), (0, -500), (-500, 0)):
-                adb("shell", "input", "swipe", str(x), str(y), str(x + dx), str(y + dy), "300", serial=serial)
-                tried.append(f"swipe{dx},{dy}")
-                if offhook(1.2):
+            for dx, dy in ((0, -600), (500, 0), (-500, 0)):
+                adb("shell", "input", "swipe", str(x), str(y), str(x + dx), str(y + dy), "350", serial=serial)
+                if _wait_offhook(serial, 1.5):
+                    method = f"swipe{dx},{dy}"
                     break
-            else:
-                adb("shell", "input", "tap", str(x), str(y), serial=serial)
-                tried.append("tap")
-                offhook(1.2)
     answered = call_state(serial) == 2
+    log["answer_method"] = method
+    log["answered_s"] = round(time.time() - t0, 1)
     spk = speaker_on(serial) if answered else False
-    res = {"answered": answered, "speaker": spk, "after_s": round(time.time() - t0, 1), "tried": tried}
+    log["speaker_s"] = round(time.time() - t0, 1)
+    log["route"] = audio_route(serial)
+    res = {"answered": answered, "speaker": spk, **log}
     if call_id:
         log_event("phone_auto", call_id=call_id, **res)
     return res
@@ -161,6 +220,7 @@ def main():
         print("phone:", adb("shell", "getprop", "ro.product.model", serial=serial).strip(), serial)
         print("call state:", {0: "idle", 1: "ringing", 2: "in call"}.get(call_state(serial), "?"))
         print("auto-record calls:", "ON" if auto_record_on(serial) else "OFF")
+        print("screen locked:", locked(serial), "| foreground:", foreground(serial), "| audio route:", audio_route(serial))
     elif a.cmd == "answer":
         print(answer_and_speaker(serial))
     else:
