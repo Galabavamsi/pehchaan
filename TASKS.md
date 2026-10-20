@@ -52,39 +52,55 @@ Owners: **G** = Galaba, **V** = Varun. Tick boxes as you go and commit this file
 ## 🔧 To do before 24 Oct, day by day
 
 ### Mon 20 Oct (evening): handover and access
-- [ ] **G:** add Varun as a GitHub collaborator; merge this PR into `master`
+- [x] **G:** add Varun as a GitHub collaborator; merge this PR into `master` (merged, `e6370a5`)
 - [ ] **G:** share keys with Varun **privately** (never in git): `.env` (Vobiz, Sarvam, Deepgram, OpenAI, HF,
       Cloudflare), the `ml/infra/pehchaan-ml` SSH key, `participants.yaml`, `config.yaml`, the consent files
       in `data/raw/`
 - [x] **AWS access:** Varun uses the root login (decided 20 Oct); no IAM user needed
-- [ ] **V:** clone, set up (`HANDOVER.md` §6), run all tests green
+- [x] **V:** clone, set up (`HANDOVER.md` §6), run all tests green (20 Oct, Linux laptop, `.venv` Python 3.12:
+      engine 85, API 27, realcall 9; v1 weights + real-call work restored from S3, `compare_models` reproduces
+      FINDINGS). Still missing from Galaba: `data/raw/` consent evidence, Cloudflare tunnel files
 - [x] GPU instance `i-0fa3f0f58693b173e`: **keep** it stopped with its disk (decided 20 Oct)
 - [x] Other projects' instances (`urumi-vps`, `t9984-speech-recorder`) paused on 20 Oct; Elastic IPs kept
 - [x] Large real-call audio backed up to `s3://…/work/realcall_laptop` (883 MB); see `HANDOVER.md` §6
 - [ ] **G:** downgrade AWS Business Support+ to Basic if not needed (console, root)
 
 ### Tue 21 Oct: deployment and the live attack call
-- [ ] **Deploy the backend** to AWS Mumbai (ap-south-1): one EC2 (c7i.large) with Docker Compose running the
+- [x] **Deploy the backend** to AWS Mumbai (ap-south-1): one EC2 (c7i.large) with Docker Compose running the
       risk API, voice service (model v1 now; model A only if promoted) and Caddy; `api.humanslop.in`
-- [ ] **Deploy the web demo** to S3 + CloudFront (or Cloudflare Pages); `demo.humanslop.in`, built with
+      20 Oct: live on `pehchaan-demo` (3.109.40.69), TLS by Caddy; T1 → hold and L2 → paid verified.
+      Voice on 2 vCPU: ~3.1 s per 10 s clip (laptop 1.1 s; SPEC budget 1.5 s); c7i.xlarge if it matters
+- [x] Deploy files ready in `deploy/` (compose + Caddy + Dockerfiles + `push.sh`). Tested locally 20 Oct: both
+      images build, API → voice proxy gives real scores in shadow mode, evidence-pack PDF renders, images
+      contain no keys or audio. Caddy on the same box serves the web build, so no CloudFront/Pages needed
+- [x] **Deploy the web demo** (served by Caddy on the same box instead of S3 + CloudFront); `demo.humanslop.in`, built with
       `VITE_API=https://api.humanslop.in`
 - [ ] Health check from a phone on mobile data (not Wi-Fi)
 - [ ] **Live attack call:** a Vobiz call to Phone A speaking a consented Varun clone (Sarvam clone, made with
       `python -m realcall.sarvam_clone` or the existing team clones). Script: "accident, send ₹50,000".
-      Test 5 times.
-- [ ] Decide Phone A and Phone B (the payer and the "real son"). Both charged, unlocked, notifications on.
+      Test 5 times. Code ready (20 Oct): `sarvam_clone --say` makes the clip, `dial attack` places the call
+      (`ml/realcall/README.md`, "Live-demo attack call"). Clip made 20 Oct (`work/src/attack/t1_S02.wav`,
+      15.8 s); tunnel runs from Varun's laptop. Left: register Phone A in `participants.yaml`, then 5 test calls
+- [x] Decide Phone A and Phone B (the payer and the "real son"). Both charged, unlocked, notifications on.
+      20 Oct: Phone A = Varun's Redmi (device `A` in `participants.yaml`, same handset as D2); Phone B = Paritosh
+      for rehearsals (web page only, not recorded or cloned)
 
 ### Wed 22 Oct: Family Verify on a real second phone, and evidence
-- [ ] **Family Verify on Phone B:** the relative page `#/relative` opened on Phone B via
+- [x] **Family Verify on Phone B:** the relative page `#/relative` opened on Phone B via
       `demo.humanslop.in`, updating live over WebSocket. Optional: a push or SMS link.
-- [ ] **Payer flow on Phone A:** `#/payer` on Phone A (a web "DemoPay"). An Android shell reading real call
+- [x] **Payer flow on Phone A:** `#/payer` on Phone A (a web "DemoPay"). An Android shell reading real call
       state only if there's time.
 - [ ] Full flow end to end on the deployed URLs, 3 times: T1 (clone → HOLD), L2 (real son → paid), T2, T3
+      20 Oct: 1 of 3 done on real phones (all four scenarios), incl. one run with the live attack call:
+      Pay → Red hold (G7) in 14 s. Attack test calls: 2 of 5
 - [ ] **D2 held-out handset test:** about 20 tape calls to Varun's Redmi, **answered by hand on speaker**
       (adb speaker doesn't work on the Redmi), then score v1 vs model A (`python -m realcall.compare_models`)
 - [ ] **Live genuine calls:** volunteers V01–V05 sign `data/recording-kit/CONSENT_LIVE_CALLS.md` (or the
       cloning form if they agree to cloning), saved to `data/raw/consent/V0x.png`. Each makes 5–10 one-minute
       live calls (`python -m realcall.capture live …`). Aim for 50 live calls for the gate.
+      20 Oct: consent by WhatsApp reply (screenshot → `data/raw/consent/V0x.png`), so V01–V05 are now
+      `clone: false` in `participants.yaml` (recording only, as the live-call form promises).
+      Tunnel now runs from Varun's laptop; Galaba's no longer runs it
 - [ ] Sarvam clone headline: tape calls with `sarvam_ivc` clones (a generator never trained on), scored the same way
 
 ### Thu 23 Oct: deck, rehearsal, backups, travel
