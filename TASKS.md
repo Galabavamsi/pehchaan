@@ -93,10 +93,10 @@ Owners: **G** = Galaba, **V** = Varun. Tick boxes as you go and commit this file
 - [ ] Full flow end to end on the deployed URLs, 3 times: T1 (clone → HOLD), L2 (real son → paid), T2, T3
       20 Oct: 1 of 3 done on real phones (all four scenarios), incl. one run with the live attack call:
       Pay → Red hold (G7) in 14 s. Attack test calls: 2 of 5
-- [ ] **D2 held-out handset test:** about 20 tape calls to Varun's Redmi, **answered by hand on speaker**
+- [x] **D2 held-out handset test:** about 20 tape calls to Varun's Redmi, **answered by hand on speaker**
       (adb speaker doesn't work on the Redmi), then score v1 vs model A (`python -m realcall.compare_models`)
-      20 Oct: the 5 calls from 19 Oct scored (41 QC-ok clips): model A EER 19.5 %, genuine flagged 7/20 = 35 %
-      (v1 39.0 %, 9/20). See FINDINGS.md. A new session needs a quiet room (20 Oct attempt failed QC: room −34 dB)
+      20 Oct: 12 calls scored (19 + 20 Oct), 75 QC-ok clips: model A EER 18.7 %, genuine flagged 9/38 = 24 %
+      (v1 37.3 %, 15/38). See FINDINGS.md. More calls only in a room that stays below −55 dB
 - [ ] **Live genuine calls:** volunteers V01–V05 sign `data/recording-kit/CONSENT_LIVE_CALLS.md` (or the
       cloning form if they agree to cloning), saved to `data/raw/consent/V0x.png`. Each makes 5–10 one-minute
       live calls (`python -m realcall.capture live …`). Aim for 50 live calls for the gate.

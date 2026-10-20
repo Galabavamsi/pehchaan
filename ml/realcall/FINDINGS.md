@@ -70,29 +70,42 @@ Held-out generators stay hardest on real calls for A: Chatterbox 43 %, Seed-VC 6
 CosyVoice2 88 %, F5 58 %). Caveats: one handset, carrier and room in both train and test; same script lines;
 41 calls; one seed. Not yet shown: another handset (D2), live genuine callers, the gate (≥ 50 live calls).
 
-## Held-out handset D2 (scored 2026-10-20, calls placed 2026-10-19)
+## Held-out handset D2 (calls 19 and 20 Oct 2026, scored 20 Oct)
 
 D2 (Redmi Note 12 Pro, Jio) was registered as a **test-only handset before any D2 data existed** (`protocol.py`),
-so nothing from it shaped training, the learned channel or any threshold. Five tape calls on 19 Oct 16:29–16:53
-were answered by hand on speaker: 80 items aligned, **41 QC-ok (51 %)**, 20 genuine and 21 clones. Scored on the
-laptop CPU with the same checkpoints (`infra/score_realcall_local.sh D2`); thresholds unchanged (each model's
-simulated-test EER point). Median SNR of QC-ok items 19.2 dB (D1 test: 24.6 dB); room noise floor −60.7 dB
-(D1: −61.8 dB), so the room matched the D1 sessions and the difference is the handset.
+so nothing from it shaped training, the learned channel or any threshold. Tape calls answered by hand on
+speaker, laptop mic ~5 cm away. Scored on the laptop CPU with the same checkpoints
+(`infra/score_realcall_local.sh D2`); thresholds unchanged (each model's simulated-test EER point).
 
-| Model | D2 EER | AUC | Clones caught | Genuine flagged | (D1 test, for reference) |
-|---|---|---|---|---|---|
-| v1 (Round 1, served) | 39.0 % | 0.667 | 15/21 = 71 % (95 % CI 50–86 %) | 9/20 = 45 % (26–66 %) | 24.6 % EER, 3 % flagged |
-| **A: learned channel + real-call clips** | **19.5 %** | **0.933** | 20/21 = 95 % (77–99 %) | **7/20 = 35 % (18–57 %)** | 6.8 % EER, 0 % flagged |
+- 19 Oct: 5 calls, 80 items aligned, 41 QC-ok (51 %). Median SNR 19.2 dB, room floor −60.7 dB.
+- 20 Oct: 9 answered calls in Varun's room (one with no chirp heard: Speaker never on), 34 QC-ok of 80 aligned
+  items, from 7 calls. Median SNR 16.4 dB, floor −58.4 dB. The room was
+  not stable (floor rose to −52 and −27 dB on the last calls, and Speaker came on late in two calls), so the
+  session was stopped early. A first 20 Oct attempt in a louder room (floor −34 dB) gave 0/10 QC-ok and is excluded.
+- Together: **75 QC-ok clips from 12 calls**, 38 genuine and 37 clones (2 speakers). D1 test SNR for reference: 24.6 dB.
+
+| Model | Session | Clips | EER | AUC | Clones caught | Genuine flagged |
+|---|---|---|---|---|---|---|
+| v1 (Round 1, served) | 19 Oct | 41 | 39.0 % | 0.667 | 15/21 | 9/20 |
+| | 20 Oct | 34 | 44.1 % | 0.604 | 9/16 | 6/18 |
+| | **both** | **75** | **37.3 %** | **0.641** | **24/37 = 65 % (95 % CI 49–78 %)** | **15/38 = 39 % (26–55 %)** |
+| A: learned channel + real-call clips | 19 Oct | 41 | 19.5 % | 0.933 | 20/21 | 7/20 |
+| | 20 Oct | 34 | 17.7 % | 0.830 | 12/16 | 2/18 |
+| | **both** | **75** | **18.7 %** | **0.869** | **32/37 = 86 % (72–94 %)** | **9/38 = 24 % (13–39 %)** |
+
+On D1's test calls the same models score: v1 24.6 % EER, 3 % genuine flagged; A 6.8 % EER, 0 % flagged.
 
 What it means:
 
-1. **Model A's gain does not transfer to a new handset.** EER roughly triples (6.8 % → 19.5 %), and a third of
-   genuine speech is flagged, where D1 had none. The learned channel was fitted on D1 only; D2's speaker path
-   (and its ~5 dB lower SNR) is different. A still beats v1 on every metric here.
-2. **This is the false-alarm failure mode the gate exists to catch**, now on our own data: a detector that
-   looks clean on the handset it was tuned around flags real people on another phone. Voice stays in shadow mode
-   (G2); the decision rests on Family Verify, the bank registry and the safe word.
+1. **Model A's gain does not transfer to a new handset.** Its EER is ~19 % on D2 in both sessions, against
+   6.8 % on D1, and about a quarter of genuine speech is flagged (D1: none). The learned channel was fitted on D1
+   only; D2's speaker path and lower SNR differ. A still beats v1 on every metric.
+2. **This is the false-alarm failure mode the gate exists to catch**, now on our own data: a detector that looks
+   clean on the handset it was tuned around flags real people on another phone. Voice stays in shadow mode (G2);
+   the decision rests on Family Verify, the bank registry and the safe word.
+3. Sarvam (held-out generator, `sarvam_ivc`): only 3 QC-ok clone items reached D2, and both models scored all three
+   confidently as genuine (well below threshold). Three items prove nothing on their own, but they match the
+   held-out-generator weakness above. Not a headline number.
 
-Caveats: 41 clips from 5 calls (wide intervals above), two speakers, one session, one seed; half the D2 items
-failed QC. The 20 Oct follow-up session failed QC entirely (room floor −34 dB, Speaker on late) and is not in
-these numbers. Still not shown: live genuine callers and the gate (≥ 50 live calls).
+Caveats: 75 clips, 12 calls, two speakers, two sessions, one seed; intervals above are wide; about half the D2
+items failed QC. Still not shown: live genuine callers and the gate (≥ 50 live calls).

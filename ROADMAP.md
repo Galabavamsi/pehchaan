@@ -17,8 +17,8 @@ Legend: ✅ done and checked · 🟡 partly done · ❌ not started · ⏸ delib
 | Live attack call (`dial attack`, Sarvam clone of S02) | ✅ | **5 of 5** test calls clean (answered, 17 s clip played, normal hangup) |
 | Voice detector v1 | ✅ served (shadow) | Real scores on the server; ~3.1 s per 10 s clip on 2 vCPU (laptop 1.1 s; SPEC budget 1.5 s) |
 | Model A (real-call EER 24.6 % → 6.8 %) | 🟡 | Reproduced on this laptop; weights in S3; not served (doesn't need to be: voice is shadow-only) |
-| D2 held-out handset test | ✅ first result | 41 QC-ok clips, 5 calls (19 Oct). **Model A: EER 19.5 %, genuine flagged 7/20 = 35 %** (D1: 6.8 %, 0 %); v1 39.0 %, 45 %. Gain doesn't transfer to a new handset. `FINDINGS.md` |
-| Sarvam held-out-generator tapes | 🟡 | 71 Sarvam clones made (S01 41, S02 30); tape calls with them not yet placed |
+| D2 held-out handset test | ✅ | 75 QC-ok clips, 12 calls (19 + 20 Oct). **Model A: EER 18.7 %, genuine flagged 9/38 = 24 %** (D1: 6.8 %, 0 %); v1 37.3 %, 15/38. Gain doesn't transfer to a new handset. `FINDINGS.md` |
+| Sarvam held-out-generator tapes | 🟡 | 71 clones made; only 3 reached D2 with QC ok (both models missed all 3). Too few for a number |
 | Live genuine calls → the gate | ⏸ | Waiting on volunteer consent screenshots (Varun's call, 20 Oct). Code blocks V01–V05 until then |
 | Deck (Round 1, 23 slides) | ❌ | No real-call results, consent or live-demo slide yet |
 | Backup video, rehearsal | ❌ | |
@@ -45,21 +45,10 @@ python -m realcall.sarvam_clone --speakers S01 S02
 ```
 Check that `realcall/work/src/clone/sarvam_ivc/` fills up, then `python -m realcall.dial check` (tape sources).
 
-### D3. D2 held-out handset session: ~20 tape calls (≈ 45 min) 🟡 needs a quiet room
-20 Oct test call: 10/10 items failed QC. Room floor −34 dB (the good D1 sessions were −62 dB), so the phone's
-speaker was barely above the room, and Speaker came on after the start chirp (`end_chirp_only`). Mic gain was
-only 37 %, so it's the room, not the gain. **Redo in a quiet room** (capture prints the level first: it must say
-below −50 dBFS before you start).
-Set-up: Redmi **5 cm from the laptop mic**, full volume, quiet room, plugged in, screen on.
-```bash
-python -m realcall.capture session --device D2 --seconds 3600
-```
-```bash
-python -m realcall.dial tape --device D2 --n 20
-```
-- Run the two commands in separate terminals.
-- Each tape waits 6 s after you answer: **tap Speaker before the start chirp**.
-- After the first call, run `python -m realcall.ingest` once and check QC is "ok" before doing the other 19.
+### D3. D2 held-out handset session ✅ (stopped early, 20 Oct)
+9 answered calls in Varun's room: 34 QC-ok items from 7 calls (call 1 and the test call 10/10; others 0–4/10 as
+the room floor rose from −58 to −52 and −27 dB, the phone got quieter, or Speaker came on late). Stopped when the
+batch hit two weak calls. More D2 calls only help in a room that **stays** below −55 dB (late night is best).
 
 ### D4. Score D2 with v1 and model A, on the laptop CPU ✅ for the 19 Oct calls
 `bash infra/score_realcall_local.sh D2` (from `ml/`; scores only clips it hasn't seen, in `realcall/work/d2/`).
