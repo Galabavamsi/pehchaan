@@ -69,3 +69,30 @@ Real-call test split: 236 clips from 41 calls (S02 held-out speaker + S01 calls 
 Held-out generators stay hardest on real calls for A: Chatterbox 43 %, Seed-VC 62 % caught (XTTS 94 %, F5-Hindi 94 %,
 CosyVoice2 88 %, F5 58 %). Caveats: one handset, carrier and room in both train and test; same script lines;
 41 calls; one seed. Not yet shown: another handset (D2), live genuine callers, the gate (≥ 50 live calls).
+
+## Held-out handset D2 (scored 2026-10-20, calls placed 2026-10-19)
+
+D2 (Redmi Note 12 Pro, Jio) was registered as a **test-only handset before any D2 data existed** (`protocol.py`),
+so nothing from it shaped training, the learned channel or any threshold. Five tape calls on 19 Oct 16:29–16:53
+were answered by hand on speaker: 80 items aligned, **41 QC-ok (51 %)**, 20 genuine and 21 clones. Scored on the
+laptop CPU with the same checkpoints (`infra/score_realcall_local.sh D2`); thresholds unchanged (each model's
+simulated-test EER point). Median SNR of QC-ok items 19.2 dB (D1 test: 24.6 dB); room noise floor −60.7 dB
+(D1: −61.8 dB), so the room matched the D1 sessions and the difference is the handset.
+
+| Model | D2 EER | AUC | Clones caught | Genuine flagged | (D1 test, for reference) |
+|---|---|---|---|---|---|
+| v1 (Round 1, served) | 39.0 % | 0.667 | 15/21 = 71 % (95 % CI 50–86 %) | 9/20 = 45 % (26–66 %) | 24.6 % EER, 3 % flagged |
+| **A: learned channel + real-call clips** | **19.5 %** | **0.933** | 20/21 = 95 % (77–99 %) | **7/20 = 35 % (18–57 %)** | 6.8 % EER, 0 % flagged |
+
+What it means:
+
+1. **Model A's gain does not transfer to a new handset.** EER roughly triples (6.8 % → 19.5 %), and a third of
+   genuine speech is flagged, where D1 had none. The learned channel was fitted on D1 only; D2's speaker path
+   (and its ~5 dB lower SNR) is different. A still beats v1 on every metric here.
+2. **This is the false-alarm failure mode the gate exists to catch**, now on our own data: a detector that
+   looks clean on the handset it was tuned around flags real people on another phone. Voice stays in shadow mode
+   (G2); the decision rests on Family Verify, the bank registry and the safe word.
+
+Caveats: 41 clips from 5 calls (wide intervals above), two speakers, one session, one seed; half the D2 items
+failed QC. The 20 Oct follow-up session failed QC entirely (room floor −34 dB, Speaker on late) and is not in
+these numbers. Still not shown: live genuine callers and the gate (≥ 50 live calls).
