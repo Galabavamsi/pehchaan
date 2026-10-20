@@ -76,11 +76,11 @@ Owners: **G** = Galaba, **V** = Varun. Tick boxes as you go and commit this file
 - [x] **Deploy the web demo** (served by Caddy on the same box instead of S3 + CloudFront); `demo.humanslop.in`, built with
       `VITE_API=https://api.humanslop.in`
 - [ ] Health check from a phone on mobile data (not Wi-Fi)
-- [ ] **Live attack call:** a Vobiz call to Phone A speaking a consented Varun clone (Sarvam clone, made with
+- [x] **Live attack call:** a Vobiz call to Phone A speaking a consented Varun clone (Sarvam clone, made with
       `python -m realcall.sarvam_clone` or the existing team clones). Script: "accident, send ₹50,000".
       Test 5 times. Code ready (20 Oct): `sarvam_clone --say` makes the clip, `dial attack` places the call
       (`ml/realcall/README.md`, "Live-demo attack call"). Clip made 20 Oct (`work/src/attack/t1_S02.wav`,
-      15.8 s); tunnel runs from Varun's laptop. Left: register Phone A in `participants.yaml`, then 5 test calls
+      15.8 s); tunnel runs from Varun's laptop. Phone A registered as device `A`; **5/5 test calls clean** (20 Oct)
 - [x] Decide Phone A and Phone B (the payer and the "real son"). Both charged, unlocked, notifications on.
       20 Oct: Phone A = Varun's Redmi (device `A` in `participants.yaml`, same handset as D2); Phone B = Paritosh
       for rehearsals (web page only, not recorded or cloned)
@@ -95,6 +95,8 @@ Owners: **G** = Galaba, **V** = Varun. Tick boxes as you go and commit this file
       Pay → Red hold (G7) in 14 s. Attack test calls: 2 of 5
 - [ ] **D2 held-out handset test:** about 20 tape calls to Varun's Redmi, **answered by hand on speaker**
       (adb speaker doesn't work on the Redmi), then score v1 vs model A (`python -m realcall.compare_models`)
+      20 Oct: the 5 calls from 19 Oct scored (41 QC-ok clips): model A EER 19.5 %, genuine flagged 7/20 = 35 %
+      (v1 39.0 %, 9/20). See FINDINGS.md. A new session needs a quiet room (20 Oct attempt failed QC: room −34 dB)
 - [ ] **Live genuine calls:** volunteers V01–V05 sign `data/recording-kit/CONSENT_LIVE_CALLS.md` (or the
       cloning form if they agree to cloning), saved to `data/raw/consent/V0x.png`. Each makes 5–10 one-minute
       live calls (`python -m realcall.capture live …`). Aim for 50 live calls for the gate.

@@ -14,15 +14,15 @@ Legend: ✅ done and checked · 🟡 partly done · ❌ not started · ⏸ delib
 | Spec, engine + simulator, risk API, React demo | ✅ | Tests: engine 85, API 27, realcall 9 (`.venv`, Python 3.12) |
 | **Live demo on the internet** | ✅ | `https://demo.humanslop.in` + `https://api.humanslop.in` (EC2 `pehchaan-demo`, Caddy TLS). See `deploy/README.md` |
 | **Full live run on real phones** | ✅ | 20 Oct 19:01: clone call rang Phone A → Pay → "Rahul" → auto Family Verify on Phone B → "not me" → **Red hold (G7) 14 s after Pay** → Cancel and report. L2, T2, T3 also run on the phones |
-| Live attack call (`dial attack`, Sarvam clone of S02) | 🟡 | **2 of 5** test calls done, both clean (answered, 17 s clip played, normal hangup) |
+| Live attack call (`dial attack`, Sarvam clone of S02) | ✅ | **5 of 5** test calls clean (answered, 17 s clip played, normal hangup) |
 | Voice detector v1 | ✅ served (shadow) | Real scores on the server; ~3.1 s per 10 s clip on 2 vCPU (laptop 1.1 s; SPEC budget 1.5 s) |
 | Model A (real-call EER 24.6 % → 6.8 %) | 🟡 | Reproduced on this laptop; weights in S3; not served (doesn't need to be: voice is shadow-only) |
-| D2 held-out handset test | ❌ | ~7 calls so far; needs ~20 more |
-| Sarvam held-out-generator tapes | ❌ | Sarvam voice for S02 exists now; no tape calls yet |
+| D2 held-out handset test | ✅ first result | 41 QC-ok clips, 5 calls (19 Oct). **Model A: EER 19.5 %, genuine flagged 7/20 = 35 %** (D1: 6.8 %, 0 %); v1 39.0 %, 45 %. Gain doesn't transfer to a new handset. `FINDINGS.md` |
+| Sarvam held-out-generator tapes | 🟡 | 71 Sarvam clones made (S01 41, S02 30); tape calls with them not yet placed |
 | Live genuine calls → the gate | ⏸ | Waiting on volunteer consent screenshots (Varun's call, 20 Oct). Code blocks V01–V05 until then |
 | Deck (Round 1, 23 slides) | ❌ | No real-call results, consent or live-demo slide yet |
 | Backup video, rehearsal | ❌ | |
-| Git | ❌ | **Nothing from 20 Oct is committed yet** |
+| Git | ✅ | Branch `finale-prep` on VARUN3WARE/pehchaan |
 
 ---
 
@@ -31,13 +31,13 @@ Legend: ✅ done and checked · 🟡 partly done · ❌ not started · ⏸ delib
 Run everything from `ml/` with the venv (`../.venv/bin/python`). The call server and tunnel must be running
 (`calls.humanslop.in/healthz`). Phone A = D2 = Varun's Redmi: **answer by hand and tap Speaker** (adb can't).
 
-### D1. Attack calls 3–5 (≈ 3 min) 🟡
+### D1. Attack calls 3–5 ✅ (5/5 clean, 20 Oct)
 ```bash
 python -m realcall.dial attack --device A --speaker S02 --clip realcall/work/src/attack/t1_S02.wav --n 3
 ```
 Answer each one. Done when 5/5 played cleanly.
 
-### D2. Make the Sarvam clones first (≈ 10 min, uses Sarvam credits) ❌
+### D2. Make the Sarvam clones first ✅ (71 clips, 2.9–15.2 s; Sarvam voices for S01 and S02)
 Sarvam is a generator no model was trained on (`sarvam_ivc`, test-only in `protocol.py`). Cloning every scripted
 line for S01 and S02 *before* the D2 calls means one session tests a held-out handset **and** a held-out generator.
 ```bash
@@ -45,7 +45,11 @@ python -m realcall.sarvam_clone --speakers S01 S02
 ```
 Check that `realcall/work/src/clone/sarvam_ivc/` fills up, then `python -m realcall.dial check` (tape sources).
 
-### D3. D2 held-out handset session: ~20 tape calls (≈ 45 min) ❌
+### D3. D2 held-out handset session: ~20 tape calls (≈ 45 min) 🟡 needs a quiet room
+20 Oct test call: 10/10 items failed QC. Room floor −34 dB (the good D1 sessions were −62 dB), so the phone's
+speaker was barely above the room, and Speaker came on after the start chirp (`end_chirp_only`). Mic gain was
+only 37 %, so it's the room, not the gain. **Redo in a quiet room** (capture prints the level first: it must say
+below −50 dBFS before you start).
 Set-up: Redmi **5 cm from the laptop mic**, full volume, quiet room, plugged in, screen on.
 ```bash
 python -m realcall.capture session --device D2 --seconds 3600
@@ -57,7 +61,9 @@ python -m realcall.dial tape --device D2 --n 20
 - Each tape waits 6 s after you answer: **tap Speaker before the start chirp**.
 - After the first call, run `python -m realcall.ingest` once and check QC is "ok" before doing the other 19.
 
-### D4. Score D2 with v1 and model A, on the laptop CPU (≈ 30 min) ❌
+### D4. Score D2 with v1 and model A, on the laptop CPU ✅ for the 19 Oct calls
+`bash infra/score_realcall_local.sh D2` (from `ml/`; scores only clips it hasn't seen, in `realcall/work/d2/`).
+Result written to `FINDINGS.md` ("Held-out handset D2"). Re-run after any new D2 session.
 - Download model A (1.26 GB): `aws s3 cp s3://pehchaan-ml-301745146083-use1/runs/ours_v3_rc/best.pt …`
 - `python -m realcall.ingest`, then score the new real-call rows with v1 and model A (`eval/score.py`,
   `ckpt:` detector) into `realcall/work/retrain_v3/scores/real__ours_v1.csv` / `real__ours_v3_rc.csv`, and run
@@ -79,8 +85,8 @@ Target ≥ 50. **If not done by 23 Oct, the deck says "gate not yet met"**, and 
 ## 3. Left this week
 
 ### Before anything else
-- [ ] **Commit and push** today's work (deploy files, attack mode, docs). Nothing is committed yet
-- [ ] Run the tunnel + call server as a background service (they currently live inside a Claude session)
+- [x] Commit and push: branch `finale-prep` on VARUN3WARE/pehchaan
+- [x] Tunnel + call server as user systemd services (`systemctl --user status pehchaan-calls pehchaan-tunnel`)
 - [ ] Decide on voice latency: c7i.xlarge (~+$2.5/day) roughly halves 3.1 s; or leave it (voice never decides)
 
 ### Wed 22 Oct
@@ -90,8 +96,8 @@ Target ≥ 50. **If not done by 23 Oct, the deck says "gate not yet met"**, and 
       understand why?"
 
 ### Thu 23 Oct
-- [ ] **Deck** (`deck/slides.src.html`): real-call table + learned channel (`FINDINGS.md`), D2/Sarvam numbers if
-      collected, caveats (one carrier, single seed, gate not met), consent slide, live-demo flow slide,
+- [ ] **Deck** (`deck/slides.src.html`): real-call table + learned channel (`FINDINGS.md`), **the D2 handset result
+      (gain doesn't transfer; 35 % genuine flagged: the case for shadow mode)**, Sarvam numbers if collected, caveats (one carrier, single seed, gate not met), consent slide, live-demo flow slide,
       deployed latency (3.1 s on 2 vCPU, not the laptop's 0.98 s). Every number traced to its source file
 - [ ] **Backup video** of the full run (screen recording + phone camera), on the laptop **and** a phone
 - [ ] Rehearse the 4-min demo + pitch **3×** with a timer; answers to `HANDOVER.md` §8
@@ -124,6 +130,6 @@ video), the real-call slide with caveats, consent evidence for every voice used.
 - Deployed voice service = real v1 on CPU, shadow mode.
 
 ## 6. Running right now (Varun's laptop)
-- Real-call server (`python -m realcall.server`, port 8600) and `cloudflared tunnel run pehchaan`: started from this
-  Claude session, so they stop when it ends. Only one machine may run the tunnel.
+- Real-call server and tunnel: user systemd services `pehchaan-calls` and `pehchaan-tunnel` (started 20 Oct, not
+  enabled at boot: `systemctl --user start pehchaan-calls pehchaan-tunnel` after a reboot). Only one machine may run the tunnel.
 - Demo server `pehchaan-demo` (3.109.40.69): Caddy + API + voice, `restart: unless-stopped`.
