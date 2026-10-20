@@ -43,3 +43,6 @@ deck/slides.html
 deploy/web/
 deploy/weights/
 *.egg-info/
+
+# checkpoints pulled from S3 for local scoring
+ml/runs/
