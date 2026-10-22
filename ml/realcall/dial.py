@@ -79,7 +79,8 @@ def cmd_tape(a, reg):
         if a.auto_answer:
             import threading
             res = {}
-            th = threading.Thread(target=lambda: res.update(phone.answer_and_speaker(serial, ring_timeout=70)), daemon=True)
+            th = threading.Thread(target=lambda: res.update(phone.answer_and_speaker(serial, ring_timeout=70,
+                                                                                    lock_first=a.lock_first)), daemon=True)
             th.start()
         r = _register_and_dial(reg, "tape", a.device, tape_id=meta["tape_id"])
         print(f"[{i + 1}/{a.n}] call {r['call_id'][:8]} tape {meta['tape_id']} ({meta['total_s']:.0f} s): "
@@ -185,6 +186,8 @@ def main():
     t.add_argument("--pairs", type=int, default=5)
     t.add_argument("--speakers", nargs="*")
     t.add_argument("--auto-answer", action="store_true", help="answer each call and turn on speaker over adb")
+    t.add_argument("--lock-first", action="store_true",
+                   help="with --auto-answer: lock the screen before each ring (Redmi/MIUI needs the full-screen call UI)")
     t.add_argument("--pull", action="store_true", help="copy the phone's dialer recording after each call over adb")
     u = sub.add_parser("uplink")
     u.add_argument("--speaker", required=True)
