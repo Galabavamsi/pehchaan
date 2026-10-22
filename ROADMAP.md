@@ -17,8 +17,8 @@ Legend: ✅ done and checked · 🟡 partly done · ❌ not started · ⏸ delib
 | Live attack call (`dial attack`, Sarvam clone of S02) | ✅ | **5 of 5** test calls clean (answered, 17 s clip played, normal hangup) |
 | Voice detector v1 | ✅ served (shadow) | Real scores on the server; ~3.1 s per 10 s clip on 2 vCPU (laptop 1.1 s; SPEC budget 1.5 s) |
 | Model A (real-call EER 24.6 % → 6.8 %) | 🟡 | Reproduced on this laptop; weights in S3; not served (doesn't need to be: voice is shadow-only) |
-| D2 held-out handset test | ✅ | 75 QC-ok clips, 12 calls (19 + 20 Oct). **Model A: EER 18.7 %, genuine flagged 9/38 = 24 %** (D1: 6.8 %, 0 %); v1 37.3 %, 15/38. Gain doesn't transfer to a new handset. `FINDINGS.md` |
-| Sarvam held-out-generator tapes | 🟡 | 71 clones made; only 3 reached D2 with QC ok (both models missed all 3). Too few for a number |
+| D2 held-out handset test | ✅ | **274 QC-ok clips, 32 calls** (19 + 20 + 23 Oct; last 19 calls unattended over adb). **Model A: EER 11.7 %, caught 85 %, genuine flagged 11/138 = 8 %** (D1: 6.8 %, 0 %); v1 28.8 %, 12 %. `FINDINGS.md` |
+| Sarvam held-out-generator tapes | ✅ | 12 Sarvam clones reached D2 QC-ok: **both models caught 0/12** (95 % CI 0–24 %). New commercial cloner beats both detectors |
 | Live genuine calls → the gate | ⏸ | Waiting on volunteer consent screenshots (Varun's call, 20 Oct). Code blocks V01–V05 until then |
 | Deck (Round 1, 23 slides) | ❌ | No real-call results, consent or live-demo slide yet |
 | Backup video, rehearsal | ❌ | |
@@ -45,10 +45,10 @@ python -m realcall.sarvam_clone --speakers S01 S02
 ```
 Check that `realcall/work/src/clone/sarvam_ivc/` fills up, then `python -m realcall.dial check` (tape sources).
 
-### D3. D2 held-out handset session ✅ (stopped early, 20 Oct)
-9 answered calls in Varun's room: 34 QC-ok items from 7 calls (call 1 and the test call 10/10; others 0–4/10 as
-the room floor rose from −58 to −52 and −27 dB, the phone got quieter, or Speaker came on late). Stopped when the
-batch hit two weak calls. More D2 calls only help in a room that **stays** below −55 dB (late night is best).
+### D3. D2 held-out handset session ✅ (23 Oct, unattended)
+19 tape calls placed, answered and put on speaker over adb (`dial tape --device D2 --auto-answer --lock-first`, fix in
+`realcall/phone.py`): **189/190 items QC-ok**, speaker on every call, room −54 dB with fans off and Chrome muted.
+The hand-answered 20 Oct attempt (34/80) is kept in the totals.
 
 ### D4. Score D2 with v1 and model A, on the laptop CPU ✅ for the 19 Oct calls
 `bash infra/score_realcall_local.sh D2` (from `ml/`; scores only clips it hasn't seen, in `realcall/work/d2/`).
@@ -86,7 +86,8 @@ Target ≥ 50. **If not done by 23 Oct, the deck says "gate not yet met"**, and 
 
 ### Thu 23 Oct
 - [ ] **Deck** (`deck/slides.src.html`): real-call table + learned channel (`FINDINGS.md`), **the D2 handset result
-      (gain doesn't transfer; 35 % genuine flagged: the case for shadow mode)**, Sarvam numbers if collected, caveats (one carrier, single seed, gate not met), consent slide, live-demo flow slide,
+      (A: 11.7 % EER, 8 % genuine flagged on a phone it never saw; D1 6.8 %, 0 %)** and **Sarvam 0/12 caught by both
+      models: the case for shadow mode**, caveats (one carrier, single seed, gate not met), consent slide, live-demo flow slide,
       deployed latency (3.1 s on 2 vCPU, not the laptop's 0.98 s). Every number traced to its source file
 - [ ] **Backup video** of the full run (screen recording + phone camera), on the laptop **and** a phone
 - [ ] Rehearse the 4-min demo + pitch **3×** with a timer; answers to `HANDOVER.md` §8

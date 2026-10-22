@@ -95,8 +95,8 @@ Owners: **G** = Galaba, **V** = Varun. Tick boxes as you go and commit this file
       Pay → Red hold (G7) in 14 s. Attack test calls: 2 of 5
 - [x] **D2 held-out handset test:** about 20 tape calls to Varun's Redmi, **answered by hand on speaker**
       (adb speaker doesn't work on the Redmi), then score v1 vs model A (`python -m realcall.compare_models`)
-      20 Oct: 12 calls scored (19 + 20 Oct), 75 QC-ok clips: model A EER 18.7 %, genuine flagged 9/38 = 24 %
-      (v1 37.3 %, 15/38). See FINDINGS.md. More calls only in a room that stays below −55 dB
+      23 Oct: 32 calls scored (19 + 20 + 23 Oct), 274 QC-ok clips: model A EER 11.7 %, genuine flagged 11/138 = 8 %,
+      caught 85 %; v1 28.8 %, 16/138. Sarvam clones 0/12 caught by both. Last 19 calls unattended over adb. FINDINGS.md
 - [ ] **Live genuine calls:** volunteers V01–V05 sign `data/recording-kit/CONSENT_LIVE_CALLS.md` (or the
       cloning form if they agree to cloning), saved to `data/raw/consent/V0x.png`. Each makes 5–10 one-minute
       live calls (`python -m realcall.capture live …`). Aim for 50 live calls for the gate.
