@@ -96,7 +96,7 @@ are shown so no session is picked.
 | A: learned channel + real-call clips | 19 Oct | 41 | 19.5 % | 0.933 | 20/21 | 7/20 |
 | | 20 Oct | 34 | 17.7 % | 0.830 | 12/16 | 2/18 |
 | | 23 Oct | 199 | 10.1 % | 0.971 | 83/99 | 2/100 |
-| | **all** | **274** | **11.7 %** | **0.935** | **115/136 = 85 % (78–90 %)** | **11/138 = 8 % (5–14 %)** |
+| | **all** | **274** | **11.7 %** | **0.935** | **115/136 = 84.6 % (78–90 %)** | **11/138 = 8 % (5–14 %)** |
 
 (95 % Wilson intervals. D1 test calls for reference: v1 24.6 % EER, 3 % flagged; A 6.8 % EER, 75 % caught, 0 % flagged.)
 
@@ -117,3 +117,16 @@ What it means:
 
 Caveats: two speakers, one carrier, one room per session, one seed; sessions differ in conditions; Sarvam n = 12.
 Still not shown: live genuine callers and the gate (≥ 50 live calls).
+
+## Live system checks (20–23 Oct 2026)
+
+Measured on the deployed demo (`api.` / `demo.humanslop.in`, EC2 c7i.large in ap-south-1) with two real phones.
+
+- **Live attack call** (`dial attack`, Sarvam clone of consenting S02, Hindi T1 script, 17 s): 5/5 test calls to
+  Phone A answered and played in full, normal hangup (20 Oct). Never recorded or ingested.
+- **T1 with the live attack call** (20 Oct, Phone A = payer, Phone B = relative, both on the deployed URLs):
+  case created at Pay 19:01:38 IST, auto Family Verify after the claim, "not me" on Phone B → Red hold (G7) at
+  19:01:52: **14 s from Pay to hold** (server case timestamps).
+- **T3 with a live attack call** (21 Oct, T3 script clip): Pay 00:28:55 → Red hold 00:28:59 IST, **4 s**; then reported.
+- **Voice service on the deployed box** (2 vCPU, CPU int8): **3.1 s per 10 s clip** (4 runs, 3,086–3,143 ms), against
+  1.1 s on the team laptop's CPU. Above the SPEC budget of 1.5 s; voice is shadow-only, so no decision waits on it.
