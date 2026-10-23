@@ -17,7 +17,7 @@ Legend: ✅ done and checked · 🟡 partly done · ❌ not started · ⏸ delib
 | Live attack call (`dial attack`, Sarvam clone of S02) | ✅ | **5 of 5** test calls clean (answered, 17 s clip played, normal hangup) |
 | Voice detector v1 | ✅ served (shadow) | Real scores on the server; ~3.1 s per 10 s clip on 2 vCPU (laptop 1.1 s; SPEC budget 1.5 s) |
 | Model A (real-call EER 24.6 % → 6.8 %) | 🟡 | Reproduced on this laptop; weights in S3; not served (doesn't need to be: voice is shadow-only) |
-| D2 held-out handset test | ✅ | **274 QC-ok clips, 32 calls** (19 + 20 + 23 Oct; last 19 calls unattended over adb). **Model A: EER 11.7 %, caught 85 %, genuine flagged 11/138 = 8 %** (D1: 6.8 %, 0 %); v1 28.8 %, 12 %. `FINDINGS.md` |
+| D2 held-out handset test | ✅ | **274 QC-ok clips, 32 calls** (19 + 20 + 23 Oct; last 19 calls unattended over adb). **Model A: EER 11.7 %, caught 84.6 %, genuine flagged 11/138 = 8 %** (D1: 6.8 %, 0 %); v1 28.8 %, 12 %. `FINDINGS.md` |
 | Sarvam held-out-generator tapes | ✅ | 12 Sarvam clones reached D2 QC-ok: **both models caught 0/12** (95 % CI 0–24 %). New commercial cloner beats both detectors |
 | Live genuine calls → the gate | ⏸ | Waiting on volunteer consent screenshots (Varun's call, 20 Oct). Code blocks V01–V05 until then |
 | Deck (Round 1, 23 slides) | ❌ | No real-call results, consent or live-demo slide yet |
@@ -85,7 +85,7 @@ Target ≥ 50. **If not done by 23 Oct, the deck says "gate not yet met"**, and 
       understand why?"
 
 ### Thu 23 Oct
-- [ ] **Deck** (`deck/slides.src.html`): real-call table + learned channel (`FINDINGS.md`), **the D2 handset result
+- [x] **Deck** (`deck/slides.src.html`, done 23 Oct): real-call table + learned channel (`FINDINGS.md`), **the D2 handset result
       (A: 11.7 % EER, 8 % genuine flagged on a phone it never saw; D1 6.8 %, 0 %)** and **Sarvam 0/12 caught by both
       models: the case for shadow mode**, caveats (one carrier, single seed, gate not met), consent slide, live-demo flow slide,
       deployed latency (3.1 s on 2 vCPU, not the laptop's 0.98 s). Every number traced to its source file

@@ -96,7 +96,7 @@ Owners: **G** = Galaba, **V** = Varun. Tick boxes as you go and commit this file
 - [x] **D2 held-out handset test:** about 20 tape calls to Varun's Redmi, **answered by hand on speaker**
       (adb speaker doesn't work on the Redmi), then score v1 vs model A (`python -m realcall.compare_models`)
       23 Oct: 32 calls scored (19 + 20 + 23 Oct), 274 QC-ok clips: model A EER 11.7 %, genuine flagged 11/138 = 8 %,
-      caught 85 %; v1 28.8 %, 16/138. Sarvam clones 0/12 caught by both. Last 19 calls unattended over adb. FINDINGS.md
+      caught 84.6 %; v1 28.8 %, 16/138. Sarvam clones 0/12 caught by both. Last 19 calls unattended over adb. FINDINGS.md
 - [ ] **Live genuine calls:** volunteers V01–V05 sign `data/recording-kit/CONSENT_LIVE_CALLS.md` (or the
       cloning form if they agree to cloning), saved to `data/raw/consent/V0x.png`. Each makes 5–10 one-minute
       live calls (`python -m realcall.capture live …`). Aim for 50 live calls for the gate.
@@ -106,7 +106,8 @@ Owners: **G** = Galaba, **V** = Varun. Tick boxes as you go and commit this file
 - [ ] Sarvam clone headline: tape calls with `sarvam_ivc` clones (a generator never trained on), scored the same way
 
 ### Thu 23 Oct: deck, rehearsal, backups, travel
-- [ ] **Deck update** (`deck/slides.src.html`):
+- [x] **Deck update** (`deck/slides.src.html`), done 23 Oct: slides 1, 6, 7, 9, 10, A3 1–5 (new A3 4/5 real calls,
+      A3 5/5 consent), disclosures. Build: `python deck/build.py` → `deck/out/deck.pdf` (25 pages):
   - the real-call results table from `FINDINGS.md`
   - the learned-channel story
   - honest caveats: one handset, single seed, gate not met
@@ -157,8 +158,8 @@ Owners: **G** = Galaba, **V** = Varun. Tick boxes as you go and commit this file
 - [ ] Backup video of the full demo on the laptop **and** a phone (offline)
 
 **Evidence**
-- [ ] Deck numbers match `ml/realcall/FINDINGS.md` and `engine/results/deck_numbers.json`
-- [ ] Real-call results slide with caveats; consent slide; disclosures updated
+- [x] Deck numbers match `ml/realcall/FINDINGS.md` and `engine/results/deck_numbers.json` (checked 23 Oct)
+- [x] Real-call results slide with caveats; consent slide; disclosures updated
 - [ ] D2 (held-out handset) and live-call numbers added if collected; otherwise stated as not yet done
 
 **Safety and consent**
