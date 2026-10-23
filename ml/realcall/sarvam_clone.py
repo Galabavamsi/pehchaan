@@ -86,7 +86,12 @@ def main():
         if not a.speakers or len(a.speakers) != 1 or a.lang not in LANG:
             raise SystemExit("--say needs exactly one --speakers ID and a --lang from LANG")
         spk = a.speakers[0]
-        out = Path(a.out) if a.out else ATTACK_SRC / f"{spk}_{len(list(ATTACK_SRC.glob(f'{spk}_*.wav'))) + 1}.wav"
+        if a.out:
+            out = Path(a.out)
+        else:   # next unused number: never overwrite a saved clip, even with gaps in the numbering
+            n = 1 + max((int(p.stem.rsplit("_", 1)[1]) for p in ATTACK_SRC.glob(f"{spk}_*.wav")
+                         if p.stem.rsplit("_", 1)[1].isdigit()), default=0)
+            out = ATTACK_SRC / f"{spk}_{n}.wav"
         speak(spk, a.say, a.lang, out)
         print(f"{spk}: wrote {out}")
         return

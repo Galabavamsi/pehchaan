@@ -141,17 +141,20 @@ def cmd_attack(a, reg):
     to = reg.dialable(a.device)   # fail before anything is written if the device can't be dialled
     for i in range(a.n):
         call_id = uuid.uuid4().hex
-        save(ATTACK / f"{call_id}.wav", resample(x, SR, 8000), 8000)   # what Vobiz plays (8 kHz mono)
-        d = reg.device(a.device)
-        log_event("call_registered", call_id=call_id, kind="attack", device=a.device, device_hash=hash_number(to),
-                  carrier=d.get("carrier"), network=d.get("network"), model=d.get("model"), route="cellular",
-                  speaker=a.speaker, clip=clip.name, clip_s=round(len(x) / SR, 1))
-        resp = _vobiz_call(to, call_id)
-        log_event("call_api", call_id=call_id, request_uuid=resp.get("request_uuid"), message=resp.get("message"))
-        print(f"[{i + 1}/{a.n}] attack call {call_id[:8]}: {clip.name} ({len(x) / SR:.0f} s) as {a.speaker} -> {a.device}", flush=True)
-        c = _wait_hangup(call_id, len(x) / SR + 120)
-        print(f"  ended: {c.get('hangup_cause')} after {c.get('duration_s')} s", flush=True)
-        (ATTACK / f"{call_id}.wav").unlink(missing_ok=True)
+        wav = ATTACK / f"{call_id}.wav"
+        save(wav, resample(x, SR, 8000), 8000)   # what Vobiz plays (8 kHz mono)
+        try:
+            d = reg.device(a.device)
+            log_event("call_registered", call_id=call_id, kind="attack", device=a.device, device_hash=hash_number(to),
+                      carrier=d.get("carrier"), network=d.get("network"), model=d.get("model"), route="cellular",
+                      speaker=a.speaker, clip=clip.name, clip_s=round(len(x) / SR, 1))
+            resp = _vobiz_call(to, call_id)
+            log_event("call_api", call_id=call_id, request_uuid=resp.get("request_uuid"), message=resp.get("message"))
+            print(f"[{i + 1}/{a.n}] attack call {call_id[:8]}: {clip.name} ({len(x) / SR:.0f} s) as {a.speaker} -> {a.device}", flush=True)
+            c = _wait_hangup(call_id, len(x) / SR + 120)
+            print(f"  ended: {c.get('hangup_cause')} after {c.get('duration_s')} s", flush=True)
+        finally:
+            wav.unlink(missing_ok=True)   # also when Vobiz rejects the call, it times out or the operator interrupts
         if i + 1 < a.n:
             time.sleep(config()["gap_between_calls_s"])
 

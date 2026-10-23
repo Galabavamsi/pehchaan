@@ -239,6 +239,13 @@ def test_attack_call_plays_clip_only_while_live(monkeypatch):
     assert not (settings.ATTACK / f"{cid}.wav").exists()
     with pytest.raises(PermissionError):                            # no clone consent, no attack call
         dial.cmd_attack(type("A", (), dict(device="D1", speaker="V01", clip=str(clip), n=1, lead_in=0)), Registry())
+
+    def vobiz_rejects(to, call_id):
+        raise RuntimeError("Vobiz 400: rejected")
+    monkeypatch.setattr(dial, "_vobiz_call", vobiz_rejects)
+    with pytest.raises(RuntimeError):                               # a failed call leaves no playback copy behind
+        dial.cmd_attack(a, Registry())
+    assert not list(settings.ATTACK.glob("*.wav"))
     assert cid not in set(ingest.main().call_id)                    # demo calls never enter the datasets
 
 
