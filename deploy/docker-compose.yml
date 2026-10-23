@@ -1,0 +1,41 @@
+# One box (ap-south-1): Caddy (TLS) -> risk API; Caddy also serves the built web demo.
+# The voice service is internal only. Run from deploy/ on the server:
+#   docker compose up -d --build
+# Hosts come from deploy/.env.deploy (API_HOST, DEMO_HOST); see deploy/README.md.
+name: pehchaan
+
+services:
+  api:
+    build: {context: .., dockerfile: deploy/api.Dockerfile}
+    restart: unless-stopped
+    environment:
+      VOICE_SERVICE_URL: http://voice:8500   # the API falls back to its mock if this is down
+      PEHCHAAN_DEMO_TIME: ${PEHCHAAN_DEMO_TIME:-}
+    volumes: [api-data:/data]
+    depends_on: [voice]
+
+  voice:
+    build: {context: .., dockerfile: deploy/voice.Dockerfile}
+    restart: unless-stopped
+    environment:
+      PEHCHAAN_THREADS: ${PEHCHAAN_THREADS:-2}
+    volumes: [./weights:/srv/ml/serve/weights:ro]
+
+  caddy:
+    image: caddy:2.8
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      API_HOST: ${API_HOST:-api.humanslop.in}
+      DEMO_HOST: ${DEMO_HOST:-demo.humanslop.in}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./web:/srv/web:ro          # app/web/dist, built with VITE_API=https://$API_HOST
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [api]
+
+volumes:
+  api-data:
+  caddy-data:
+  caddy-config:

@@ -211,6 +211,44 @@ def test_server_answer_and_uplink_ws(sources):
     assert len(up) == 2 and set(up.label) == {"bonafide"}
 
 
+def test_attack_call_plays_clip_only_while_live(monkeypatch):
+    from fastapi.testclient import TestClient
+    from realcall import dial, server
+    server.config = lambda: {**settings.DEFAULTS, "public_base_url": "https://example.trycloudflare.com"}
+    cl = TestClient(server.app)
+    clip = TMP / "t1_S02.wav"
+    save(clip, fake_speech(4, 180, 11), SR)
+    dialled = []
+
+    def fake_vobiz(to, call_id):
+        # Vobiz fetches the answer XML and the clip while the call is live
+        r = cl.post(f"/answer/{call_id}", data={"CallUUID": "a1"})
+        assert f"/attack/{call_id}.wav</Play>" in r.text and "recordSession" not in r.text
+        assert cl.get(f"/attack/{call_id}.wav").status_code == 200
+        assert cl.get(f"/tape/{call_id}.wav").status_code == 404
+        cl.post(f"/hangup/{call_id}", data={"CallUUID": "a1", "HangupCause": "NORMAL_CLEARING"})
+        dialled.append((to, call_id))
+        return {"request_uuid": "r1"}
+
+    monkeypatch.setattr(dial, "_vobiz_call", fake_vobiz)
+    a = type("A", (), dict(device="D1", speaker="S02", clip=str(clip), n=1, lead_in=1.0))
+    dial.cmd_attack(a, Registry())
+    (to, cid), = dialled
+    assert to == "+919000000001" and settings.calls()[cid]["kind"] == "attack"
+    assert cl.get(f"/attack/{cid}.wav").status_code == 404        # hung up: clip gone
+    assert not (settings.ATTACK / f"{cid}.wav").exists()
+    with pytest.raises(PermissionError):                            # no clone consent, no attack call
+        dial.cmd_attack(type("A", (), dict(device="D1", speaker="V01", clip=str(clip), n=1, lead_in=0)), Registry())
+
+    def vobiz_rejects(to, call_id):
+        raise RuntimeError("Vobiz 400: rejected")
+    monkeypatch.setattr(dial, "_vobiz_call", vobiz_rejects)
+    with pytest.raises(RuntimeError):                               # a failed call leaves no playback copy behind
+        dial.cmd_attack(a, Registry())
+    assert not list(settings.ATTACK.glob("*.wav"))
+    assert cid not in set(ingest.main().call_id)                    # demo calls never enter the datasets
+
+
 def test_protocol_live_callers_stay_in_one_split():
     from realcall import protocol
     old = set(protocol.TEST_DEVICES)

@@ -38,3 +38,11 @@ session-export/
 submission/*.pdf
 deck/slides.html
 *participant-brief.pdf
+
+# deploy box: built web and mounted weights
+deploy/web/
+deploy/weights/
+*.egg-info/
+
+# checkpoints pulled from S3 for local scoring
+ml/runs/

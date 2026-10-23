@@ -107,3 +107,20 @@ to `work/device_uploads/<device>/` and `ingest.py` will align those as a second 
 line_id, split, heldout, source, native_channel`) plus call metadata. Append the train/dev rows to
 `corpus_src.csv` to fine-tune (rows with a `realcall_*` native channel skip channel simulation),
 re-run `gate.py` with the new model, and only promote voice if the gate passes.
+
+## Live-demo attack call (finale)
+
+Not a measurement: it rings the payer's phone (Phone A) with a consented clone saying the T1 script, so the
+judges hear the scam before Pehchaan stops it. Attack calls are never recorded, ingested, scored or counted.
+
+```bash
+python -m realcall.sarvam_clone --speakers S02 --lang hi --say "Mummy, main Rahul... accident ho gaya, police ne phone le liya. Papa ko mat batana, abhi pachaas hazaar bhej do."
+```
+```bash
+python -m realcall.dial attack --device A --speaker S02 --clip realcall/work/src/attack/S02_1.wav
+```
+
+- The speaker needs clone consent and the device must be registered in `participants.yaml` (owner consented to
+  being called), exactly as for tapes. Run the server and the tunnel first.
+- The clip is written to `work/attack/<call_id>.wav`, served only while that call is live, and deleted at hangup.
+- An existing team clone (`work/src/clone/<gen>/…`) also works as `--clip` if Sarvam is unavailable.

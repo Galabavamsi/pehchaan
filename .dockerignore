@@ -1,0 +1,26 @@
+# Build context is the repo root. Secrets, audio and personal data must never enter an image.
+.git
+.env
+.env.*
+**/participants.yaml
+ml/realcall/config.yaml
+ml/infra/pehchaan-ml
+data/
+ml/realcall/work/
+ml/serve/weights/
+**/*.pt
+**/*.wav
+**/*.mp3
+**/*.flac
+**/*.mp4
+
+# local environments and build output
+.venv/
+**/node_modules/
+**/__pycache__/
+**/*.egg-info/
+app/server/data/
+app/web/dist/
+deck/
+research/
+session-export/

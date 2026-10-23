@@ -16,7 +16,7 @@ from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconn
 from fastapi.responses import FileResponse, Response
 
 from common.audio import load, save
-from realcall.settings import TAPES, UPLINK, calls, config, ensure_dirs, log_event
+from realcall.settings import ATTACK, TAPES, UPLINK, calls, config, ensure_dirs, log_event
 
 app = FastAPI(title="pehchaan-realcall")
 SR_UP = 16000
@@ -73,6 +73,9 @@ async def answer(call_id: str, request: Request):
     if c["kind"] == "tape":
         # 6 s before the tape: time for the phone (by hand or realcall.phone) to switch to speaker before the start chirp
         return _xml(f'{rec}\n<Wait length="6"/>\n<Play>{escape(b)}/tape/{call_id}.wav</Play>\n<Wait length="2"/>\n<Hangup/>')
+    if c["kind"] == "attack":
+        # demo theatre: never recorded, whatever record_session says
+        return _xml(f'<Play>{escape(b)}/attack/{call_id}.wav</Play>\n<Wait length="1"/>\n<Hangup/>')
     if c["kind"] == "uplink":
         ws = b.replace("https://", "wss://") + f"/ws/uplink/{call_id}"
         return _xml(f'<Stream bidirectional="true" audioTrack="inbound" contentType="audio/x-l16;rate={SR_UP}" keepCallAlive="true" '
@@ -125,6 +128,21 @@ def tape_file(name: str):
     if "hangup_t" in c or time.time() - c.get("registered_t", 0) > TAPE_URL_TTL_S:
         raise HTTPException(404)
     p = TAPES / f"{c['tape_id']}.wav"
+    if not p.exists():
+        raise HTTPException(404)
+    return FileResponse(p, media_type="audio/wav")
+
+
+@app.api_route("/attack/{name}", methods=["GET", "HEAD"])
+def attack_file(name: str):
+    """The clone clip for one live-demo attack call, by its unguessable call ID, only while that call is live."""
+    call_id = name[:-4] if name.endswith(".wav") else ""
+    c = calls().get(call_id)
+    if not c or c.get("kind") != "attack":
+        raise HTTPException(404)
+    if "hangup_t" in c or time.time() - c.get("registered_t", 0) > TAPE_URL_TTL_S:
+        raise HTTPException(404)
+    p = ATTACK / f"{call_id}.wav"
     if not p.exists():
         raise HTTPException(404)
     return FileResponse(p, media_type="audio/wav")

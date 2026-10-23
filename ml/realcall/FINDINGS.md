@@ -69,3 +69,64 @@ Real-call test split: 236 clips from 41 calls (S02 held-out speaker + S01 calls 
 Held-out generators stay hardest on real calls for A: Chatterbox 43 %, Seed-VC 62 % caught (XTTS 94 %, F5-Hindi 94 %,
 CosyVoice2 88 %, F5 58 %). Caveats: one handset, carrier and room in both train and test; same script lines;
 41 calls; one seed. Not yet shown: another handset (D2), live genuine callers, the gate (≥ 50 live calls).
+
+## Held-out handset D2 (calls 19, 20 and 23 Oct 2026 IST, scored 23 Oct)
+
+D2 (Redmi Note 12 Pro, Jio) was registered as a **test-only handset before any D2 data existed** (`protocol.py`),
+so nothing from it shaped training, the learned channel or any threshold. Tape calls on speaker, laptop mic ~5 cm
+away; scored on the laptop CPU with the same checkpoints (`infra/score_realcall_local.sh D2`); thresholds unchanged
+(each model's simulated-test EER point). The pre-registered measure is **all QC-ok D2 test clips**; per-session rows
+are shown so no session is picked.
+
+| Session (IST) | How answered | Calls with QC-ok items | QC-ok / aligned | Median SNR |
+|---|---|---|---|---|
+| 19 Oct | by hand | 5 | 41 / 70 | 19.2 dB |
+| 20 Oct | by hand, room got louder (stopped early) | 7 | 34 / 90 | 16.4 dB |
+| 23 Oct | **unattended over adb** (`--auto-answer --lock-first`), quiet room | 20 | 199 / 230 | 16.7 dB |
+| **all** | | **32** | **274** (138 genuine, 136 clones) | 16.9 dB |
+
+(23 Oct includes one diagnostic call where speaker came on; the three earpiece-only diagnostic calls all failed QC.)
+
+| Model | Session | Clips | EER | AUC | Clones caught | Genuine flagged |
+|---|---|---|---|---|---|---|
+| v1 (Round 1, served) | 19 Oct | 41 | 39.0 % | 0.667 | 15/21 | 9/20 |
+| | 20 Oct | 34 | 44.1 % | 0.604 | 9/16 | 6/18 |
+| | 23 Oct | 199 | 23.1 % | 0.818 | 29/99 | 1/100 |
+| | **all** | **274** | **28.8 %** | **0.737** | **53/136 = 39 % (31–47 %)** | **16/138 = 12 % (7–18 %)** |
+| A: learned channel + real-call clips | 19 Oct | 41 | 19.5 % | 0.933 | 20/21 | 7/20 |
+| | 20 Oct | 34 | 17.7 % | 0.830 | 12/16 | 2/18 |
+| | 23 Oct | 199 | 10.1 % | 0.971 | 83/99 | 2/100 |
+| | **all** | **274** | **11.7 %** | **0.935** | **115/136 = 84.6 % (78–90 %)** | **11/138 = 8 % (5–14 %)** |
+
+(95 % Wilson intervals. D1 test calls for reference: v1 24.6 % EER, 3 % flagged; A 6.8 % EER, 75 % caught, 0 % flagged.)
+
+**Sarvam (`sarvam_ivc`, a commercial generator no model was trained on, test-only):** 12 clone items reached D2
+QC-ok. **Both models caught 0/12** (95 % CI 0–24 %); median scores were far on the "genuine" side (A −6.2 vs threshold
+−0.3; v1 −10.4 vs −2.5). Without Sarvam, A caught 115/124 of the other clones.
+
+What it means:
+
+1. **Model A's gain mostly transfers to a new handset, not fully.** EER 6.8 % on D1 → 11.7 % on D2; a few genuine
+   clips are flagged (8 %) where D1 had none. A beats v1 on every metric. (A smaller 20 Oct estimate of 24 % genuine
+   flagged came from 75 hand-answered clips and is superseded by the full set above.)
+2. **Capture consistency matters as much as the model.** The hand-answered sessions flagged 9/38 genuine clips; the
+   unattended session, with the same speaker route every call, flagged 2/100. An in-app capture path is the fix.
+3. **A new commercial cloner beat both detectors on every clip.** This is the strongest evidence so far for the
+   product rule: voice stays in shadow mode (G2), and the decision rests on Family Verify, the bank registry and the
+   safe word.
+
+Caveats: two speakers, one carrier, one room per session, one seed; sessions differ in conditions; Sarvam n = 12.
+Still not shown: live genuine callers and the gate (≥ 50 live calls).
+
+## Live system checks (20–23 Oct 2026)
+
+Measured on the deployed demo (`api.` / `demo.humanslop.in`, EC2 c7i.large in ap-south-1) with two real phones.
+
+- **Live attack call** (`dial attack`, Sarvam clone of consenting S02, Hindi T1 script, 17 s): 5/5 test calls to
+  Phone A answered and played in full, normal hangup (20 Oct). Never recorded or ingested.
+- **T1 with the live attack call** (20 Oct, Phone A = payer, Phone B = relative, both on the deployed URLs):
+  case created at Pay 19:01:38 IST, auto Family Verify after the claim, "not me" on Phone B → Red hold (G7) at
+  19:01:52: **14 s from Pay to hold** (server case timestamps).
+- **T3 with a live attack call** (21 Oct, T3 script clip): Pay 00:28:55 → Red hold 00:28:59 IST, **4 s**; then reported.
+- **Voice service on the deployed box** (2 vCPU, CPU int8): **3.1 s per 10 s clip** (4 runs, 3,086–3,143 ms), against
+  1.1 s on the team laptop's CPU. Above the SPEC budget of 1.5 s; voice is shadow-only, so no decision waits on it.

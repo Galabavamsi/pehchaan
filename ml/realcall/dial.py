@@ -2,6 +2,7 @@
 
   python -m realcall.dial tape --device D2 --n 10              # 10 tape calls to device D2
   python -m realcall.dial uplink --speaker S01 --device D1 --lines 12 --replay 4
+  python -m realcall.dial attack --device A --speaker S02 --clip work/src/attack/t1_S02.wav   # live-demo attack call
   python -m realcall.dial check                                # credentials, tunnel, sources; places no call
 
 Only registered devices of consenting participants can be dialled (consent.Registry.dialable).
@@ -10,11 +11,15 @@ import argparse
 import random
 import time
 import uuid
+from pathlib import Path
 
+import numpy as np
 import requests
 
+from common.audio import load, resample, save
 from realcall.consent import Registry, hash_number
-from realcall.settings import UPLINK, calls, config, env, ensure_dirs, log_event
+from realcall.dsp import SR
+from realcall.settings import ATTACK, UPLINK, calls, config, env, ensure_dirs, log_event
 from realcall.tape import _texts, build, index_sources
 
 
@@ -74,7 +79,8 @@ def cmd_tape(a, reg):
         if a.auto_answer:
             import threading
             res = {}
-            th = threading.Thread(target=lambda: res.update(phone.answer_and_speaker(serial, ring_timeout=70)), daemon=True)
+            th = threading.Thread(target=lambda: res.update(phone.answer_and_speaker(serial, ring_timeout=70,
+                                                                                    lock_first=a.lock_first)), daemon=True)
             th.start()
         r = _register_and_dial(reg, "tape", a.device, tape_id=meta["tape_id"])
         print(f"[{i + 1}/{a.n}] call {r['call_id'][:8]} tape {meta['tape_id']} ({meta['total_s']:.0f} s): "
@@ -121,6 +127,38 @@ def cmd_uplink(a, reg):
     print(f"ended: {c.get('hangup_cause')} after {c.get('duration_s')} s")
 
 
+def cmd_attack(a, reg):
+    """Live-demo attack call: play one consented clone clip (e.g. the T1 "accident, send ₹50,000" script) to a
+    registered device. Demo theatre only: attack calls are never ingested, scored or counted towards the gate."""
+    reg.require_clone(a.speaker)
+    clip = Path(a.clip)
+    if not clip.exists():
+        raise SystemExit(f"{clip} not found (make one with: python -m realcall.sarvam_clone --speakers {a.speaker} --say ...)")
+    ensure_dirs()
+    x = load(clip)
+    if a.lead_in:
+        x = np.concatenate([np.zeros(int(a.lead_in * SR), np.float32), x])
+    to = reg.dialable(a.device)   # fail before anything is written if the device can't be dialled
+    for i in range(a.n):
+        call_id = uuid.uuid4().hex
+        wav = ATTACK / f"{call_id}.wav"
+        save(wav, resample(x, SR, 8000), 8000)   # what Vobiz plays (8 kHz mono)
+        try:
+            d = reg.device(a.device)
+            log_event("call_registered", call_id=call_id, kind="attack", device=a.device, device_hash=hash_number(to),
+                      carrier=d.get("carrier"), network=d.get("network"), model=d.get("model"), route="cellular",
+                      speaker=a.speaker, clip=clip.name, clip_s=round(len(x) / SR, 1))
+            resp = _vobiz_call(to, call_id)
+            log_event("call_api", call_id=call_id, request_uuid=resp.get("request_uuid"), message=resp.get("message"))
+            print(f"[{i + 1}/{a.n}] attack call {call_id[:8]}: {clip.name} ({len(x) / SR:.0f} s) as {a.speaker} -> {a.device}", flush=True)
+            c = _wait_hangup(call_id, len(x) / SR + 120)
+            print(f"  ended: {c.get('hangup_cause')} after {c.get('duration_s')} s", flush=True)
+        finally:
+            wav.unlink(missing_ok=True)   # also when Vobiz rejects the call, it times out or the operator interrupts
+        if i + 1 < a.n:
+            time.sleep(config()["gap_between_calls_s"])
+
+
 def cmd_check(a, reg):
     cfg = config()
     print("vobiz_number:", "set" if cfg.get("vobiz_number") and "X" not in cfg["vobiz_number"] else "MISSING")
@@ -151,6 +189,8 @@ def main():
     t.add_argument("--pairs", type=int, default=5)
     t.add_argument("--speakers", nargs="*")
     t.add_argument("--auto-answer", action="store_true", help="answer each call and turn on speaker over adb")
+    t.add_argument("--lock-first", action="store_true",
+                   help="with --auto-answer: lock the screen before each ring (Redmi/MIUI needs the full-screen call UI)")
     t.add_argument("--pull", action="store_true", help="copy the phone's dialer recording after each call over adb")
     u = sub.add_parser("uplink")
     u.add_argument("--speaker", required=True)
@@ -158,10 +198,16 @@ def main():
     u.add_argument("--lines", type=int, default=12)
     u.add_argument("--replay", type=int, default=0)
     u.add_argument("--window", type=float, default=9.0)
+    k = sub.add_parser("attack", help="live demo: play one consented clone clip to a device")
+    k.add_argument("--device", required=True)
+    k.add_argument("--speaker", required=True, help="whose cloned voice the clip is (needs clone consent)")
+    k.add_argument("--clip", required=True)
+    k.add_argument("--n", type=int, default=1)
+    k.add_argument("--lead-in", type=float, default=1.5, help="seconds of silence after answer before the voice")
     sub.add_parser("check")
     a = ap.parse_args()
     reg = Registry()
-    {"tape": cmd_tape, "uplink": cmd_uplink, "check": cmd_check}[a.cmd](a, reg)
+    {"tape": cmd_tape, "uplink": cmd_uplink, "attack": cmd_attack, "check": cmd_check}[a.cmd](a, reg)
 
 
 if __name__ == "__main__":

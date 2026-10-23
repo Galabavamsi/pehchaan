@@ -158,11 +158,19 @@ def _wait_offhook(serial, wait_s=2.0) -> bool:
     return False
 
 
-def answer_and_speaker(serial=None, ring_timeout=60, call_id=None) -> dict:
+def answer_and_speaker(serial=None, ring_timeout=60, call_id=None, lock_first=False) -> dict:
     """Wait for the ring, answer, put the call on speaker. Every step is checked against the phone's real state
-    (call state from telephony, audio route from telecom); the result records which method worked and when."""
+    (call state from telephony, audio route from telecom); the result records which method worked and when.
+
+    lock_first: switch the screen off before the ring, so the call arrives as the full-screen call UI with Answer
+    and Speaker buttons. Needed on the Redmi (MIUI + Google Phone): unlocked, the call is only a banner, answering
+    leaves it in the background and the Speaker button is never on screen (verified 23 Oct)."""
     log = {}
-    if locked(serial):
+    if lock_first:
+        if not locked(serial):
+            adb("shell", "input", "keyevent", "KEYCODE_SLEEP", serial=serial)
+            time.sleep(1.0)
+    elif locked(serial):
         adb("shell", "input", "keyevent", "KEYCODE_WAKEUP", serial=serial)
         adb("shell", "wm", "dismiss-keyguard", serial=serial)
         time.sleep(0.8)

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>Pehchaan — RAKSHAM Round 1</title>
+<html lang="en"><head><meta charset="utf-8"><title>Pehchaan — RAKSHAM Grand Finale</title>
 <link rel="stylesheet" href="styles.css">
 <style>
 /* ---------- slide 1 ---------- */
@@ -97,9 +97,9 @@
     <div class="card"><div class="row" style="gap:8px;align-items:center"><span class="num">3</span><span class="h3">Verify</span></div><p class="sm" style="margin-top:5px">A check a clone can't pass, then <span class="chip g">GO</span> <span class="chip a">PAUSE</span> <span class="chip r">HOLD</span></p></div>
   </div>
   <div class="row" style="gap:8px;margin-top:16px;flex-wrap:wrap;max-width:700px">
-    <span class="chip line">{{icon:check-circle}} working prototype: 3 live surfaces</span>
+    <span class="chip line">{{icon:check-circle}} live at demo.humanslop.in</span>
     <span class="chip line">{{icon:check-circle}} consented Indic voice corpus (te · hi · en)</span>
-    <span class="chip line">{{icon:check-circle}} fine-tuned clone detector on AWS</span>
+    <span class="chip line">{{icon:check-circle}} tested on 73 real phone calls, 2 handsets</span>
     <span class="chip line">{{icon:check-circle}} unit-tested guardrails</span>
   </div>
   <div class="team" style="grid-template-columns:repeat(3,1fr)">
@@ -120,7 +120,7 @@
       <p class="sm" style="margin-top:5px"><b>"Is it really Rahul?"</b> Ask him on <i>his</i> phone. A clone can't answer from there.</p>
     </div>
   </div>
-<div class="foot"><span class="src">Round 1 submission · pitch deck (10 slides) · architecture overview (3 pages) · appendix (sources, disclosures, results)</span><span class="pg">01 / 10</span></div>
+<div class="foot"><span class="src">Grand finale · IIT Delhi · 24–25 Oct 2026 · pitch (10) · architecture (3) · appendix (results, real calls, consent, sources)</span><span class="pg">01 / 10</span></div>
 </section>
 
 <!-- =============================== 2. THE HARMFUL MOMENT =============================== -->
@@ -312,7 +312,7 @@
         <div class="wl"><b>O</b> Rahul's phone: "No, not me"</div><div class="wb"><i style="width:148px;background:var(--red)"></i><span style="left:153px">+5.70</span></div><div class="wp"><span class="chip r" style="padding:2px 5px">99.8%</span></div>
       </div>
       <div class="hr" style="margin:10px 0 8px"></div>
-      <p class="sm"><b>Result: <span class="red">HOLD</span> via G7</b>: Rahul's own phone said "not me". The V row adds nothing today: a real call fooled every detector we tested, so voice is in <b>shadow mode</b>. Even once calibrated (+2.08 → 92%), <b>strict G2 keeps it at PAUSE</b>. A clone score can never hold anyone's money.</p>
+      <p class="sm"><b>Result: <span class="red">HOLD</span> via G7</b>: Rahul's own phone said "not me". The V row adds nothing today: on real calls a cloner none of our models had seen got past them 12 times out of 12, so voice is in <b>shadow mode</b>. Even once calibrated (+2.08 → 92%), <b>strict G2 keeps it at PAUSE</b>. A clone score can never hold anyone's money.</p>
       <p class="sm" style="margin-top:6px"><b>Genuine twin:</b> the real Rahul calls from his saved UK number about his own new account → 34% <span class="chip a" style="padding:2px 5px">PAUSE</span> → Family Verify is sent automatically → he taps "Yes, it's me" → 1% <span class="chip g" style="padding:2px 5px">GO</span> (G4).</p>
       <p class="xs" style="margin-top:6px">Each bar is ln(likelihood ratio) after family caps, exactly as the analyst console shows it. Measured voice ratios: 57–70× on simulated channels, but 0.93× (no information) on a real call, hence shadow mode. The others are documented assumptions, recalibrated in shadow mode.</p>
     </div>
@@ -335,13 +335,13 @@
 <!-- =============================== 7. DATA & VALIDATION =============================== -->
 <section class="slide"><div class="inner">
   <div class="kicker">06 · Data, evidence &amp; validation <span class="tag">what we measured · what we assume</span></div>
-  <h1 class="t">We measured it on <em>our own consented voices</em> in Telugu, Hindi and English, and on a real phone call, which fooled every detector.</h1>
+  <h1 class="t">Measured on <em>our own consented voices</em> and 73 real phone calls: retraining on real calls cut errors from 24.6% to 6.8%, but a new cloner still got through.</h1>
   <div class="body row" style="gap:14px">
     <div class="col" style="width:330px;gap:10px">
       <div class="card" style="padding:9px 12px">
         <div class="lbl">Consented Indic clone corpus</div>
         <ul class="tight" style="margin-top:5px">
-          <li class="sm"><b>2 consented team speakers</b> (Telugu · Hindi · English) + <b>a real cellular call</b> as genuine phone audio · deleted by 31 Dec 2026</li>
+          <li class="sm"><b>2 consented team speakers</b> (Telugu · Hindi · English) + <b>73 real test calls</b> over Jio to two team phones, one never used in training · deleted by 31 Dec 2026</li>
           <li class="sm"><b>13 generators</b>; 6 never seen in training: Seed-VC, Chatterbox, Parler, Sarvam, OpenAI, Deepgram</li>
           <li class="sm"><b>5 channels:</b> clean · PSTN 8 kHz · AMR-NB · Opus · speaker→mic</li>
           <li class="sm"><b>Content-matched</b> lines · held-out speaker S02 · 19k test clips</li>
@@ -359,26 +359,26 @@
         </table>
       </div>
     </div>
-    <div class="card" style="width:400px;padding:10px 13px">
-      <div class="lbl">Detector · measured (EER, lower is better)</div>
-      <table class="tb" style="margin-top:6px;font-size:11.5px">
-        <tr><th>Detector</th><th>All</th><th>Seen</th><th>Unseen gens</th></tr>
-        <tr><td class="k">XLS-R + AASIST, off-the-shelf</td><td>34.3%</td><td>36.8%</td><td>32.6%</td></tr>
-        <tr><td class="k">NII MMS-300M, best public (NC)</td><td>15.1%</td><td>16.7%</td><td>13.9%</td></tr>
-        <tr><td class="k saff">Ours, fine-tuned</td><td class="b saff">4.8%</td><td class="b saff">2.7%</td><td class="b saff">6.0%</td></tr>
+    <div class="card" style="width:430px;padding:10px 13px">
+      <div class="lbl">Simulated phone channels · EER, lower is better</div>
+      <table class="tb" style="margin-top:4px;font-size:11px">
+        <tr><th>Detector</th><th>All</th><th>Unseen generators</th></tr>
+        <tr><td class="k">XLS-R + AASIST, off-the-shelf</td><td>34.3%</td><td>32.6%</td></tr>
+        <tr><td class="k">NII MMS-300M, best public (NC)</td><td>15.1%</td><td>13.9%</td></tr>
+        <tr><td class="k saff">Ours v1, fine-tuned (Round 1)</td><td class="b saff">4.8%</td><td class="b saff">6.0%</td></tr>
       </table>
-      <div class="lbl" style="margin-top:10px">Generators it never saw · ours vs off-the-shelf</div>
-      <div class="bars" style="margin-top:6px;gap:5px">
-        <div class="bar" style="grid-template-columns:96px 1fr"><div class="bl">Seed-VC (live VC)</div><div class="bt" style="height:16px"><i style="width:20%;background:var(--saff)"></i><span style="left:21%;top:1px;font-size:10.5px">10 vs 21</span></div></div>
-        <div class="bar" style="grid-template-columns:96px 1fr"><div class="bl">Deepgram Aura</div><div class="bt" style="height:16px"><i style="width:22%;background:var(--saff)"></i><span style="left:23%;top:1px;font-size:10.5px">11 vs 48</span></div></div>
-        <div class="bar" style="grid-template-columns:96px 1fr"><div class="bl">Indic Parler-TTS</div><div class="bt" style="height:16px"><i style="width:14%;background:var(--saff)"></i><span style="left:15%;top:1px;font-size:10.5px">7 vs 32</span></div></div>
-        <div class="bar" style="grid-template-columns:96px 1fr"><div class="bl">Chatterbox</div><div class="bt" style="height:16px"><i style="width:12%;background:var(--saff)"></i><span style="left:13%;top:1px;font-size:10.5px">6 vs 41</span></div></div>
-        <div class="bar" style="grid-template-columns:96px 1fr"><div class="bl">Sarvam Bulbul</div><div class="bt" style="height:16px"><i style="width:6%;background:var(--saff)"></i><span style="left:7%;top:1px;font-size:10.5px">3 vs 26</span></div></div>
-        <div class="bar" style="grid-template-columns:96px 1fr"><div class="bl">OpenAI TTS</div><div class="bt" style="height:16px"><i style="width:2%;background:var(--saff)"></i><span style="left:3%;top:1px;font-size:10.5px">1 vs 38</span></div></div>
-      </div>
-      <p class="xs" style="margin-top:6px">Calibration error (ECE) 0.048 · worst channel speaker→mic 7.5% · <b>a new real speaker is hardest</b>: held-out S02 16.6%.</p>
+      <div class="lbl" style="margin-top:9px">Real phone calls · Vobiz → Jio → phone on speaker</div>
+      <table class="tb" style="margin-top:4px;font-size:11px">
+        <tr><th>Model</th><th>EER</th><th>Clones caught</th><th>Genuine flagged</th></tr>
+        <tr><td colspan="4" class="xs" style="padding-top:3px"><b>Samsung (D1)</b> · test split, 236 clips from 41 calls</td></tr>
+        <tr><td class="k">v1 (Round 1)</td><td>24.6%</td><td>48%</td><td>3%</td></tr>
+        <tr><td class="k saff">A: retrained on real calls</td><td class="b saff">6.8%</td><td class="b saff">75%</td><td class="b saff">0%</td></tr>
+        <tr><td colspan="4" class="xs" style="padding-top:3px"><b>Redmi (D2)</b> · never used in training · 274 clips from 32 calls</td></tr>
+        <tr><td class="k">v1 (Round 1)</td><td>28.8%</td><td>39%</td><td>12%</td></tr>
+        <tr><td class="k saff">A: retrained on real calls</td><td class="b saff">11.7%</td><td class="b saff">84.6%</td><td class="b saff">8%</td></tr>
+      </table>
       <div class="note" style="position:relative;margin-top:8px;padding:8px 10px;background:#FBE9E6;border-color:var(--red)">
-        <p class="sm"><b class="red">Real phone call: every detector failed.</b> On a genuine cellular call, ours flagged 91–95% of chunks as fake (best public model 96–100%). So voice runs in <b>shadow mode</b>: logged for analysts, never used in a decision, until it passes a real-call gate.</p>
+        <p class="sm"><b class="red">A new cloner got through: 0 of 12 caught.</b> Clones from Sarvam's instant voice cloning, which no model was trained on, passed as genuine on real calls for both v1 and A. So voice stays in <b>shadow mode</b>: logged for analysts, never used in a decision, until it passes the real-call gate (≤5% false flags on ≥50 live calls; not yet run).</p>
       </div>
     </div>
     <div class="card fill" style="padding:10px 13px">
@@ -391,7 +391,7 @@
       </div>
     </div>
   </div>
-<div class="foot"><span class="src">Simulator outputs are assumption-driven projections, labelled as such; detector numbers are measured. Detector tables: appendix A3 · simulator results and assumptions: A4–A5 · [15] DoT DIP via ET Gov 10 Sep 2026</span><span class="pg">07 / 10</span></div>
+<div class="foot"><span class="src">Simulator outputs are assumption-driven projections, labelled as such; detector and real-call numbers are measured. Detector tables: A3 1–3/5 · real calls (method, sessions, caveats): A3 4/5 · simulator: A4–A5 · [15] DoT DIP via ET Gov 10 Sep 2026</span><span class="pg">07 / 10</span></div>
 </section>
 
 <!-- =============================== 8. SAFEGUARDS =============================== -->
@@ -488,7 +488,7 @@
         <div class="lbl">Latency, friction and cost</div>
         <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:10px;margin-top:6px">
           <div class="stat"><div class="n" style="font-size:26px">3.9 ms</div><div class="d">risk assess p95 at Pay tap, engine + API in-process (target &lt;300 ms end-to-end)</div></div>
-          <div class="stat"><div class="n" style="font-size:26px">0.34 s</div><div class="d">full voice-score call for a 10 s clip (RTX 4070); 32 ms model-only on A10G; 0.98 s on CPU</div></div>
+          <div class="stat"><div class="n" style="font-size:26px">0.34 s</div><div class="d">full voice-score call for a 10 s clip (RTX 4070); 32 ms model-only on A10G; 0.98 s on CPU; 3.1 s on our 2-vCPU demo server</div></div>
           <div class="stat"><div class="n" style="font-size:26px">5.6%</div><div class="d">of genuine triggered payments see PAUSE; 0.21% are held (sim)</div></div>
         </div>
         <p class="xs" style="margin-top:8px">Only payments made during or just after a call to a new or unusual payee are assessed. The rest of India's 24 bn monthly UPI transactions<sup class="r">18</sup> never touch Pehchaan.</p>
@@ -498,55 +498,54 @@
 <div class="foot"><span class="src">Sources: [6] RBI 9 Apr 2026 · [14] TRAI direction 19 Nov 2025 · [15] DoT/ET Gov 10 Sep 2026 · [16] RBI/2025-26/79 · [18] NPCI Sep 2026</span><span class="pg">09 / 10</span></div>
 </section>
 
-<!-- =============================== 10. 48-HOUR PLAN =============================== -->
+<!-- =============================== 10. SINCE ROUND 1 + FINALE PLAN =============================== -->
 <section class="slide"><div class="inner">
-  <div class="kicker">09 · 48-hour finale plan <span class="tag">already built · what we add · how we prove it</span></div>
-  <h1 class="t">The core already works. The finale goes to <em>a live cloned-voice phone call</em>, a real second phone, and an honest red-team round.</h1>
+  <div class="kicker">09 · Since Round 1 · the finale <span class="tag">what's live now · what we build on site · how we prove it</span></div>
+  <h1 class="t">Since Round 1: <em>a live cloned-voice call</em> on real phones, held 14 s after Pay, and the detector tested on 73 real calls. On site we add the native app.</h1>
   <div class="body row" style="gap:16px">
-    <div class="card" style="width:300px">
-      <div class="lbl">Built before Round 1 (verifiable in repo)</div>
+    <div class="card" style="width:330px">
+      <div class="lbl">Built since Round 1 (live, verifiable)</div>
       <ul class="tight" style="margin-top:7px">
-        <li class="sm"><b>Fusion engine</b> with guardrail unit tests</li>
-        <li class="sm"><b>Risk API</b> + mocked FRI, registry and 1600 adapters</li>
-        <li class="sm"><b>Demo app:</b> payer phone, relative phone, analyst console, live via WebSocket</li>
-        <li class="sm"><b>Consented Indic corpus</b>: 13 generators × 5 channels, 19k test clips</li>
-        <li class="sm"><b>Fine-tuned detector</b>: 4.8% EER (off-the-shelf 34%), served at 0.34 s</li>
-        <li class="sm"><b>Alert-budget simulator</b> + ablations</li>
-        <li class="sm"><b>Evidence pack</b> (signed, hash-chained) with NCRP pre-fill</li>
+        <li class="sm"><b>Deployed:</b> demo.humanslop.in + api.humanslop.in on AWS Mumbai, TLS, live WebSockets</li>
+        <li class="sm"><b>Live attack call:</b> Vobiz rings a real phone with a consented cloned teammate voice (5/5 test calls)</li>
+        <li class="sm"><b>Two real phones:</b> Pay → "Who asked?" → Family Verify on the relative's phone → "not me" → <b>HOLD in 14 s</b></li>
+        <li class="sm"><b>Real-call pipeline:</b> tape calls, chirp alignment, QC, pre-registered splits, hands-free over USB</li>
+        <li class="sm"><b>Retrained on real calls:</b> 24.6% → 6.8% EER; on a phone never trained on, 11.7%</li>
+        <li class="sm"><b>Honest negative:</b> Sarvam's instant voice cloning passed 12/12 times, so voice stays in shadow mode</li>
       </ul>
     </div>
-    <div class="card" style="width:470px">
-      <div class="lbl">Hour by hour</div>
+    <div class="card" style="width:430px">
+      <div class="lbl">On site at IIT Delhi</div>
       <div class="hrs" style="margin-top:8px">
-        <div class="h">H0–6</div><p><b>Android shell</b> (Kotlin/Flutter): reads real call state and VoIP audio mode, wired to the AWS risk API.</p>
-        <div class="h">H6–14</div><p><b>Live attack line:</b> a Vapi/Bolna agent speaking in a consented cloned teammate voice calls a real phone; streaming voice + cue check (Deepgram / Sarvam ASR).</p>
-        <div class="h">H14–22</div><p><b>Family Verify on a second real phone</b> (push + signed challenge); bank "are we calling you?" registry on Amazon Connect outbound.</p>
-        <div class="h">H22–30</div><p><b>Close the real-call gap:</b> 100+ consented calls over real phone lines (Bolna/Vapi) → retrain → report real-call false flags before and after, plus one brand-new generator.</p>
-        <div class="h">H30–38</div><p><b>Comprehension test</b> with 5 volunteers (consented), Hindi + 1 regional language; fix confusing copy.</p>
-        <div class="h">H38–48</div><p>Metrics dashboard, offline fallback, recorded backup demo, rehearsal ×3.</p>
+        <div class="h">App</div><p><b>Native Android shell</b> around the tested screens: the phone's real call state and an on-device contact check drive the risk check. No scenario buttons.</p>
+        <div class="h">Verify</div><p><b>Family Verify as a real notification</b> on the relative's phone, even with the screen locked.</p>
+        <div class="h">UPI</div><p><b>upi:// links and QR codes</b> open Pehchaan first, which checks, then hands over to the user's own UPI app. In front of any UPI app, no change to NPCI rails.</p>
+        <div class="h">Bank</div><p>"Are we calling you?" registry endpoint for the genuine-bank path; Amazon Connect outbound as the production route.</p>
+        <div class="h">Gate</div><p>Live genuine calls from consented volunteers towards the ≥50-call gate, reported however it lands.</p>
+        <div class="h">Ready</div><p>Backup video, rehearsal ×3, the web demo as the fallback at every step.</p>
       </div>
     </div>
     <div class="col fill" style="gap:12px">
       <div class="card">
-        <div class="lbl">Demo the judges will see (3 min)</div>
-        <p class="sm" style="margin-top:6px">① A teammate's <b>cloned voice calls</b> a phone asking for ₹50,000 → ② payer taps Pay → <b>PAUSE</b> in &lt;1 s → ③ "Family" → the real teammate's phone shows <b>"Is this you?"</b> → "No" → <b>HOLD</b> → ④ analyst console + evidence pack. Then a <b>genuine call → GO, zero screens.</b></p>
+        <div class="lbl">Demo the judges will see (4 min)</div>
+        <p class="sm" style="margin-top:6px">① A <b>cloned voice calls</b> the payer's phone: "accident, send ₹50,000" → ② she taps Pay → "Who asked?" → Rahul → ③ <b>Rahul's own phone</b> lights up → "No, that's not me" → <b>HOLD</b> → ④ console + signed report. Then the <b>real Rahul</b> taps "Yes, it's me" → paid.</p>
       </div>
       <div class="card">
-        <div class="lbl">Success criteria · proof of progress</div>
+        <div class="lbl">Success criteria · status</div>
         <ul class="tight" style="margin-top:6px">
-          <li class="sm">Live clone call → HOLD in &lt;60 s end-to-end</li>
-          <li class="sm">Genuine call → no screen; assess p95 &lt;300 ms</li>
-          <li class="sm">Real-call false-flag rate before/after, on stage, good or bad</li>
-          <li class="sm">≥4 of 5 testers can explain the screen back</li>
+          <li class="sm">Live clone call → HOLD in &lt;60 s · <b class="teal">met: 14 s</b></li>
+          <li class="sm">Genuine path → paid with one tap · <b class="teal">met</b></li>
+          <li class="sm">Real-call results before/after, good or bad · <b class="teal">met</b> (incl. Sarvam 0/12)</li>
+          <li class="sm">≥4 of 5 testers explain the screen back · on site</li>
         </ul>
       </div>
       <div class="card" style="padding:10px 13px">
         <div class="lbl">Dependencies → fallback</div>
-        <p class="xs" style="margin-top:4px">Venue Wi-Fi → hotspot + local models · API quotas → open-source TTS/ASR on our GPU · Android permissions → web build + simulated call state · Unseen generator fools the detector → O-checks still HOLD (that's the point).</p>
+        <p class="xs" style="margin-top:4px">Venue Wi-Fi → phone hotspot · app build slips → the tested web demo · a new cloner fools the detector → the person-checks still HOLD (Sarvam 0/12 is why).</p>
       </div>
     </div>
   </div>
-<div class="foot"><span class="src">Unstop lists the finale as 24 Oct 09:00 – 25 Oct 20:00 IST; the same plan compresses to 35 h by merging H30–38 into H22–30. Team roles on slide 1.</span><span class="pg">10 / 10</span></div>
+<div class="foot"><span class="src">Live checks, real-call results and caveats: ml/realcall/FINDINGS.md · on-site build plan: app/MOBILE_PLAN.md · deployment: deploy/README.md. Team roles on slide 1.</span><span class="pg">10 / 10</span></div>
 </section>
 
 <!-- =============================== A1. ARCHITECTURE: SYSTEM =============================== -->
@@ -723,7 +722,7 @@
         <table class="tb" style="margin-top:4px;font-size:11px">
           <tr><th>Path</th><th>Budget</th><th>Measured (prototype)</th></tr>
           <tr><td class="k">Risk assess at Pay tap</td><td>&lt;300 ms p95</td><td>3.9 ms p95 (in-process; network excluded)</td></tr>
-          <tr><td class="k">Voice score (10 s clip)</td><td>&lt;1.5 s</td><td>0.34 s GPU · 0.98 s CPU (int8), end-to-end</td></tr>
+          <tr><td class="k">Voice score (10 s clip)</td><td>&lt;1.5 s</td><td>0.34 s GPU · 0.98 s CPU (int8), end-to-end · 3.1 s on the 2-vCPU demo server (shadow only)</td></tr>
           <tr><td class="k">Family Verify round trip</td><td>&lt;3 min, async</td><td>human response time; measured in pilot (A2)</td></tr>
           <tr><td class="k">Triggered share of UPI txns</td><td>assumed &lt;1%</td><td>validate in shadow mode</td></tr>
         </table>
@@ -774,21 +773,21 @@
 
 <!-- =============================== APPENDIX: DETECTOR RESULTS =============================== -->
 <section class="slide"><div class="inner">
-  <div class="kicker">Appendix A3 · 1/3 <span class="tag">detector evaluation · measured</span></div>
+  <div class="kicker">Appendix A3 · 1/5 <span class="tag">detector evaluation · measured</span></div>
   <h1 class="t" style="font-size:24px">Off-the-shelf detectors collapse on Indian phone audio; ours holds up on every channel, including generators it never saw.</h1>
   <div class="body"><div class="card" style="padding:10px 14px"><div class="chart">{{svg:../ml/results/figures/heldout_gap_bars.svg}}</div></div></div>
-<div class="foot"><span class="src">Test set: 7,809 genuine / 11,265 cloned clips; one global threshold; channels simulated. Held-out generators were never in training. Off-the-shelf = XLS-R + AASIST (ASVspoof LA checkpoint).</span><span class="pg">APPENDIX A3 · 1/3</span></div>
+<div class="foot"><span class="src">Test set: 7,809 genuine / 11,265 cloned clips; one global threshold; channels simulated. Held-out generators were never in training. Off-the-shelf = XLS-R + AASIST (ASVspoof LA checkpoint).</span><span class="pg">APPENDIX A3 · 1/5</span></div>
 </section>
 
 <section class="slide"><div class="inner">
-  <div class="kicker">Appendix A3 · 2/3 <span class="tag">detector evaluation · DET curves</span></div>
+  <div class="kicker">Appendix A3 · 2/5 <span class="tag">detector evaluation · DET curves</span></div>
   <h1 class="t" style="font-size:24px">Trade-off curves: at every operating point, ours misses fewer clones and flags fewer real callers.</h1>
   <div class="body"><div class="card" style="padding:10px 14px"><div class="chart">{{svg:../ml/results/figures/det_baseline_vs_ours.svg}}</div></div></div>
-<div class="foot"><span class="src">NII MMS-300M AntiDeepfake weights are non-commercial and were used for evaluation only. Ours: XLS-R-300M + AASIST, fine-tuned from the LA checkpoint with codec and RawBoost-style augmentation, temperature-calibrated (ECE 0.048).</span><span class="pg">APPENDIX A3 · 2/3</span></div>
+<div class="foot"><span class="src">NII MMS-300M AntiDeepfake weights are non-commercial and were used for evaluation only. Ours: XLS-R-300M + AASIST, fine-tuned from the LA checkpoint with codec and RawBoost-style augmentation, temperature-calibrated (ECE 0.048).</span><span class="pg">APPENDIX A3 · 2/5</span></div>
 </section>
 
 <section class="slide"><div class="inner">
-  <div class="kicker">Appendix A3 · 3/3 <span class="tag">per generator × channel · calibration · limitations</span></div>
+  <div class="kicker">Appendix A3 · 3/5 <span class="tag">per generator × channel · calibration · limitations</span></div>
   <h1 class="t" style="font-size:24px">Where it still fails, and why voice stays in shadow mode until it passes a real-call gate.</h1>
   <div class="body row" style="gap:14px;align-items:flex-start">
     <div class="card" style="width:690px;padding:10px 12px"><div class="lbl">EER by generator × channel (ours)</div><div class="chart" style="margin-top:4px">{{svg:../ml/results/figures/eer_heatmap_generator_channel.svg}}</div></div>
@@ -807,9 +806,10 @@
       <div class="card" style="padding:9px 12px">
         <div class="lbl">Limitations we report, not hide</div>
         <ul class="tight" style="margin-top:4px">
-          <li class="sm"><b>One real cellular call</b> flagged 91–95% genuine as fake. A v2 retrained with extra telephony augmentation didn't fix it, so the finale plan is real-network training data.</li>
-          <li class="sm"><b>New speaker is hardest:</b> held-out S02 16.6% EER (S01 6.8%).</li>
-          <li class="sm">Only 2 speakers; all channels simulated except that one call; one seed.</li>
+          <li class="sm"><b>Round 1's one real call</b> (a dialer recording) flagged 91–95% of genuine speech. On 73 speakerphone test calls since, the failure was <b>missed clones</b>; retraining on real calls fixed most of it (A3 4/5).</li>
+          <li class="sm"><b>A new cloner still wins:</b> clips from Sarvam's instant voice cloning were caught 0/12 times on real calls by v1 and A (its stock Bulbul voices, left, are easy).</li>
+          <li class="sm"><b>New speaker is hardest:</b> held-out S02 16.6% EER on simulated channels (S01 6.8%).</li>
+          <li class="sm">Only 2 speakers, one carrier, one seed; the live-caller gate is not yet run.</li>
           <li class="sm">Some TTS emit digital silence between words, a shortcut risk; trimming is applied to real and fake alike.</li>
         </ul>
       </div>
@@ -819,7 +819,102 @@
       </div>
     </div>
   </div>
-<div class="foot"><span class="src">Latency for a 10 s clip: 32 ms model-only on an A10G (fp16); 0.34 s end-to-end on an RTX 4070; 0.98 s on CPU (int8). Full tables: ml/results/SUMMARY.md, metrics.json; licences: ml/DATA_CARD.md.</span><span class="pg">APPENDIX A3 · 3/3</span></div>
+<div class="foot"><span class="src">Latency for a 10 s clip: 32 ms model-only on an A10G (fp16); 0.34 s end-to-end on an RTX 4070; 0.98 s on CPU (int8). Full tables: ml/results/SUMMARY.md, metrics.json; licences: ml/DATA_CARD.md.</span><span class="pg">APPENDIX A3 · 3/5</span></div>
+</section>
+
+<!-- =============================== APPENDIX: REAL CALLS =============================== -->
+<section class="slide"><div class="inner">
+  <div class="kicker">Appendix A3 · 4/5 <span class="tag">real phone calls · method · retraining · held-out handset</span></div>
+  <h1 class="t" style="font-size:24px">Real phone calls: what we measured, what retraining fixed, and what still gets through.</h1>
+  <div class="body row" style="gap:14px;align-items:flex-start">
+    <div class="card" style="width:330px;padding:10px 13px">
+      <div class="lbl">Method</div>
+      <ul class="tight" style="margin-top:6px">
+        <li class="sm"><b>Tape calls:</b> Vobiz → Jio → a team phone on speaker → laptop mic. Each tape mixes ~10 s genuine team lines with content-matched clones of the same lines.</li>
+        <li class="sm"><b>Alignment:</b> start/end chirps by matched filter, items by envelope correlation; an item counts only with ≥40% speech and SNR ≥8 dB.</li>
+        <li class="sm"><b>Pre-registered splits:</b> speaker S02, Sarvam clones and the whole Redmi (D2) are test-only, fixed before any of their data existed.</li>
+        <li class="sm"><b>Learned speakerphone channel</b> fitted on train calls only (112 items, 24 calls): clean clones pushed through it are caught 27% of the time vs 28% on real calls, so it reproduces the real failure for training.</li>
+        <li class="sm"><b>Hands-free:</b> adb answers and turns on speaker; the last 19 Redmi calls ran unattended, 189/190 items usable.</li>
+      </ul>
+    </div>
+    <div class="col fill" style="gap:10px">
+      <div class="card" style="padding:9px 12px">
+        <div class="lbl">Retraining · Samsung (D1) test split, 236 clips from 41 calls, never trained on</div>
+        <table class="tb" style="margin-top:4px;font-size:11px">
+          <tr><th>Model</th><th>Real-call EER</th><th>S02 EER</th><th>AUC</th><th>Clones caught</th><th>Genuine flagged</th><th>Sim EER</th></tr>
+          <tr><td class="k">v1 (Round 1)</td><td>24.6%</td><td>21.7%</td><td>0.844</td><td>48%</td><td>3%</td><td>4.8%</td></tr>
+          <tr><td class="k">B: + real-call clips</td><td>9.3%</td><td>9.8%</td><td>0.963</td><td>69%</td><td>0%</td><td>5.7%</td></tr>
+          <tr><td class="k">C: + learned channel</td><td>18.6%</td><td>18.5%</td><td>0.907</td><td>67%</td><td>6%</td><td>5.7%</td></tr>
+          <tr><td class="k saff">A: both</td><td class="b saff">6.8%</td><td class="b saff">8.7%</td><td class="b saff">0.988</td><td class="b saff">75%</td><td class="b saff">0%</td><td>6.1%</td></tr>
+        </table>
+      </div>
+      <div class="card" style="padding:9px 12px">
+        <div class="lbl">Held-out handset · Redmi (D2), model A, every session shown</div>
+        <table class="tb" style="margin-top:4px;font-size:11px">
+          <tr><th>Session (IST)</th><th>Answered</th><th>Clips</th><th>EER</th><th>Genuine flagged</th></tr>
+          <tr><td class="k">19 Oct</td><td>by hand</td><td>41</td><td>19.5%</td><td>7/20</td></tr>
+          <tr><td class="k">20 Oct</td><td>by hand, room got louder</td><td>34</td><td>17.7%</td><td>2/18</td></tr>
+          <tr><td class="k">23 Oct</td><td>unattended over adb</td><td>199</td><td>10.1%</td><td>2/100</td></tr>
+          <tr><td class="k saff">All (pre-registered)</td><td></td><td class="b saff">274</td><td class="b saff">11.7%</td><td class="b saff">11/138 = 8% (5–14%)</td></tr>
+        </table>
+        <p class="xs" style="margin-top:4px">Clones caught 115/136 = 84.6%. v1 on the same clips: 28.8% EER, 53/136 caught, 16/138 genuine flagged.</p>
+      </div>
+      <div class="row" style="gap:10px">
+        <div class="card fill" style="padding:9px 12px;background:#FBE9E6;border-color:var(--red)">
+          <div class="lbl red">Sarvam instant voice cloning · never trained on</div>
+          <p class="sm" style="margin-top:4px"><b>0/12 caught</b> by v1 and by A on real calls (95% CI 0–24%); every score sat far on the "genuine" side.</p>
+        </div>
+        <div class="card fill" style="padding:9px 12px">
+          <div class="lbl">What it means</div>
+          <p class="sm" style="margin-top:4px">Retraining on real calls helps and mostly carries to a new phone. How the call is captured matters as much as the model. A new cloner beats it: <b>voice stays a clue, never the judge.</b></p>
+        </div>
+      </div>
+    </div>
+  </div>
+<div class="foot"><span class="src">Caveats: two speakers, one carrier, one seed; sessions differ in conditions; Sarvam n = 12; the live-caller gate (≤5% false flags on ≥50 live calls) is not yet run. 95% Wilson intervals. Source: ml/realcall/FINDINGS.md.</span><span class="pg">APPENDIX A3 · 4/5</span></div>
+</section>
+
+<!-- =============================== APPENDIX: CONSENT =============================== -->
+<section class="slide"><div class="inner">
+  <div class="kicker">Appendix A3 · 5/5 <span class="tag">consent · data handling for real calls and the live demo</span></div>
+  <h1 class="t" style="font-size:24px">Every voice we cloned or recorded belongs to a consenting team member, and the code refuses anyone else.</h1>
+  <div class="body q4" style="align-content:start">
+
+
+    <div class="card" style="padding:11px 14px">
+      <div class="row" style="gap:8px;align-items:center">{{icon:signature}}<span class="h3">Who consented, to what</span></div>
+      <ul class="tight" style="margin-top:7px">
+        <li class="sm"><b>Cloning (2 people):</b> the two team members signed a written form: recordings, synthetic copies with open-source and commercial tools (Sarvam named), role-play scam lines, hackathon use only, no public release.</li>
+        <li class="sm"><b>Recording only (volunteers):</b> a separate form that promises no cloning. Volunteers stay blocked in code until their signed form is saved.</li>
+        <li class="sm"><b>Withdrawal</b> at any time; data deleted within 7 days of asking.</li>
+      </ul>
+    </div>
+    <div class="card" style="padding:11px 14px">
+      <div class="row" style="gap:8px;align-items:center">{{icon:lock-key}}<span class="h3">Enforced in code, not by policy</span></div>
+      <ul class="tight" style="margin-top:7px">
+        <li class="sm">The call tools <b>refuse to dial, record or clone</b> anyone without a saved consent file, and won't answer any caller but our own test number.</li>
+        <li class="sm">Phone numbers live only in one private file; call logs store a hash.</li>
+        <li class="sm">Webhooks and audio URLs work only for calls we placed, and only while they're live.</li>
+      </ul>
+    </div>
+    <div class="card" style="padding:11px 14px">
+      <div class="row" style="gap:8px;align-items:center">{{icon:phone-call}}<span class="h3">The live attack call</span></div>
+      <ul class="tight" style="margin-top:7px">
+        <li class="sm">Plays a <b>pre-recorded clone of a consenting teammate</b> to a team phone; the scam script is role-play.</li>
+        <li class="sm"><b>Never recorded, scored or added to any dataset</b>; the clip is deleted when the call ends.</li>
+        <li class="sm">Every screen uses fictional people, banks and UPI IDs (DemoPay, Bharat Demo Bank).</li>
+      </ul>
+    </div>
+    <div class="card" style="padding:11px 14px">
+      <div class="row" style="gap:8px;align-items:center">{{icon:trash}}<span class="h3">Storage and deletion</span></div>
+      <ul class="tight" style="margin-top:7px">
+        <li class="sm">Audio and consent files: the team laptop and one private, encrypted cloud bucket, <b>auto-deleted on 31 Dec 2026</b>.</li>
+        <li class="sm">Cloned voices saved at Sarvam are deleted after the finale.</li>
+        <li class="sm">No real person's voice from the internet, ever. No customer or bank data anywhere.</li>
+      </ul>
+    </div>
+  </div>
+<div class="foot"><span class="src">Consent forms: data/recording-kit/CONSENT_FORM (cloning) and CONSENT_LIVE_CALLS.md (recording only). Enforcement: ml/realcall/consent.py, server.py, phone.py.</span><span class="pg">APPENDIX A3 · 5/5</span></div>
 </section>
 
 <!-- =============================== APPENDIX: SIM RESULTS =============================== -->
@@ -941,24 +1036,24 @@
       <div class="lbl">AI-generated content in this submission</div>
       <ul class="tight" style="margin-top:6px">
         <li class="sm"><b>Writing &amp; code assistance:</b> deck text, research synthesis and prototype code were drafted with an AI coding assistant (Claude, Anthropic) and reviewed and edited by the team.</li>
-        <li class="sm"><b>Synthetic voices:</b> all cloned audio is of <b>our own team members, with signed consent</b>, generated by the tools listed on the right. Stock synthetic voices (no cloning) came from commercial TTS APIs.</li>
+        <li class="sm"><b>Synthetic voices:</b> all cloned audio is of <b>our own team members, with signed consent</b>, generated by the tools listed on the right, including the clip played in the live attack call. Stock synthetic voices (no cloning) came from commercial TTS APIs.</li>
         <li class="sm"><b>No AI-generated images</b> are used in this deck. Screenshots are from our running prototype; diagrams and charts are drawn from code.</li>
         <li class="sm"><b>Names and stories</b> on slides 1–2 are illustrative composites of the cited incidents.</li>
       </ul>
       <div class="lbl" style="margin-top:12px">Data</div>
       <ul class="tight" style="margin-top:6px">
         <li class="sm">No bank, customer or platform data was used. Payments, callers and registry lookups in the prototype are synthetic or mocked.</li>
-        <li class="sm"><b>Public datasets</b>: Google FLEURS (CC-BY-4.0) as genuine speech; ASVspoof 2019 LA (ODC-By) for training and sanity checks; IndicSynth (CC-BY-NC-4.0, <b>non-commercial</b>) as published spoofs. Team recordings: 2 consenting members plus one real phone call between them.</li>
+        <li class="sm"><b>Public datasets</b>: Google FLEURS (CC-BY-4.0) as genuine speech; ASVspoof 2019 LA (ODC-By) for training and sanity checks; IndicSynth (CC-BY-NC-4.0, <b>non-commercial</b>) as published spoofs. Team recordings: 2 consenting members, one real phone call between them, and consented test calls over Jio to two team phones (73 calls in the real-call test sets).</li>
       </ul>
     </div>
     <div class="card fill">
       <div class="lbl">Models, tools and assets (licence)</div>
       <p class="xs" style="margin-top:6px"><b>Detection:</b> SSL_Anti-spoofing XLS-R-300M + AASIST (code MIT; checkpoint licence unstated), fine-tuned by us · wav2vec2-XLS-R (Apache-2.0) · baseline NII MMS-300M AntiDeepfake (CC-BY-NC-SA-4.0, <b>evaluation only</b>) · resemble-perth watermark (MIT) · silero-vad, faster-whisper (MIT).</p>
       <p class="xs" style="margin-top:4px"><b>Voice generation (attack corpus):</b> F5-TTS (weights CC-BY-NC) · F5-Hindi, IIT Madras (CC-BY-4.0) · XTTS-v2 (CPML, NC) · Chatterbox (MIT) · CosyVoice2 (Apache-2.0) · Seed-VC (GPL-3.0) · MMS-TTS (CC-BY-NC) · Kokoro (Apache-2.0) · Indic Parler-TTS (Apache-2.0) · stock voices from Sarvam Bulbul, OpenAI TTS, Deepgram Aura (their API terms). Channel simulation: ffmpeg, libopus, opencore-amrnb, sox, pyroomacoustics.</p>
-      <p class="xs" style="margin-top:4px"><b>Speech / LLM services:</b> Sarvam AI, OpenAI and Deepgram (stock-voice generation only); planned for the finale: Deepgram / Sarvam ASR, Amazon Bedrock, Vapi / Bolna telephony. <b>Compute:</b> AWS EC2 g5.2xlarge (A10G), about $15–20 total.</p>
-      <p class="xs" style="margin-top:4px"><b>Prototype and deck tooling:</b> FastAPI, React, Vite (MIT) · Playwright (Apache-2.0) · rough.js, rough-notation (MIT) · matplotlib (PSF) · Phosphor Icons (MIT).</p>
+      <p class="xs" style="margin-top:4px"><b>Speech services:</b> Sarvam AI (stock voices, and instant voice cloning of the two consenting team members only); OpenAI and Deepgram (stock voices only). No ASR or LLM service is used in the product today. <b>Telephony:</b> Vobiz (outbound test and demo calls). <b>Compute:</b> AWS EC2 g5.2xlarge (A10G) for training, about $15–20 in Round 1; one c7i.large in ap-south-1 hosts the live demo.</p>
+      <p class="xs" style="margin-top:4px"><b>Prototype and deck tooling:</b> FastAPI, React, Vite (MIT) · tweetnacl (Unlicense) · Docker · Caddy (Apache-2.0) with Let's Encrypt certificates · Cloudflare DNS and tunnel · Android platform-tools/adb (Apache-2.0) · Playwright (Apache-2.0) · rough.js, rough-notation (MIT) · matplotlib (PSF) · Phosphor Icons (MIT).</p>
       <p class="xs" style="margin-top:4px"><b>Fonts:</b> Inter, Space Grotesk, JetBrains Mono, Noto Sans Devanagari (all SIL OFL 1.1).</p>
-      <p class="xs" style="margin-top:4px"><b>Research:</b> web sources gathered with Firecrawl; every figure is cited to its original publisher in A1.</p>
+      <p class="xs" style="margin-top:4px"><b>Research:</b> web sources gathered with Firecrawl; every figure is cited to its original publisher in A6.</p>
       <p class="xs" style="margin-top:4px"><b>Brands:</b> the prototype uses a fictional "DemoPay / Bharat Demo Bank"; Amazon, AWS and other names are referenced descriptively; no endorsement implied.</p>
     </div>
   </div>
