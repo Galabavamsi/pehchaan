@@ -94,3 +94,49 @@ def api2_split(generator: str, voice: str) -> str:
 
 def is_heldout(generator: str, speaker: str = "") -> bool:
     return generator in HELDOUT_GENERATORS or (speaker in HELDOUT_SPEAKERS)
+
+
+# 2026-10-24 (on site, evening): generalisation run "v5". Written before any IndicVoices clip was downloaded or
+# cloned, but AFTER we had seen every model (v1, A, A2, A2-ivc) miss S02's Sarvam clones, and NII separate them on
+# clean audio (AUC 1.00) but not on real calls. So every v5 result is reported as a follow-up to those results, never
+# as a blind test. Rule change of the same day (CLAUDE.md): voices of an open dataset whose licence allows derivative
+# use may be cloned with open-source cloners for detector research, declared in DATA_CARD.md and the deck.
+# Data (source tags "iv" for real speech, "iv_clone" for its clones):
+#   ai4bharat/IndicVoices (CC-BY-4.0), config hindi, train shards IV_SHARDS (fixed before download): raw field
+#   recordings at 16 kHz. NOT IndicVoices-R: its audio went through VoiceFixer, which re-synthesises speech with a
+#   neural vocoder, so as "bona fide" it would teach the detector that vocoder artefacts are real.
+#   Per speaker, seeded: one reference utterance (6-15 s; its transcript is the reference text) and up to 3 target
+#   utterances (3-12 s). Each target is a bona fide row; XTTS-v2 and F5-Hindi each read the target's transcript in
+#   that speaker's voice from the reference, so every clone has a real twin of the same speaker and content.
+#   Clones outside 0.5-2x their twin's duration are dropped and counted. Up to IV_MAX_SPEAKERS speakers with at least
+#   4 usable utterances, lowest hash first.
+#   Split by PERSON with iv_split (salted SHA-1): 70 train / 10 dev / 20 test; a speaker's real and cloned clips
+#   always share it. xtts and f5hi stay seen generators, so iv test rows measure "seen cloner, unseen speaker".
+#   Sarvam IVC, Chatterbox, Seed-VC, MLAAD and every other held-out generator stay never-trained. IndicF5 is not used
+#   on dataset voices: its terms allow cloning only with the speaker's permission.
+# Candidates: model A's recipe (aug v3, real-call rows at 0.25 of each class, 6 x 600 steps, bs 16, seed 0, the
+# existing balanced sampling). Sarvam IVC is never trained, so S01's and S02's Sarvam clones are both "unseen cloner";
+# S02 stays an unseen speaker.
+#   ours_n1   NII mms-300m-anti-deepfake init (CC-BY-NC-SA-4.0, research and education only; the fine-tuned weights
+#             inherit that licence) + the ours_a2 data (old corpus + paid-API stock voices)   -> backbone effect
+#   ours_a3   model A's init (XLS-R + AASIST, LA) + the ours_a2 data + iv/iv_clone             -> many-speaker effect
+#   ours_n3   NII init + the ours_a2 data + iv/iv_clone                                        -> both
+# Promotion as for the api2 candidates: a candidate replaces model A only if it beats A on the same fixed dev set
+# (scores_v4 dev_sim + dev_rc). Test results are reported whatever they show: the pre-registered real-call test, the
+# clean/AMR bench (S01/S02 genuine vs every cloner, Sarvam IVC included), iv test speakers, the paid-API unseen
+# voices and the simulated test sample. NII-initialised models are scored by NII's own protocol (whole clip up to
+# 16 s, layer-normed), as the served NII is.
+IV_SHARDS = list(range(0, 82, 8))
+IV_SALT = "pehchaan-iv-v5"
+IV_MAX_SPEAKERS = 600
+IV_GENERATORS = ("xtts", "f5hi")
+
+
+def iv_bucket(speaker_id: str) -> int:
+    import hashlib
+    return int(hashlib.sha1(f"{IV_SALT}:{speaker_id}".encode()).hexdigest()[:8], 16) % 100
+
+
+def iv_split(speaker_id: str) -> str:
+    b = iv_bucket(speaker_id)
+    return "train" if b < 70 else ("dev" if b < 80 else "test")

@@ -1,7 +1,7 @@
 """Fine-tune XLS-R-300M + AASIST (initialised from the SSL_Anti-spoofing LA checkpoint) on our corpus.
 
   python train/finetune.py --src_manifest corpus_src.csv --eval_manifest corpus_eval.csv --out runs/ours_full
-     [--init la|df|<ckpt>] [--no_channel_aug] [--exclude_sources team,team_clone] [--epochs 6]
+     [--init la|df|nii|<ckpt>] [--no_channel_aug] [--exclude_sources team,team_clone] [--epochs 6]
 
 Training data = split=="train" rows whose generator is NOT held out and whose speaker is NOT held out.
 Each training example: random ~5 s crop -> random channel (clean/pstn/amr/opus/replay; same code as the
@@ -16,6 +16,10 @@ are used as they are (no simulated channel or RawBoost on top: they already went
 a fixed share of each class's sampling mass (--realcall_weight). Dev rows are scored as an extra "realcall" channel
 in model selection. --aug_set v3 adds the speakerphone channel learned from real calls (realcall/learned_channel.py).
 Held-out speakers and generators stay out of training exactly as before.
+
+--init nii (2026-10-24, common/protocol.py note "v5"): start from NII AntiDeepfake MMS-300M instead (its own network:
+SSL -> mean pool -> linear, input layer-normed per clip; CC-BY-NC-SA-4.0, research only). Same data, sampling,
+augmentation and model selection; the checkpoint loads with eval/score.py --detector niickpt:<best.pt>.
 """
 import argparse
 import json
@@ -226,20 +230,25 @@ def main():
         print("dry run ok", flush=True)
         return
 
-    from models.ssl_aasist import Model, convert_fairseq_state_dict
     device = torch.device("cuda")
-    model = Model()
-    init = {"la": "LA_model.pth", "df": "Best_LA_model_for_DF.pth"}.get(a.init)
-    ck = os.path.join(a.weights_dir, init) if init else a.init
-    sd = torch.load(ck, map_location="cpu", weights_only=False)
-    if any(k.startswith("ssl_model.model.encoder.pos_conv.0") for k in sd):
-        sd, rep = convert_fairseq_state_dict(sd, model)
-        sd = {k: v for k, v in sd.items() if k not in rep["extra"]}
-    model.load_state_dict(sd, strict=False)
+    if a.init == "nii":
+        from models.nii_antideepfake import NIIFineTune
+        model = NIIFineTune.pretrained()
+    else:
+        from models.ssl_aasist import Model, convert_fairseq_state_dict
+        model = Model()
+        init = {"la": "LA_model.pth", "df": "Best_LA_model_for_DF.pth"}.get(a.init)
+        ck = os.path.join(a.weights_dir, init) if init else a.init
+        sd = torch.load(ck, map_location="cpu", weights_only=False)
+        if any(k.startswith("ssl_model.model.encoder.pos_conv.0") for k in sd):
+            sd, rep = convert_fairseq_state_dict(sd, model)
+            sd = {k: v for k, v in sd.items() if k not in rep["extra"]}
+        model.load_state_dict(sd, strict=False)
     model.to(device).train()
 
-    ssl_params = [p for n, p in model.named_parameters() if n.startswith("ssl_model.")]
-    head_params = [p for n, p in model.named_parameters() if not n.startswith("ssl_model.")]
+    ssl_prefix = ("ssl_model.", "net.ssl.")
+    ssl_params = [p for n, p in model.named_parameters() if n.startswith(ssl_prefix)]
+    head_params = [p for n, p in model.named_parameters() if not n.startswith(ssl_prefix)]
     opt = torch.optim.AdamW([{"params": ssl_params, "lr": a.lr_ssl}, {"params": head_params, "lr": a.lr_head}], weight_decay=1e-4)
     total = a.epochs * a.steps_per_epoch
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: min(1.0, (s + 1) / 200) * 0.5 * (1 + math.cos(math.pi * min(1.0, s / total))))
