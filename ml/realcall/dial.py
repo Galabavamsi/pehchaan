@@ -17,6 +17,7 @@ import numpy as np
 import requests
 
 from common.audio import load, resample, save
+from realcall import agent
 from realcall.consent import Registry, hash_number
 from realcall.dsp import SR
 from realcall.settings import ATTACK, UPLINK, calls, config, env, ensure_dirs, log_event
@@ -159,6 +160,47 @@ def cmd_attack(a, reg):
             time.sleep(config()["gap_between_calls_s"])
 
 
+def cmd_agent(a, reg):
+    """Conversational live-demo attack call (SPEC §8 V4): the cloned 'son' listens and reacts turn by turn. Demo
+    theatre only, like attack: never ingested, scored or counted. Costs money (phone + STT/LLM/TTS each turn)."""
+    reg.require_clone(a.speaker)
+    to = reg.dialable(a.device)       # fail before anything else if consent/device is wrong
+    card = agent.ScriptCard(persona=a.persona, lang=a.lang, min_amount=a.min_amount, max_amount=a.max_amount,
+                            upi_id=a.upi, max_turns=a.max_turns)
+    if a.lang not in agent.LANG:
+        raise SystemExit(f"--lang must be one of {sorted(agent.LANG)}")
+    tts = getattr(a, "tts", "sarvam")
+    engine = getattr(a, "engine", "xtts")
+    gpu_host = getattr(a, "gpu_host", agent.GPU_HOST)
+    if tts == "gpu":
+        # the GPU clone is validated in `agent dry --tts gpu`; the live two-way call is driven by realcall.server,
+        # which builds the Sarvam clone, so a real --tts gpu call needs server._make_agent to read tts/engine too.
+        print(f"note: --tts gpu ({engine}) prewarms and records the GPU backend, but realcall.server still drives the "
+              f"live call with Sarvam IVC. Drive the agent with the GPU clone via `agent dry --tts gpu`.", flush=True)
+    if not a.no_prewarm:
+        # resolve/warm the clone voice now: fails fast on missing consent/reference (or an unreachable box), so the
+        # first turn is quick
+        if tts == "gpu":
+            agent.GpuCloneTTS(engine, a.speaker, reg, card.lang, host=gpu_host).ensure_voice()
+        else:
+            agent.SarvamCloneTTS(a.speaker, reg, card.lang).ensure_voice()
+    ensure_dirs()
+    d = reg.device(a.device)
+    for i in range(a.n):
+        call_id = uuid.uuid4().hex
+        log_event("call_registered", call_id=call_id, kind="agent", device=a.device, device_hash=hash_number(to),
+                  carrier=d.get("carrier"), network=d.get("network"), model=d.get("model"), route="cellular",
+                  speaker=a.speaker, card=card.as_dict(), stt=a.stt, llm=a.llm, vad=a.vad, tts=tts, engine=engine)
+        resp = _vobiz_call(to, call_id)
+        log_event("call_api", call_id=call_id, request_uuid=resp.get("request_uuid"), message=resp.get("message"))
+        print(f"[{i + 1}/{a.n}] agent call {call_id[:8]} as {a.speaker} -> {a.device}: cloned son, up to {a.max_turns} "
+              f"turns (watch the server log for the live transcript)", flush=True)
+        c = _wait_hangup(call_id, a.max_turns * 30 + 120)
+        print(f"  ended: {c.get('hangup_cause')} after {c.get('duration_s')} s", flush=True)
+        if i + 1 < a.n:
+            time.sleep(config()["gap_between_calls_s"])
+
+
 def cmd_check(a, reg):
     cfg = config()
     print("vobiz_number:", "set" if cfg.get("vobiz_number") and "X" not in cfg["vobiz_number"] else "MISSING")
@@ -204,10 +246,29 @@ def main():
     k.add_argument("--clip", required=True)
     k.add_argument("--n", type=int, default=1)
     k.add_argument("--lead-in", type=float, default=1.5, help="seconds of silence after answer before the voice")
+    g = sub.add_parser("agent", help="live demo: a two-way cloned 'son' that reacts to what the mother says")
+    g.add_argument("--device", required=True)
+    g.add_argument("--speaker", required=True, help="whose cloned voice the son uses (needs clone consent)")
+    g.add_argument("--lang", default="hi")
+    g.add_argument("--persona", default="Rahul", help="fictional name the son claims")
+    g.add_argument("--upi", default="rahul.friend@okfinbank", help="fictional UPI ID he asks money be sent to")
+    g.add_argument("--min-amount", type=int, default=2000)
+    g.add_argument("--max-amount", type=int, default=50000)
+    g.add_argument("--max-turns", type=int, default=8)
+    g.add_argument("--n", type=int, default=1)
+    g.add_argument("--stt", default="sarvam", choices=["sarvam", "deepgram"])
+    g.add_argument("--llm", default="openai", choices=["openai"])
+    g.add_argument("--tts", default="sarvam", choices=["sarvam", "gpu"],
+                   help="sarvam = Sarvam IVC (default, live-call path); gpu = offline neural clone on the GPU box")
+    g.add_argument("--engine", default="xtts", choices=list(agent.GPU_ENGINES), help="offline engine with --tts gpu")
+    g.add_argument("--gpu-host", default=agent.GPU_HOST, help="serve_clone_tts.py over the SSH tunnel (--tts gpu)")
+    g.add_argument("--vad", default="energy", choices=["energy", "silero"])
+    g.add_argument("--no-prewarm", action="store_true", help="don't resolve the clone voice before dialing")
     sub.add_parser("check")
     a = ap.parse_args()
     reg = Registry()
-    {"tape": cmd_tape, "uplink": cmd_uplink, "attack": cmd_attack, "check": cmd_check}[a.cmd](a, reg)
+    {"tape": cmd_tape, "uplink": cmd_uplink, "attack": cmd_attack, "agent": cmd_agent,
+     "check": cmd_check}[a.cmd](a, reg)
 
 
 if __name__ == "__main__":

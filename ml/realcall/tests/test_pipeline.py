@@ -249,6 +249,116 @@ def test_attack_call_plays_clip_only_while_live(monkeypatch):
     assert cid not in set(ingest.main().call_id)                    # demo calls never enter the datasets
 
 
+def _fake_agent_setup(max_turns=1):
+    from realcall import agent
+    return (agent.Providers(agent.FakeSTT(), agent.FakeLLM(), agent.FakeTTS()),
+            agent.make_vad("energy", sr=agent.SR_UP), agent.ScriptCard(max_turns=max_turns))
+
+
+def _ingested_ids():
+    df = ingest.main()
+    return set(df["call_id"]) if "call_id" in df.columns else set()
+
+
+def test_agent_conversation_reactive_metered_and_silent():
+    """The son opens, then reacts turn by turn; distinct replies prove reactivity; every turn carries latency and
+    length metadata; nothing is written to disk (never recorded)."""
+    from realcall import agent
+    card = agent.ScriptCard(max_turns=3)
+    conv = agent.AgentConversation(card, agent.Providers(agent.FakeSTT(), agent.FakeLLM(), agent.FakeTTS()))
+    plan, audio, t = conv.open()
+    assert plan.emotion in agent.EMOTIONS and len(audio) > 0 and t["stt_ms"] == 0 and set(t) == {
+        "stt_ms", "llm_ms", "tts_ms", "total_ms", "mother_chars", "son_chars"}
+    lines, done = [], False
+    for _ in range(3):
+        plan, audio, t = conv.respond(np.zeros(agent.SR_UP, np.float32), agent.SR_UP)
+        assert plan.emotion in agent.EMOTIONS and t["mother_chars"] > 0 and len(audio) > 0
+        lines.append(plan.text)
+        if plan.done:
+            done = True
+            break
+    assert len(set(lines)) >= 2 and done                       # reacts differently, and ends the call
+
+
+def test_agent_stream_out_bargein():
+    """Paced playback finishes when uninterrupted, and flushes with clearAudio the instant she barges in."""
+    import asyncio
+    from realcall import agent, server
+    sent = []
+
+    async def send(o):
+        sent.append(o)
+
+    audio = np.zeros(int(0.5 * agent.SR_UP), np.float32)
+    assert asyncio.run(server._stream_out(send, audio, False, "s1", lambda: False, lambda: False)) is True
+    assert sent and all(o["event"] == "playAudio" for o in sent)
+
+    sent.clear()
+    fired = {"n": 0}
+
+    def barged():
+        fired["n"] += 1
+        return fired["n"] > 2                                  # barge in after two chunks have gone out
+    assert asyncio.run(server._stream_out(send, audio, False, "s1", barged, lambda: False)) is False
+    assert sent[-1]["event"] == "clearAudio" and any(o["event"] == "playAudio" for o in sent[:-1])
+
+
+def test_agent_server_answer_ws_and_never_recorded(monkeypatch):
+    from fastapi.testclient import TestClient
+    from realcall import agent, server
+    server.config = lambda: {**settings.DEFAULTS, "public_base_url": "https://example.trycloudflare.com"}
+    monkeypatch.setattr(server, "_make_agent", lambda c: _fake_agent_setup(max_turns=1))
+    cl = TestClient(server.app)
+    cid = "e" * 32
+    settings.log_event("call_registered", call_id=cid, kind="agent", device="D1", speaker="S02",
+                       card=agent.ScriptCard().as_dict())
+    # answer XML: a two-way stream to the agent websocket, and never a Record (demo theatre)
+    r = cl.post(f"/answer/{cid}")
+    assert "<Stream" in r.text and f"/ws/agent/{cid}" in r.text and "recordSession" not in r.text
+
+    speech = fake_speech(1.1, 150, 5)
+    with cl.websocket_connect(f"/ws/agent/{cid}") as ws:
+        ws.send_text(json.dumps({"event": "start", "start": {"streamId": "s1"}}))
+        inbound = np.concatenate([np.zeros(int(0.6 * SR), np.float32), speech, np.zeros(int(0.9 * SR), np.float32)])
+        for i in range(0, len(inbound) // 320 * 320, 320):     # 20 ms L16 frames, little-endian
+            pcm = (inbound[i:i + 320] * 32767).astype("<i2").tobytes()
+            ws.send_text(json.dumps({"event": "media", "media": {"track": "inbound", "payload": base64.b64encode(pcm).decode()}}))
+        events = []
+        for _ in range(400):
+            m = ws.receive_json()
+            events.append(m["event"])
+            if m["event"] == "stop":
+                break
+    assert events.count("playAudio") >= 2 and "stop" in events       # the son's opening line, then a reply
+
+    turns = [e for e in settings.read_ledger() if e.get("ev") == "agent_turn" and e.get("call_id") == cid]
+    steps = sorted(e["step"] for e in turns)
+    assert steps[:2] == [0, 1] and all(e["emotion"] in agent.EMOTIONS for e in turns)
+    assert all("text" not in e and "transcript" not in e for e in turns)   # metadata only, no content persisted
+    assert not (settings.UPLINK / f"{cid}.wav").exists() and not (settings.SEGMENTS / cid).exists()
+    assert cid not in _ingested_ids()                                      # agent calls never enter the datasets
+
+
+def test_agent_dial_registers_card_and_enforces_consent(monkeypatch):
+    from realcall import dial, server
+    server.config = lambda: {**settings.DEFAULTS, "public_base_url": "https://example.trycloudflare.com"}
+    dialled = []
+    monkeypatch.setattr(dial, "_vobiz_call", lambda to, cid: (dialled.append((to, cid)), {"request_uuid": "r1"})[1])
+    monkeypatch.setattr(dial, "_wait_hangup", lambda cid, t: {"hangup_cause": "NORMAL_CLEARING", "duration_s": 3})
+    base = dict(device="D1", speaker="S02", lang="hi", persona="Rahul", upi="rahul.friend@okfinbank",
+                min_amount=2000, max_amount=50000, max_turns=4, n=1, stt="sarvam", llm="openai", vad="energy",
+                no_prewarm=True)
+    dial.cmd_agent(type("A", (), base), Registry())
+    (to, cid), = dialled
+    c = settings.calls()[cid]
+    assert to == "+919000000001" and c["kind"] == "agent"
+    assert c["card"]["upi_id"] == "rahul.friend@okfinbank" and c["speaker"] == "S02" and c["vad"] == "energy"
+    assert cid not in _ingested_ids()
+    with pytest.raises(PermissionError):                                  # no clone consent -> nothing dialled
+        dial.cmd_agent(type("A", (), {**base, "speaker": "V01"}), Registry())
+    assert len(dialled) == 1
+
+
 def test_protocol_live_callers_stay_in_one_split():
     from realcall import protocol
     old = set(protocol.TEST_DEVICES)
