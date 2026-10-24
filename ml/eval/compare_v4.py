@@ -15,9 +15,14 @@ from pathlib import Path
 import pandas as pd
 
 from realcall.compare_models import eer_thr
-from realcall.settings import REPORTS
+from realcall.settings import MANIFESTS, REPORTS
 
 MODELS = {"ours_v3_rc": "A (current)", "ours_a2": "A2: + paid-API stock voices", "ours_a2_ivc": "A2-ivc: + S01 Sarvam clones"}
+
+
+def scores(f):
+    """Only utt_id + score from a score file (some carry their manifest's label column too)."""
+    return pd.read_csv(f, usecols=["utt_id", "score"])
 
 
 def main():
@@ -25,30 +30,37 @@ def main():
     ap.add_argument("--dir", default="realcall/work/retrain_v4/scores")
     a = ap.parse_args()
     d = Path(a.dir)
+    # labels: the scored manifests if they carry them, else the same fallbacks as realcall/compare_models.py
     sim_lab = pd.read_csv(d / "sim_test.csv", usecols=lambda c: c in ("utt_id", "label"))
+    if "label" not in sim_lab:
+        ce = d / "corpus_eval.csv" if (d / "corpus_eval.csv").exists() else d.parent / "corpus_eval.csv"
+        sim_lab = pd.read_csv(ce, usecols=["utt_id", "label"])
     dev_lab = pd.concat([pd.read_csv(d / f, usecols=["utt_id", "label"]) for f in ("dev_sim.csv", "dev_rc.csv")])
     api2_lab = pd.read_csv(d / "api2_test.csv", usecols=["utt_id", "generator", "channel"])
-    rc_lab = pd.read_csv(d / "realcall_eval.csv", usecols=lambda c: c in ("utt_id", "label", "generator", "speaker", "split"))
+    rc_cols = ("utt_id", "label", "generator", "speaker", "split")
+    rc_lab = pd.read_csv(d / "realcall_eval.csv", usecols=lambda c: c in rc_cols)
+    if "label" not in rc_lab:
+        rc_lab = pd.read_csv(MANIFESTS / "realcall.csv", usecols=lambda c: c in rc_cols)
     out = {}
     for m, name in MODELS.items():
         if not (d / f"sim__{m}.csv").exists():
             continue
-        sim = pd.read_csv(d / f"sim__{m}.csv").merge(sim_lab, on="utt_id")
+        sim = scores(d / f"sim__{m}.csv").merge(sim_lab, on="utt_id")
         sim_eer, thr = eer_thr((sim.label == "spoof").astype(int).values, sim.score.values)
         r = {"model": name, "sim_EER": round(float(sim_eer), 4), "threshold": round(float(thr), 4)}
-        dev = [pd.read_csv(d / f"{p}__{m}.csv") for p in ("devsim", "devrc") if (d / f"{p}__{m}.csv").exists()]
+        dev = [scores(d / f"{p}__{m}.csv") for p in ("devsim", "devrc") if (d / f"{p}__{m}.csv").exists()]
         if len(dev) == 2:
             dv = pd.concat(dev).merge(dev_lab, on="utt_id")
             r["dev_EER"] = round(float(eer_thr((dv.label == "spoof").astype(int).values, dv.score.values)[0]), 4)
             r["n_dev"] = int(len(dv))
         if (d / f"api2__{m}.csv").exists():
-            x = pd.read_csv(d / f"api2__{m}.csv").merge(api2_lab, on="utt_id")
+            x = scores(d / f"api2__{m}.csv").merge(api2_lab, on="utt_id")
             r["api2_caught"] = round(float((x.score >= thr).mean()), 3)
             r["api2_n"] = int(len(x))
             r["api2_caught_by_engine"] = {g: round(float((y.score >= thr).mean()), 3) for g, y in x.groupby("generator")}
             r["api2_caught_by_channel"] = {c: round(float((y.score >= thr).mean()), 3) for c, y in x.groupby("channel")}
         if (d / f"real__{m}.csv").exists():
-            t = pd.read_csv(d / f"real__{m}.csv").merge(rc_lab, on="utt_id")
+            t = scores(d / f"real__{m}.csv").merge(rc_lab, on="utt_id")
             t = t[(t.split == "test") & (t.generator == "sarvam_ivc")]
             r["sarvam_ivc_real_calls"] = {spk: f"{int((y.score >= thr).sum())}/{len(y)}" for spk, y in t.groupby("speaker")}
         out[m] = r
