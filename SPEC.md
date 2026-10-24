@@ -138,6 +138,18 @@ Every decision returns `reasons[]`: code, plain-language text (EN + HI), contrib
 
 **Customer phone (Pehchaan SDK inside the bank/UPI app):** call-state sensor; on-device contact-hash matcher; payment hook; Pause & Verify UI; voice-check capture with VAD and quality gate.
 
+**Android SDK and demo shell (added 24 Oct 2026, on site; plan in `app/MOBILE_PLAN.md`):**
+- `pehchaan-sdk`: a native Kotlin Android library. It is the part a bank or TPAP integrates.
+  - Call context: call state, start and end, duration, `ended_sec_ago`. It uses `TelephonyCallback` (Android 12+) with a `PhoneStateListener` fallback.
+  - VoIP: `AudioManager` mode `MODE_IN_COMMUNICATION` → `channel: "voip"`. It can't tell which app; it doesn't need to.
+  - On-device contact check (`ContactsContract.PhoneLookup`). Only `in_contacts: true/false` leaves the phone, never the contact list.
+  - Screen sharing during the call: Android 15+ only (`addScreenRecordingCallback`). It is reported to the app; it is not yet an engine signal.
+  - Payment screens set `FLAG_SECURE`, so a screen-share can't capture them.
+  - Family Verify listener: a foreground service holds `/ws/device/{device_id}` and posts a high-priority, full-screen notification on `fv_request`. There is no FCM, and nothing is polled while idle.
+- Two build modes. The **Play-compliant** mode uses only `READ_PHONE_STATE` (call active and duration) and audio mode (VoIP, no permission). The caller's number is then unknown to the app, and number signals come from the bank or telco side (DoT FRI, CNAP). The **demo** build also uses `READ_CALL_LOG` to get the number for the contact check and the caller signals. Google Play allows call-log access only for default phone, SMS or assistant apps, so the demo build is sideloaded.
+- Demo host app "DemoPay": a Capacitor shell around `app/web` (the payer and relative screens), with a role picker on first launch. It sends the phone's real `call` object to `POST /v1/risk/assess`; the API contract is unchanged.
+- Not in this build: iOS (CallKit's `CXCallObserver` says whether a call is active but gives no number), keys in Android Keystore, and call audio.
+
 **Bank/PSP cloud (AWS; production in ap-south-1 for RBI payment-data localisation):**
 - Risk API: FastAPI on ECS Fargate behind API Gateway.
 - Fusion Engine: the `pehchaan` Python package.
