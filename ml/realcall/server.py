@@ -329,10 +329,13 @@ async def agent_ws(ws: WebSocket, call_id: str):
                 if ev == "start":
                     st["stream_id"] = msg["start"]["streamId"]
                     started.set()
-                    log_event("stream_start", call_id=call_id, stream_id=st["stream_id"])
+                    st["t_stream"] = time.perf_counter()
+                    log_event("stream_start", call_id=call_id, stream_id=st["stream_id"],
+                              start=msg.get("start"))       # Vobiz declares its media format here (rate, codec)
                 elif ev == "media" and msg.get("media", {}).get("track", "inbound") == "inbound":
                     raw = base64.b64decode(msg["media"]["payload"])
                     buf.extend(raw)
+                    st["in_bytes"] = st.get("in_bytes", 0) + len(raw)   # to derive the true inbound rate vs wall clock
                     if st["be"] is None and len(buf) >= 3200:
                         st["be"] = _guess_big_endian(bytes(buf))
                     n = len(raw) // 2 * 2
@@ -395,8 +398,12 @@ async def agent_ws(ws: WebSocket, call_id: str):
         text = await loop.run_in_executor(None, conv.transcribe, utt, agent.SR_UP)
         stt_ms = agent._ms(t0, time.perf_counter())
         if len(text.strip()) < 2:                 # nothing was said -> don't answer, don't burn a turn
+            u = np.asarray(utt, np.float32)        # metadata only (no audio): is it silence, noise, or clean speech?
+            rms = float(np.sqrt(np.mean(u ** 2))) if len(u) else 0.0
+            rms_db = round(20 * float(np.log10(rms + 1e-9)), 1)
+            hf = float(np.mean(np.diff(u) ** 2) / (np.mean(u ** 2) + 1e-12)) if len(u) > 1 else 0.0
             log_event("agent_skip", call_id=call_id, stt_ms=stt_ms, utt_s=round(len(utt) / agent.SR_UP, 2),
-                      chars=len(text.strip()))    # metadata only, so a test call shows what was skipped
+                      chars=len(text.strip()), rms_db=rms_db, hf_ratio=round(hf, 2), be=bool(st["be"]))
             return None
         t1 = time.perf_counter()
         fut = loop.run_in_executor(None, conv.plan, text)
@@ -483,7 +490,10 @@ async def agent_ws(ws: WebSocket, call_id: str):
             await recv_task
         except (asyncio.CancelledError, Exception):
             pass
-        log_event("agent_done", call_id=call_id, turns=st["turns"])
+        secs = time.perf_counter() - st.get("t_stream", time.perf_counter())
+        rate = round(st.get("in_bytes", 0) / 2 / secs) if secs > 0.5 else 0   # samples/sec: should be ~16000
+        log_event("agent_done", call_id=call_id, turns=st["turns"], inbound_rate_hz=rate,
+                  inbound_s=round(st.get("in_bytes", 0) / 2 / agent.SR_UP, 1), stream_s=round(secs, 1))
 
 
 def main():

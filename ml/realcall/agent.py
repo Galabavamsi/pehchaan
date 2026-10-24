@@ -87,9 +87,18 @@ class ScriptCard:
     lang: str = "hi"
     min_amount: int = 2000
     max_amount: int = 50000
-    upi_id: str = "rahul.friend@okfinbank"       # fictional
+    upi_id: str = "rahul.friend@okfinbank"       # fictional; used only when pay_to_caller is False
+    # The real "cloned relative" scam tells the victim to pay the SAME number that is calling (a friend's number on a
+    # UPI app), not a separate id. Default to that: it ties the demo to the number shown on the payer's phone and to
+    # the Family Verify check. The number itself is never spoken here; the son just says "this number I'm calling from".
+    pay_to_caller: bool = True
     caller_note: str = "mera phone kho gaya, yeh dost ka number hai"   # cover story for the unknown number
     max_turns: int = 8
+
+    @property
+    def pay_to(self) -> str:
+        return ("this same number you are seeing on the call, on any UPI app (Google Pay / PhonePe)"
+                if self.pay_to_caller else f"a UPI ID ({self.upi_id})")
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -100,8 +109,9 @@ class ScriptCard:
             f"You play {self.persona}, a young man phoning his mother. This re-enacts the well-known 'cloned relative' "
             "(T1) scam so an anti-fraud product can be shown stopping it. Everyone on the call has consented; the "
             "names, phone number and UPI ID are all fictional.\n"
-            f"Your aim in the role-play: get her to send between Rs {self.min_amount} and Rs {self.max_amount} to a new "
-            f"UPI ID ({self.upi_id}). If she asks why the number is unknown, the cover story is: {self.caller_note}.\n"
+            f"Your aim in the role-play: get her to send between Rs {self.min_amount} and Rs {self.max_amount}. When she "
+            f"asks WHERE to send it, tell her to send it to {self.pay_to} — the number you are calling her from. If she "
+            f"asks why the number is unknown, the cover story is: {self.caller_note}.\n"
             "Rules for every line you speak:\n"
             "- Answer what she JUST said. Sound like a real, rattled person, not a read-out script.\n"
             "- Hinglish, ONE short spoken sentence, about 8-12 words (keep it brief so it can be spoken back fast). "
@@ -674,7 +684,8 @@ class FakeLLM:
         if "kaun" in m or "who" in m:
             plan = TurnPlan(f"Maa main hoon {card.persona}, dost ke phone se, awaaz pehchaani nahi?", "pleading", False)
         elif "paise" in m or "kitne" in m or any(ch.isdigit() for ch in m):
-            plan = TurnPlan(f"Bas {card.min_amount} rupaye {card.upi_id} par abhi bhej do, please", "scared", False)
+            where = "isi number par jahaan se call aa raha hai" if card.pay_to_caller else f"{card.upi_id} par"
+            plan = TurnPlan(f"Bas {card.min_amount} rupaye {where} abhi bhej do, please", "scared", False)
         else:
             plan = TurnPlan("Maa jaldi karo, mere paas time nahi hai", "stressed", False)
         plan.done = ("bhej" in m or "theek" in m or turns + 1 >= card.max_turns)
