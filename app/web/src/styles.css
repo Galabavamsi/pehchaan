@@ -545,3 +545,7 @@ h1.q[lang="hi"], .hi h1.q { font-size: calc(28px * var(--s)); line-height: 1.3; 
 .review-banner { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0 4px; padding: 10px 12px; border-radius: 12px;
   background: var(--amber-soft); color: var(--ink); font-size: 13.5px; line-height: 1.45; }
 .review-banner svg { color: #a87a12; flex: 0 0 auto; margin-top: 1px; }
+
+/* FINALE_PLAN C2: seconds a genuine payer spends */
+.sent .sent-after { margin-top: 14px; font-size: 13.5px; color: var(--ink-2); }
+.outcome-s { font-size: 13px; color: var(--ink-2); margin-left: 6px; }

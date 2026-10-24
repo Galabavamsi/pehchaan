@@ -114,6 +114,15 @@ const statusLabel = (s: string) => ({ held: "On hold", paused: "Paused", awaitin
   cleared: "Cleared", sent: "Sent", cancelled: "Cancelled by customer", reported: "Reported by customer",
   confirmed_fraud: "Confirmed scam", false_positive: "Marked genuine", released: "Released", open: "Open" } as any)[s] ?? s;
 
+/** FINALE_PLAN C2: seconds from "Pay tapped" to the case's outcome (sent, held, released or closed). */
+const OUTCOME_EVENTS = new Set(["user_action", "hold_started", "analyst_decision"]);
+function outcomeSeconds(d: any): number | null {
+  const ev = d.events || [];
+  const end = [...ev].reverse().find((e: any) => OUTCOME_EVENTS.has(e.type));
+  if (!ev.length || !end || ["open", "verifying"].includes(d.status)) return null;
+  return Math.max(0, Math.round((Date.parse(end.ts) - Date.parse(ev[0].ts)) / 1000));
+}
+
 const EVT: Record<string, (d: any) => string> = {
   payment_attempt: (d) => `Pay tapped · trigger: ${(d.trigger || []).join(", ")}`,
   assessment: (d) => `Scored ${d.tier} · p ${Number(d.p).toFixed(3)} · ${d.why}${d.guardrails?.length ? " · " + d.guardrails.join(", ") : ""}`,
@@ -146,6 +155,7 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
         <span className="cid">{d.case_id}</span>
         <TierChip tier={d.tier} big label={tierWord(d.tier, d.status)} />
         <span className="st">{statusLabel(d.status)}{d.hold && !d.hold.released ? ` · until ${d.hold.until.slice(11, 16)} IST` : ""}</span>
+        {outcomeSeconds(d) != null && <span className="outcome-s" data-testid="outcome-seconds">outcome after <b className="mono">{outcomeSeconds(d)} s</b></span>}
         <span className="grow" />
         <span className="mono" style={{ fontSize: 13, color: "var(--slate)" }}>config v{d.config_version} · {d.created_at_ist?.slice(11, 19)} IST</span>
       </div>

@@ -84,6 +84,7 @@ const S = {
   enter_pin: ["Enter UPI PIN", "UPI PIN डालें"],
   sent_title: ["{amount} sent", "{amount} भेज दिए गए"],
   sent_to: ["to {payee}", "{payee} को"],
+  sent_after: ["{s} s after you tapped Pay", "Pay दबाने के {s} सेकंड बाद"],
   done: ["Done", "ठीक है"],
   cancelled_title: ["Payment cancelled", "पेमेंट रद्द हो गया"],
   cancelled_sub: ["Your money is safe in your account.", "आपके पैसे आपके खाते में सुरक्षित हैं।"],

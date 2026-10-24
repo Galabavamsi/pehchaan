@@ -42,6 +42,7 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
   const [err, setErr] = useState<string | null>(null);
   const [utr, setUtr] = useState<string | null>(null);
   const screenRef = useRef(screen);
+  const payAt = useRef<number | null>(null);
   screenRef.current = screen;
 
   const amount = Number(amountStr || 0);
@@ -76,6 +77,7 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
   };
 
   async function onPay() {
+    payAt.current ??= Date.now();   // FINALE_PLAN C2: the seconds a genuine payer spends, shown on the sent screen
     const r = await run(() => api.assess({
       payer_id: scenario.payer.id, scenario: scenario.scenario,
       payment: { ...scenario.payment, amount_inr: amount }, call: scenario.call,
@@ -187,7 +189,8 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
               }
               setScreen("sent");
             }} />}
-            {screen === "sent" && <SentScreen amountTxt={amountTxt} payee={payee} utr={utr} />}
+            {screen === "sent" && <SentScreen amountTxt={amountTxt} payee={payee} utr={utr}
+              seconds={payAt.current ? Math.max(1, Math.round((Date.now() - payAt.current) / 1000)) : null} />}
           </div>
         </>
       ) : null}
@@ -739,7 +742,7 @@ function PinScreen({ amountTxt, payee, onDone }: { amountTxt: string; payee: str
   );
 }
 
-function SentScreen({ amountTxt, payee, utr }: { amountTxt: string; payee: string; utr: string | null }) {
+function SentScreen({ amountTxt, payee, utr, seconds }: { amountTxt: string; payee: string; utr: string | null; seconds: number | null }) {
   const { t } = useT();
   return (
     <div className="sent" data-testid="screen-sent">
@@ -747,6 +750,7 @@ function SentScreen({ amountTxt, payee, utr }: { amountTxt: string; payee: strin
       <h1 className="mono">{t("sent_title", { amount: amountTxt })}</h1>
       <div className="to">{t("sent_to", { payee })}</div>
       <div className="utr">UTR {utr ?? "DEMO" + Date.now().toString().slice(-10)}</div>
+      {seconds != null && <div className="sent-after" data-testid="sent-after">{t("sent_after", { s: String(seconds) })}</div>}
     </div>
   );
 }
