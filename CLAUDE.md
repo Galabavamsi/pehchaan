@@ -14,9 +14,19 @@ Pehchaan protects UPI and bank payers from voice-cloning fraud by **verifying th
 The voice detector is a supporting clue in **shadow mode**; it can never hold money (guardrail G2).
 
 ## Rules (don't break these)
-- **Consent:**
-  - Only clone or record people with a saved consent form. `ml/realcall/consent.py` enforces it; don't bypass it.
-  - No real people's voices from the internet, ever.
+- **Consent** (rule changed 24 Oct 2026 after the judges confirmed open datasets are fine if declared and used for
+  research and education):
+  - **People** (team, friends, volunteers): record or clone only with a saved consent form. `ml/realcall/consent.py`
+    enforces it; don't bypass it. Live calls, the closing demo and every demo screen use these consented voices only.
+  - **Open datasets:** voices from a dataset whose licence allows derivative use (e.g. IndicVoices-R, Rasa: CC-BY-4.0)
+    may be cloned with **open-source** cloners for detector research and education. Already-synthetic datasets (e.g.
+    IndicSynth, CC BY-NC 4.0, non-commercial) may be used as they are. Every dataset is listed with its licence in
+    `ml/DATA_CARD.md` and declared in the deck's disclosure page. These clones stay in the research corpus: never in a
+    live call, a demo, a public release, or anything that impersonates the speaker.
+  - **Commercial cloning APIs** (Sarvam, ElevenLabs, …) only on consented people: their terms require the speaker's own
+    consent, and a dataset licence isn't that (Sarvam Terms of Service §10.2). The same holds for any open model whose
+    terms require the speaker's permission (IndicF5).
+  - Never scrape voices from social media or the open web.
   - Demo screens use fictional names, banks and UPI IDs.
 - **Secrets:**
   - Keys live only in the repo-root `.env`.

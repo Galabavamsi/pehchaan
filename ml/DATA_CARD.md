@@ -37,6 +37,26 @@ Gated values: `false` = open; `auto` = must log in, accept the conditions on the
 Not used (access or time): IndicF5 and MLAAD (gated: IndicF5 returns 403; MLAAD lets the token list files and read the README, but every audio file returns 403, re-checked 2026-10-06 ~06:00 IST; `data_prep/fetch_mlaad.py` is ready for a test-only Indic subset once access works), IndicVoices, Kathbath, ASVspoof 5, In-the-Wild, Gemini TTS (no key).
 **Production note:** a commercial deployment would have to drop every NC item above (NII weights, F5-TTS weights, XTTS, MMS-TTS, IndicSynth) and retrain on permissive data plus the team's own consented corpus.
 
+## 0b. Added on site (24 Oct 2026) - disclose these too
+
+Rule of 24 Oct 2026 (CLAUDE.md, after the judges confirmed that declared open datasets are fine for research and
+education): voices from a dataset whose licence allows derivative use may be cloned with open-source cloners for
+detector research. Those clones stay in the research corpus (never in a live call, a demo or a release). Commercial
+cloning APIs, and any cloner whose own terms require the speaker's permission (IndicF5), are used only on consented
+people.
+
+| Item | Role | Licence | NC? |
+|---|---|---|---|
+| Sarvam Bulbul v3 / v4 Flash, OpenAI gpt-4o-mini-tts, Deepgram Aura-2 (stock voices) | training spoofs (person-split; `common/protocol.py` 24 Oct note) | API terms | (commercial API) |
+| Sarvam instant voice cloning of S01 (consented) | training spoofs for `ours_a2_ivc` only | Sarvam ToS (§10.2: the speaker's consent) | (commercial API) |
+| ai4bharat/IndicVoices, Hindi, 11 of 82 train shards | run "v5": bona fide speech of many speakers + cloning references | CC-BY-4.0 (cite arXiv:2403.01926) | |
+| XTTS-v2 and F5-Hindi clones of those IndicVoices speakers | run "v5": training/test spoofs, research corpus only | CPML **NC** (XTTS) / CC-BY-4.0 (F5-Hindi) | **NC** (XTTS) |
+| nii-yamagishilab/mms-300m-anti-deepfake as the starting point of fine-tuned models (`ours_n1`, `ours_n3`) | candidate detectors | CC-BY-NC-SA-4.0; the fine-tuned weights inherit it | **NC** |
+
+Not used as bona fide: **IndicVoices-R**. Its audio went through HTDemucs, VoiceFixer (re-synthesis with a neural
+vocoder) and DeepFilterNet3, so labelling it "real" would teach a detector that vocoder artefacts are real.
+Not used on dataset voices: **IndicF5** ("only clone voices for which you have explicit permission").
+
 ## 1. Datasets
 
 | Name | Source URL | Licence | Gated? | Commercial use? | How we use it | Notes |
