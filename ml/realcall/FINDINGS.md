@@ -376,8 +376,32 @@ Caveats:
   so their old test clips are no longer never-trained for A2/A2-ivc.
 - **Scope:** all three columns use synthetic audio (clean plus simulated channels).
 
-**Not measured yet:**
-- **Real phone calls:** the held-out handset D2, its false-flag rate, and the 12 Sarvam IVC clones (7 of them S02).
-  The GPU box couldn't be reached after the network change, so these are still to come.
-- **Promotion:** neither candidate replaces A in the panel or the service until it holds up on real calls. The scorer
-  is ready: `score_rc_v4.sh` on the box, then `python -m realcall.compare_models --name retrain_v4 --device D2`.
+**Real phone calls, the deciding test (scored 24 Oct, 19:19).** The 510 real-call test clips (D1 + held-out handset
+D2), the same set as above, were scored on the GPU for A and both candidates. A's scores match its published CPU scores
+(correlation 0.99999) and reproduce its D2 numbers exactly. Each model uses its own deployed threshold.
+
+| Held-out handset D2 (274 clips, 32 calls) | EER | AUC | Clones caught | Genuine flagged | Sarvam IVC caught, S01 / S02 |
+|---|---|---|---|---|---|
+| A (current) | **11.7 %** | **0.935** | 115/136 = 84.6 % (78–90 %) | 11/138 = 8.0 % (5–14 %) | 0/5 / 0/7 |
+| A2 | 13.9 % | 0.923 | 110/136 = 80.9 % (73–87 %) | 10/138 = 7.2 % (4–13 %) | 0/5 / 0/7 |
+| A2-ivc | 13.1 % | 0.928 | 120/136 = 88.2 % (82–93 %) | 18/138 = 13.0 % (8–20 %) | 5/5 (seen speaker and cloner) / **0/7** |
+
+On all 510 real-call test clips (D1 + D2):
+- **EER:** A 11.0 %, A2 12.5 %, A2-ivc 12.5 %.
+- **Clones caught:** A 80 %, A2 73 %, A2-ivc 81 %.
+- **Genuine flagged:** A 4 %, A2 4 %, A2-ivc 7 %.
+
+What it means:
+1. **Synthetic gains don't transfer.** The retrain improved every synthetic test (fixed dev 2.86 % → 2.04–2.29 %; new
+   engines 91.1 % → 95.9–96.3 %), but **not real phone calls**: A stays the best on D2. The differences between models
+   on real calls are within the confidence intervals, so "no improvement" is the safe reading, not "worse".
+2. **Sarvam IVC training doesn't generalise to a new speaker.** A2-ivc caught the 5 Sarvam clones of S01, the speaker
+   it trained on, and **none of the 7 Sarvam clones of S02**, the unseen speaker. Its extra catches on D2 are exactly
+   those 5 S01 clips (non-Sarvam clones: 115/124, the same as A), and it wrongly flags 7 more genuine clips.
+3. **Decision:** model A stays the served and panel model; A2 and A2-ivc are not promoted. The checkpoints stay in S3
+   (`runs/ours_a2`, `runs/ours_a2_ivc`) for further work. A commercial cloner on a new person's voice still beats every
+   detector we have, which is why Pehchaan never lets the voice score decide.
+
+Reproduce: `ml/realcall/work/retrain_v4/d2cmp` (scores from S3 `work/scores_v4`, plus the labelled real-call manifest),
+then `python -m realcall.compare_models --dir realcall/work/retrain_v4/d2cmp --name retrain_v4 --device D2` and
+`python -m eval.compare_v4 --dir realcall/work/retrain_v4/d2cmp`.
