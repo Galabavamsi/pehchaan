@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from "react";
-import { ArrowClockwise, Phone } from "@phosphor-icons/react";
+import { ArrowClockwise, Bank, ChartScatter, Compass, Handshake, HeartStraight, Phone, ShieldWarning, Siren,
+  SlidersHorizontal, UserSound, Waveform, type Icon } from "@phosphor-icons/react";
 import { API, api, subscribe, urlParam, type Lang, type Scenario } from "./api";
 import { Bench } from "./Bench";
 import { BenchmarkPage } from "./Benchmark";
@@ -10,12 +11,12 @@ import { PayerPhone } from "./PayerPhone";
 import { RelativePhone } from "./RelativePhone";
 import { Seal } from "./components";
 
-const SCEN: { id: string; label: string }[] = [
-  { id: "T1", label: "Cloned son, +44" },
-  { id: "T2", label: "Fake bank call" },
-  { id: "T3", label: "Digital arrest" },
-  { id: "L1", label: "Paying a friend" },
-  { id: "L2", label: "Real son, new number" },
+const SCEN: { id: string; label: string; icon: Icon }[] = [
+  { id: "T1", label: "Cloned son, +44", icon: UserSound },
+  { id: "T2", label: "Fake bank call", icon: Bank },
+  { id: "T3", label: "Digital arrest", icon: Siren },
+  { id: "L1", label: "Paying a friend", icon: Handshake },
+  { id: "L2", label: "Real son, new number", icon: HeartStraight },
 ];
 
 function useRoute() {
@@ -74,7 +75,7 @@ function DemoControl() {
   const [scale, setScale] = useState(1);
   useLayoutEffect(() => {
     const forced = Number(urlParam("scale"));
-    const f = () => setScale(forced || Math.min(1, Math.max(0.6, (innerHeight - 150) / 900)));
+    const f = () => setScale(forced || Math.min(1, Math.max(0.55, (innerHeight - (innerWidth > 1500 ? 170 : 230)) / 900)));
     f();
     addEventListener("resize", f);
     return () => removeEventListener("resize", f);
@@ -83,27 +84,33 @@ function DemoControl() {
   return (
     <div className="demo" data-testid="demo">
       <header className="demo-top">
-        <span className="wm"><Seal size={26} /><span className="w">Pehchaan</span><span className="whi">पहचान</span></span>
+        <a className="wm" href="#/tour"><Seal size={28} /><span className="w">Pehchaan</span><span className="whi">पहचान</span></a>
         <span className="tag">Verify the person, not the voice.</span>
         <span className="grow" />
         <div className="scen" role="group" aria-label="Scenario">
           {SCEN.map((s) => (
             <button key={s.id} aria-pressed={sc?.scenario === s.id} onClick={() => load(s.id)} data-testid={`scen-${s.id}`}>
-              <b>{s.id}</b><span>{s.label}</span>
+              <i className="sic"><s.icon size={18} weight="duotone" /></i><b>{s.id}</b><span>{s.label}</span>
             </button>
           ))}
         </div>
-        <button className="chipbtn" aria-pressed={sc?.scenario === "CUSTOM"} onClick={() => setJury(true)} data-testid="jury-open"
-          style={{ minHeight: 40, padding: "0 12px" }}>Your case</button>
-        <button className="chipbtn" onClick={() => sc && load(sc.scenario)} aria-label="Restart scenario" style={{ minHeight: 40, padding: "0 12px" }}>
+        <button className="demo-cta" aria-pressed={sc?.scenario === "CUSTOM"} onClick={() => setJury(true)} data-testid="jury-open">
+          <SlidersHorizontal size={18} weight="bold" /> Your case
+        </button>
+        <button className="chipbtn" onClick={() => sc && load(sc.scenario)} aria-label="Restart scenario" style={{ minHeight: 42, padding: "0 14px" }}>
           <ArrowClockwise size={16} weight="bold" /> Restart
         </button>
-        <a className="chipbtn" href="#/bench" style={{ minHeight: 40, padding: "0 12px", textDecoration: "none" }}>Detector bench</a>
+        <nav className="demo-nav" aria-label="More">
+          <a href="#/bench"><Waveform size={16} weight="duotone" /> Bench</a>
+          <a href="#/benchmark"><ChartScatter size={16} weight="duotone" /> Benchmark</a>
+          <a href="#/redteam"><ShieldWarning size={16} weight="duotone" /> Red team</a>
+          <a href="#/tour"><Compass size={16} weight="duotone" /> Tour</a>
+        </nav>
       </header>
       {jury && <JuryPanel current={sc} onClose={() => setJury(false)} />}
       {sc && (
         <div className="demo-script">
-          <Phone size={16} weight="fill" />
+          <span className="ph"><Phone size={15} weight="fill" /></span>
           <span className="lab">{sc.pattern}</span>
           <span className="q">{sc.script}</span>
           <span style={{ marginLeft: "auto", color: "var(--slate)", fontSize: 13 }}>Fictional people and numbers · context adapters are mocks</span>

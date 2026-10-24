@@ -147,22 +147,22 @@ function Panel({ title, points, flagged }: { title: string; points: { g: string;
       <figcaption>{title}{flagged != null && <span className="bm-fl">real voices flagged: {pct(flagged)}</span>}</figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${title}: share caught against speaker similarity`}>
         {[0, 0.5, 1].map((v) => (
-          <g key={v}><line x1={L} x2={W - R} y1={sy(v)} y2={sy(v)} stroke="#e1e0d9" strokeWidth={1} />
+          <g key={v}><line x1={L} x2={W - R} y1={sy(v)} y2={sy(v)} stroke="#e1e9f8" strokeWidth={1} />
             <text x={L - 6} y={sy(v) + 4} textAnchor="end" className="bm-ax">{v * 100}%</text></g>
         ))}
         {[0.6, 0.7, 0.8, 0.9].filter((v) => v > x0 && v < x1).map((v) => (
           <text key={v} x={sx(v)} y={H - 10} textAnchor="middle" className="bm-ax">{v.toFixed(1)}</text>
         ))}
-        <line x1={L} x2={W - R} y1={sy(0)} y2={sy(0)} stroke="#c3c2b7" strokeWidth={1} />
+        <line x1={L} x2={W - R} y1={sy(0)} y2={sy(0)} stroke="#c3cfe6" strokeWidth={1} />
         {points.map((p) => (
           <g key={p.g} onMouseEnter={() => setHover(p.g)} onMouseLeave={() => setHover(null)} style={{ cursor: "default" }}>
             <circle cx={sx(p.x)} cy={sy(p.y)} r={14} fill="transparent" />
-            <circle cx={sx(p.x)} cy={sy(p.y)} r={5} fill={p.held ? "#fcfcfb" : "#2a78d6"} stroke="#2a78d6" strokeWidth={2} />
+            <circle cx={sx(p.x)} cy={sy(p.y)} r={5} fill={p.held ? "#ffffff" : "#2a78d6"} stroke="#2a78d6" strokeWidth={2} />
           </g>
         ))}
         {hp && (
           <g pointerEvents="none">
-            <rect x={Math.min(sx(hp.x) + 8, W - 128)} y={Math.max(sy(hp.y) - 34, 2)} width={120} height={30} rx={6} fill="#0b0b0b" opacity={0.88} />
+            <rect x={Math.min(sx(hp.x) + 8, W - 128)} y={Math.max(sy(hp.y) - 34, 2)} width={120} height={30} rx={6} fill="#111d3c" opacity={0.92} />
             <text x={Math.min(sx(hp.x) + 14, W - 122)} y={Math.max(sy(hp.y) - 20, 16)} className="bm-tip">{GEN[hp.g] ?? hp.g}</text>
             <text x={Math.min(sx(hp.x) + 14, W - 122)} y={Math.max(sy(hp.y) - 8, 28)} className="bm-tip">sim {hp.x.toFixed(3)} · caught {pct(hp.y)}</text>
           </g>

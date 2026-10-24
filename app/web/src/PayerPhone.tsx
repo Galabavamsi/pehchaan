@@ -43,6 +43,9 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
   const [utr, setUtr] = useState<string | null>(null);
   const screenRef = useRef(screen);
   const payAt = useRef<number | null>(null);
+  const [sentSecs, setSentSecs] = useState<number | null>(null);
+  const [paymentRef, setPaymentRef] = useState<string | null>(null);   // a payment that opened no case
+  const mountedAt = useRef(Date.now());
   screenRef.current = screen;
 
   const amount = Number(amountStr || 0);
@@ -80,11 +83,14 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
     payAt.current ??= Date.now();   // FINALE_PLAN C2: the seconds a genuine payer spends, shown on the sent screen
     const r = await run(() => api.assess({
       payer_id: scenario.payer.id, scenario: scenario.scenario,
-      payment: { ...scenario.payment, amount_inr: amount }, call: scenario.call,
+      payment: { ...scenario.payment, amount_inr: amount }, call: scenario.call.state === "active"
+        ? { ...scenario.call, duration_sec: scenario.call.duration_sec + Math.round((Date.now() - mountedAt.current) / 1000) }
+        : scenario.call,
     }));
     if (!r) return;
     setA(r);
     if (r.case_id) setCaseId(r.case_id);
+    setPaymentRef(r.payment_ref ?? null);
     if (!r.case_id || (!r.ask_claim && r.tier === "green")) { setScreen("pin"); return; }
     if (r.ask_claim || r.tier !== "red") setScreen("who"); else route(r);
   }
@@ -161,7 +167,8 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
 
   const head = (variant: "plain" | "amber" | "red" | "teal" = "plain") => (
     <div className={variant === "plain" ? "pp-head" : "band-head"}>
-      <Seal size={20} dot={variant === "red" || variant === "teal" ? "#fffdf8" : "#1b1f24"} ring={variant === "amber" ? "#1b1f24" : variant === "plain" ? "#e8742a" : "#ffd2b0"} />
+      <Seal size={20} dot={variant === "red" || variant === "teal" ? "#ffd2c4" : variant === "amber" ? "#111d3c" : "#ff7b5c"}
+        ring={variant === "amber" ? "#111d3c" : variant === "plain" ? undefined : "#ffffff"} />
       <span className="word">Pehchaan</span><span className="word-hi" style={{ opacity: 0.8 }}>पहचान</span>
       <span className="grow" />
       <LangToggle toggles={toggles} dark={variant === "red" || variant === "teal"} />
@@ -186,11 +193,13 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
               if (caseId && a?.status !== "sent") {
                 const r: any = await run(() => api.userAction(caseId, a?.tier === "green" ? "pay" : "continue"));
                 if (r?.utr) setUtr(r.utr);
+              } else if (!caseId && paymentRef) {
+                await api.paymentSent(paymentRef).catch(() => null);
               }
+              setSentSecs(payAt.current ? Math.max(1, Math.round((Date.now() - payAt.current) / 1000)) : null);
               setScreen("sent");
             }} />}
-            {screen === "sent" && <SentScreen amountTxt={amountTxt} payee={payee} utr={utr}
-              seconds={payAt.current ? Math.max(1, Math.round((Date.now() - payAt.current) / 1000)) : null} />}
+            {screen === "sent" && <SentScreen amountTxt={amountTxt} payee={payee} utr={utr} seconds={sentSecs} />}
           </div>
         </>
       ) : null}
@@ -540,7 +549,7 @@ function FvWait({ fv, relName, pronoun, head, onCallInstead, onCancel, onCancelR
         <h1 className="q">{fv.auto ? t("fv_auto_title", { name: relName, their }) : t("waiting_for", { name: relName })}</h1>
         <p className="lede">{fv.auto ? t("fv_auto_sub", { name: relName }) : t("waiting_sub", { name: relName })}</p>
         <div className="ring-wrap">
-          <Ring size={190} frac={cd.frac} stroke={12} track="#ede5d5" color="#e8742a">
+          <Ring size={190} frac={cd.frac} stroke={14} track="#e1e9f8" color="#3461e8">
             <div><div className="big">{cd.mmss}</div><div className="small">{t("fv_left")}</div></div>
           </Ring>
         </div>
@@ -631,7 +640,7 @@ function HoldScreen({ a, head, relName, relative, bankName, amountTxt, claim, bu
         {head}
         <div className="hold-grid">
           <div className="hold-ring">
-            <Ring size={116} frac={cd.frac} stroke={9} track="rgba(255,255,255,0.22)" color="#fffdf8">
+            <Ring size={116} frac={cd.frac} stroke={10} track="rgba(255,255,255,0.22)" color="#ffffff">
               <div><div className="big">{cd.mmss}</div><div className="small">{lang === "hi" ? "रोक बाकी" : "on hold"}</div></div>
             </Ring>
           </div>
@@ -862,7 +871,7 @@ function ReportScreen({ pack, head, bankName }: { pack: any; head: React.ReactNo
         <h1 className="q" lang={lang}>{t("report_ready")}</h1>
         <p className="lede" style={{ marginBottom: 0 }}>{t("report_sub")}</p>
         <div className="pack-id">
-          <div style={{ fontSize: 12.5, color: "#c9cdd3" }}>{lang === "hi" ? "केस नंबर" : "Case number"}</div>
+          <div style={{ fontSize: 12.5, color: "#cbd5f2" }}>{lang === "hi" ? "केस नंबर" : "Case number"}</div>
           <div className="pid">{pack.case_id}</div>
           <div className="seal"><SealCheck size={16} weight="fill" />{t("signed_pack")} · Ed25519 · {pack.hash_chain.length} {lang === "hi" ? "घटनाएँ जुड़ी" : "events chained"}</div>
           <div className="hash">SHA-256 {pack.hash_chain.head.slice(0, 32)}…</div>

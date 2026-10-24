@@ -44,7 +44,7 @@ export interface PanelResult {
   audio_retained: boolean; used_in_decision: boolean;
 }
 export interface Assessment {
-  case_id: string | null; triggered: boolean; stage?: string; tier: Tier; raw_tier?: Tier; p: number | null;
+  case_id: string | null; triggered: boolean; payment_ref?: string; stage?: string; tier: Tier; raw_tier?: Tier; p: number | null;
   log_odds?: number; prior?: number; prior_log_odds?: number;
   thresholds?: { green_below: number; red_at_or_above: number; green_below_log_odds: number; red_at_or_above_log_odds: number };
   reasons: Reason[]; top_reasons: Reason[]; actions: Action[]; guardrails: Guardrail[];
@@ -100,6 +100,8 @@ async function req<T>(path: string, init?: RequestInit & { json?: unknown }): Pr
 
 export const api = {
   scenario: (name: string) => req<Scenario>(`/v1/demo/scenario/${name}`, { method: "POST" }),
+  /** A payment that opened no case counts in the payee history only once it is really sent (Greptile P1). */
+  paymentSent: (ref: string) => req<{ recorded: boolean; already?: boolean }>(`/v1/payments/${ref}/sent`, { method: "POST" }),
   custom: (c: CustomCase) => req<Scenario>("/v1/demo/custom", { method: "POST", json: c }),
   assess: (body: unknown) => req<Assessment>("/v1/risk/assess", { method: "POST", json: body }),
   verifyFamily: (case_id: string, relative_id?: string) =>

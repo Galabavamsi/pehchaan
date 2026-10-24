@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DownloadSimple, Microphone, Stop, UploadSimple, WarningCircle } from "@phosphor-icons/react";
 import { api, type PanelResult } from "./api";
 import { Seal } from "./components";
@@ -52,14 +52,35 @@ export function Bench() {
     setTimeout(pump, 0);
   };
 
+  // The microphone must never outlive the page: stop it on leave, even if access is granted after we left.
+  const alive = useRef(true);
+  const starting = useRef(false);
+  const recRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  useEffect(() => () => {
+    alive.current = false;
+    const r = recRef.current;
+    if (r && r.state !== "inactive") { r.onstop = null; r.stop(); }
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+  }, []);
+
   const record = async () => {
     if (rec) { rec.stop(); return; }
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    if (starting.current) return;
+    starting.current = true;
+    let stream: MediaStream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } finally { starting.current = false; }
+    if (!alive.current) { stream.getTracks().forEach((t) => t.stop()); return; }
     const mr = new MediaRecorder(stream);
+    streamRef.current = stream;
+    recRef.current = mr;
     const chunks: Blob[] = [];
     mr.ondataavailable = (e) => chunks.push(e.data);
     mr.onstop = () => {
       stream.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      recRef.current = null;
+      if (!alive.current) return;
       setRec(null);
       add([{ blob: new Blob(chunks, { type: mr.mimeType }), name: `mic-${new Date().toLocaleTimeString()}.webm` }]);
     };
@@ -96,7 +117,14 @@ export function Bench() {
     const head = ["file", "label", "audio_s", "speech_s", "fused", ...models.flatMap((m) => [`${m}_verdict`, `${m}_z`])];
     const lines = rows.filter((r) => r.res).map((r) => [r.name, r.label, r.res!.audio_seconds, r.res!.quality.speech_sec,
       r.res!.fused?.verdict ?? "", ...models.flatMap((m) => { const x = r.res!.models.find((y) => y.id === m); return [x?.verdict ?? "", x?.z ?? ""]; })]);
-    const blob = new Blob([[head, ...lines].map((l) => l.join(",")).join("\n")], { type: "text/csv" });
+    // quote every field that needs it (a filename may hold commas, quotes or line breaks), and keep spreadsheet
+    // formulas out of text cells
+    const cell = (v: unknown) => {
+      let t = String(v ?? "");
+      if (typeof v === "string" && /^[=+\-@]/.test(t) && Number.isNaN(Number(t))) t = `'${t}`;
+      return /[",\r\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+    };
+    const blob = new Blob([[head, ...lines].map((l) => l.map(cell).join(",")).join("\n")], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "pehchaan-bench.csv";

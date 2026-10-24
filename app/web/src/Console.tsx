@@ -48,7 +48,7 @@ export function Console({ compact = false, follow = false }: { compact?: boolean
   };
 
   // Needs review: large holds (analyst release) and, since SPEC v0.3, voice hits from the shadow detector
-  const needsReview = (c: any) => (c.status === "held" && (c.amount_inr ?? 0) >= 50000) || !!c.review;
+  const needsReview = (c: any) => (c.status === "held" && (c.amount_inr ?? 0) >= 50000) || (!!c.review && !c.review.resolved);
   const shown = list.filter((c) => filter === "all" ? true : filter === "held" ? c.status === "held" : needsReview(c));
   const counts = { all: list.length, held: list.filter((c) => c.status === "held").length,
     review: list.filter(needsReview).length };
@@ -59,10 +59,10 @@ export function Console({ compact = false, follow = false }: { compact?: boolean
         <span className="bankmark"><span className="bm"><Bank size={17} weight="fill" /></span>Bharat Demo Bank</span>
         <span className="sep" />
         <span className="title">Fraud risk console</span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#c9cdd3" }}><Seal size={16} dot="#fffdf8" />Pehchaan</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#cbd5f2" }}><Seal size={16} ring="#9db4ff" dot="#ffffff" />Pehchaan</span>
         <span className="grow" />
         <span className="logged"><Eye size={15} weight="bold" />{compact ? "Access logged" : "Every case you open is logged with your reason"}</span>
-        <span className="role"><UserCircle size={16} weight="fill" /><b>Fraud analyst · L2</b><span className="mono" style={{ fontSize: 12, color: "#c9cdd3" }}>a.verma</span></span>
+        <span className="role"><UserCircle size={16} weight="fill" /><b>Fraud analyst · L2</b><span className="mono" style={{ fontSize: 12, color: "#cbd5f2" }}>a.verma</span></span>
       </div>
       <div className="con-main">
         <aside className="queue">
@@ -84,7 +84,7 @@ export function Console({ compact = false, follow = false }: { compact?: boolean
                   <div className="qt">{c.payee_name}</div>
                   <div className="qs">{claimLabel(c.claim)} · {statusLabel(c.status)}</div>
                   <div style={{ marginTop: 6 }}><TierChip tier={c.tier} label={tierWord(c.tier, c.status)} />
-                    {c.review && <span className="review-chip" title="Voice check flagged it; not used in the payment decision">Voice flagged</span>}</div>
+                    {c.review && !c.review.resolved && <span className="review-chip" title="Voice check flagged it; not used in the payment decision">Voice flagged</span>}</div>
                 </span>
                 <span>
                   <div className="qa">{formatINR(c.amount_inr)}</div>
@@ -106,7 +106,7 @@ export function Console({ compact = false, follow = false }: { compact?: boolean
 
 const tierWord = (t: Tier, status: string) =>
   ({ red: status === "held" ? "Red · on hold" : "Red", amber: "Amber", green: "Green" }[t]);
-const tierColor = (t: Tier) => ({ red: "#c8372d", amber: "#e0a526", green: "#13796f" }[t] ?? "#6b7280");
+const tierColor = (t: Tier) => ({ red: "#d63a31", amber: "#f0a20f", green: "#0b7f63" }[t] ?? "#62718f");
 const claimLabel = (c: string | null) => ({ family: "Claimed family", bank: "Claimed bank", upi_or_shop: "UPI app / shop",
   authority: "Claimed police / govt",
   other: "Someone else", none: "No one asked" } as any)[c ?? ""] ?? "No claim yet";
@@ -162,9 +162,10 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
       {d.review && (
         <div className="review-banner" data-testid="review-banner">
           <WarningCircle size={18} weight="fill" />
-          <span><b>For review:</b> the voice check scored this call {d.review.reason === "voice_watermark" ? "as carrying an AI watermark" : "likely synthetic"}
+          <span><b>{d.review.resolved ? "Reviewed" : "For review"}:</b> the voice check scored this call {d.review.reason === "voice_watermark" ? "as carrying an AI watermark" : "likely synthetic"}
             {d.review.p_synthetic != null && <> (p <span className="mono">{Number(d.review.p_synthetic).toFixed(2)}</span>)</>}.
             {d.review.voice_mode === "shadow" ? " Shadow mode: it did not change the tier, the hold or anything the customer saw. Your label feeds the real-call gate." : ""}
+            {d.review.resolved && <> Decided: <b>{String(d.review.resolved.decision).replaceAll("_", " ")}</b> by {d.review.resolved.by}.</>}
             <span className="mono" style={{ fontSize: 11.5, color: "var(--slate)" }}> {d.review.model_version}</span></span>
         </div>
       )}
@@ -195,7 +196,7 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
                       <td><div style={{ fontWeight: 600 }}>{SHORT[r.code]?.[0] ?? r.code}</div><div className="mono" style={{ fontSize: 11.5, color: "var(--slate)" }}>{r.code} · {r.basis}</div>{r.basis === "shadow" && <span className="shadow-badge">shadow: not used in decision</span>}</td>
                       <td>{r.text.en}<div className="hi" lang="hi">{r.text.hi}</div></td>
                       <td className="num">{r.lr < 1 ? r.lr.toFixed(2) : r.lr.toFixed(r.lr < 10 ? 1 : 0)}</td>
-                      <td className="num" style={{ color: r.contribution > 0 ? "#b4531a" : "var(--teal)", fontWeight: 600 }}>{r.contribution > 0 ? "+" : "−"}{Math.abs(r.contribution).toFixed(2)}</td>
+                      <td className="num" style={{ color: r.contribution > 0 ? "#c4452a" : "var(--teal)", fontWeight: 600 }}>{r.contribution > 0 ? "+" : "−"}{Math.abs(r.contribution).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
