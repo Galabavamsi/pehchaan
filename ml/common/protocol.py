@@ -51,5 +51,38 @@ def team_split(speaker: str, line_id: str, section: str) -> str:
     return "train" if n <= 8 else ("dev" if n <= 10 else "test")
 
 
+# 2026-10-24 (on site). Written before any of the clips below existed, but AFTER we had seen every model miss the
+# Sarvam IVC clones, so any result that depends on this change must say so. A jury member confirmed that audio
+# from paid APIs may be used for training. New TRAINING generators, split by voice PERSON (one person is in one
+# split across every model and style) and by the FLEURS split of the sentence read:
+#   sarvam_v3t   Sarvam Bulbul v3 stock voices          sarvam_v4f  Sarvam Bulbul v4 Flash stock voices
+#   openai_t     OpenAI gpt-4o-mini-tts stock voices    deepgram_t  Deepgram Aura-2 stock voices (English)
+#   sarvam_ivct  Sarvam instant voice clones of S01 only (consented); train split
+# Unchanged: every clip made before today keeps its split, so the held-out "sarvam", "openai", "deepgram" and
+# "sarvam_ivc" clips stay test-only; S02 stays held out; Gemini TTS stays a never-trained engine. The test persons
+# below include every voice behind the old held-out commercial clips, so those clips stay unseen voices.
+# A model trained on these generators reports Sarvam/OpenAI/Deepgram as "seen engine, unseen voices" and
+# Sarvam IVC only on S02 ("seen engine, unseen speaker").
+API2_GENERATORS = {"sarvam_v3t", "sarvam_v4f", "openai_t", "deepgram_t", "sarvam_ivct"}
+API2_PERSONS = {
+    "sarvam": {"test": {"shubh", "rahul", "amit", "rohan", "ritu", "priya", "kavya", "neha", "simran", "vijay",
+                        "kavitha", "roopa"},
+               "dev": {"aditya", "ishita", "kabir", "tanya", "mani", "chaitra", "bhavik", "sanchita"}},
+    "openai": {"test": {"marin", "nova", "onyx"}, "dev": {"cedar", "shimmer"}},
+    "deepgram": {"test": {"thalia", "andromeda", "helena", "apollo", "arcas", "aries", "asteria", "orion", "luna", "zeus"},
+                 "dev": {"athena", "hermes", "iris", "juno"}},
+}
+
+
+def api2_split(generator: str, voice: str) -> str:
+    """Split of a 2026-10-24 paid-API clip: by the voice's person (v4 Flash ids are person_lang_style)."""
+    if generator == "sarvam_ivct":
+        return "train"
+    family = generator.split("_")[0]
+    person = voice.replace("aura-2-", "").split("_")[0].split("-")[0]
+    rule = API2_PERSONS[family]
+    return "test" if person in rule["test"] else ("dev" if person in rule["dev"] else "train")
+
+
 def is_heldout(generator: str, speaker: str = "") -> bool:
     return generator in HELDOUT_GENERATORS or (speaker in HELDOUT_SPEAKERS)

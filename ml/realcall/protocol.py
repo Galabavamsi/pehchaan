@@ -8,6 +8,10 @@ from common.protocol import HELDOUT_SPEAKERS
 
 # A generator never used in any training run, so the finale can report a brand-new clone engine on real lines.
 REALCALL_HELDOUT_GENERATORS = {"sarvam_ivc"}
+# 2026-10-24 (on site, after the Sarvam IVC result had been seen): unchanged, and every existing sarvam_ivc clip
+# stays test-only. New Sarvam IVC clones of S01 made today for training are a separate generator, "sarvam_ivct"
+# (common/protocol.py note of the same date). A model trained with them reports sarvam_ivc only on S02 (held-out
+# speaker), labelled "seen engine", and never claims a never-trained clone engine; that claim stays with v1 and A.
 
 # Fill in before the first session: one whole handset/carrier kept out of training, and the live callers
 # whose calls form the gate set. Edit only before data from them exists.
