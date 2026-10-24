@@ -19,7 +19,9 @@ import pandas as pd
 from realcall.settings import MANIFESTS, REPORTS
 
 MODELS = {"ours_v1": "v1 (Round 1, served)", "ours_v1_rc": "B: + real-call clips", "ours_v3": "C: + learned channel",
-          "ours_v3_rc": "A: + learned channel + real-call clips"}
+          "ours_v3_rc": "A: + learned channel + real-call clips",
+          # 2026-10-24 paid-API retrain (common/protocol.py note): candidates beside A, never replacing it unchecked
+          "ours_a2": "A2: A + paid-API stock voices", "ours_a2_ivc": "A2-ivc: A2 + S01 Sarvam clones"}
 
 
 def eer_thr(y, s):
@@ -44,6 +46,7 @@ def main():
     ap.add_argument("--dir", default="realcall/work/retrain_v3/scores",
                     help="folder synced from s3://.../work/scores_rc (scores + labelled manifests, flat)")
     ap.add_argument("--device", help="only real-call test clips captured on this handset (e.g. D2, held out)")
+    ap.add_argument("--name", default="retrain_v3", help="report file: <name>_comparison[_<device>].json")
     a = ap.parse_args()
     d = Path(a.dir)
     if not (d / "realcall_eval.csv").exists() and (d / "scores").is_dir():
@@ -102,7 +105,7 @@ def main():
     print("\nclones caught per generator (deployed threshold):")
     for m in out:
         print(f"  {MODELS[m]:42s} {out[m]['per_generator_caught']}")
-    (REPORTS / f"retrain_v3_comparison{'_' + a.device if a.device else ''}.json").write_text(json.dumps(out, indent=1))
+    (REPORTS / f"{a.name}_comparison{'_' + a.device if a.device else ''}.json").write_text(json.dumps(out, indent=1))
 
 
 if __name__ == "__main__":

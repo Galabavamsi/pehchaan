@@ -238,6 +238,8 @@ def run(a):
     jobs = [j for j in jobs if not (os.path.exists(j["out"]) and os.path.getsize(j["out"]) > 2000)]
     if a.reverse:   # a second process can work the same list from the other end
         jobs = jobs[::-1]
+    if a.shuffle:    # ... and a third in random order (each job re-checks its file just before calling the API)
+        random.Random(a.shuffle).shuffle(jobs)
     if a.limit:
         jobs = jobs[: a.limit]
     print(f"{len(jobs)} jobs")
@@ -285,6 +287,7 @@ if __name__ == "__main__":
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--reverse", action="store_true")
+    ap.add_argument("--shuffle", type=int, default=0, help="random job order with this seed")
     a = ap.parse_args()
     a.out_dir = a.out_dir or str(ROOT / ("data/generated/api2" if a.mode == "build2" else "data/generated/api"))
     {"build": build, "build2": build2, "run": run}[a.mode](a)
