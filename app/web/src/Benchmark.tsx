@@ -70,7 +70,10 @@ export function BenchmarkPage() {
           ClonEval's measure (arXiv:2504.20581): how close a clone sounds to the real speaker to a speaker-recognition model
           (WavLM). The same files then go through a phone codec, and real phone calls come from our pre-registered test split.
         </p>
-        {err && <p className="bm-err">No benchmark yet ({err}).</p>}
+        {err && (err.startsWith("404")
+          ? <p className="bm-note" title={err}>The results are being re-scored with the detector bench's scoring plan. They appear here
+              as soon as that run finishes.</p>
+          : <p className="bm-err" title={err}>The benchmark results could not be loaded right now. Please try again in a minute.</p>)}
         {r && rows && (<>
           <div className="bm-ctl">
             <div className="seg" role="group" aria-label="Condition">
