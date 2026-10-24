@@ -31,6 +31,8 @@ const S = {
   cl_secrecy: ["They asked me to keep it secret", "उन्होंने बात छिपाने को कहा"],
   cl_otp: ["They asked for an OTP or PIN", "उन्होंने OTP या PIN माँगा"],
   cl_arrest: ["They said someone could be arrested", "उन्होंने किसी की गिरफ़्तारी की बात कही"],
+  cl_remote: ["They asked me to install an app or share my screen", "उन्होंने कोई ऐप डालने या स्क्रीन शेयर करने को कहा"],
+  cl_refund: ["They said I must pay to get a refund or to verify", "उन्होंने कहा कि रिफ़ंड या वेरिफ़िकेशन के लिए पैसे भेजने होंगे"],
   cl_none: ["None of these", "इनमें से कुछ नहीं"],
   cl_done: ["Done", "हो गया"],
   cancel_safer: ["Cancel is the safer choice: what you heard on the call did not match.", "रद्द करना ही सुरक्षित है: कॉल पर जो सुना, वो मेल नहीं खाता।"],

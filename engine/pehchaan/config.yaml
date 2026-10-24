@@ -115,6 +115,9 @@ actions:
   # Pehchaan circle (bound phone), send the Family Verify push automatically if the result is
   # Amber or Red. The payer sees "We've asked <name> to confirm" with a small Cancel request link.
   family_verify_auto: true
+  # SPEC v0.3 (red-team run): also at Green. A spoofed or hijacked caller ID showing the son's saved number, or a
+  # mule account in his name, keeps the context Green; the son's own phone is the check the attacker can't fake.
+  family_verify_auto_green: true
   # SPEC v0.3 section 6: rate limit, so an attacker can't spam a relative's phone with requests.
   family_verify_max_per_payer_hour: 3
   family_verify_max_per_relative_hour: 5

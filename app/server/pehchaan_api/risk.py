@@ -123,6 +123,13 @@ class CaseService:
             return None
         return {"count": before, "usual_amount": (hist["usual_amount"] * hist["count"] - total) / before}
 
+    def _recent_new_payees(self, payer_id: str, exclude_vpa: str) -> int:
+        """Other payees this payer paid for the first time in the burst window (SPEC section 3, burst_new_payees)."""
+        since = ist_iso(self.now() - timedelta(minutes=CFG.trigger.burst_window_min))
+        rows = self.s.all("SELECT payee_vpa, COUNT(*) AS n FROM sent_payments WHERE payer_id=? AND ts>=? AND payee_vpa!=? "
+                          "GROUP BY payee_vpa", (payer_id, since, exclude_vpa.lower()))
+        return sum(1 for r in rows if (self.history.payee(payer_id, r["payee_vpa"]) or {"count": 0})["count"] <= r["n"])
+
     def _record_sent(self, payer_id: str, amount: float, payee_vpa: str, caller: str | None) -> None:
         self.s.x("INSERT INTO sent_payments(payer_id, ts, amount, payee_vpa, caller) VALUES(?,?,?,?,?)",
                  (payer_id, self.ts(), amount, payee_vpa.lower(), caller or ""))
@@ -167,7 +174,8 @@ class CaseService:
         flag = self.i4c.lookup(payment["payee_vpa"])
         if flag:
             sig.append(f"payee_flagged_{flag}")
-        recent_new = payer.get("recent_new_payees_30m", 0) + (1 if hist is None else 0)
+        recent_new = (payer.get("recent_new_payees_30m", 0) + self._recent_new_payees(uid, payment["payee_vpa"])
+                      + (1 if hist is None else 0))
         if recent_new >= CFG.trigger.burst_min_new_payees:
             sig.append("burst_new_payees")
         cc = country_of(number) if number else None
@@ -185,7 +193,10 @@ class CaseService:
         trusted = None
         if hist is not None:
             trusted = {"prior_payments": hist["count"], "usual_amount_inr": hist["usual_amount"], "amount_inr": amount}
+        # SPEC v0.3: is the call from the saved number of someone in the payer's circle?
+        caller_rel = next((r for r in payer.get("circle", []) if number and normalise_number(r.get("saved_number")) == number), None)
         return {"signals": sig, "params": params, "trigger": trig.model_dump(), "trusted": trusted,
+                "caller_relative_id": caller_rel["id"] if caller_rel else None,
                 "number": number, "state": state, "channel": channel, "in_contacts": bool(in_contacts)}
 
     # --------------------------------------------------------------- scoring
@@ -229,7 +240,7 @@ class CaseService:
                    trusted=TrustedPayee(**case["trusted"]) if case.get("trusted") else None, params=params, cfg=CFG)
         has_check = any((case["checks"].get(k) or {}).get("result") for k in CHECK_SIGNALS)
         stage = "verified" if has_check else ("claim" if case.get("claim") else "context")
-        ask = stage == "context" and should_ask_claim(a, CFG)
+        ask = stage == "context" and should_ask_claim(a, CFG, caller_in_circle=bool(case.get("caller_relative_id")))
         prev_tier = case.get("tier")
         if stage == "context":
             case["context_tier"] = a.tier   # SPEC v0.2 A20: the K+P tier before the claim
@@ -348,12 +359,13 @@ class CaseService:
             "call_duration_sec": call.get("duration_sec"),
             "claim": None, "relative": None, "relative_name": None, "checks": {}, "cues": [],
             "context_signals": ctx["signals"], "params": ctx["params"], "trusted": ctx["trusted"],
+            "caller_relative_id": ctx["caller_relative_id"],
             "trigger": ctx["trigger"], "status": "open", "history": [],
         }
         # score before persisting: silent Green keeps only an anonymous counter (SPEC 5)
         probe = assess(ctx["signals"], trusted=TrustedPayee(**ctx["trusted"]) if ctx["trusted"] else None,
                        params=ctx["params"], cfg=CFG)
-        if probe.tier == "green" and not should_ask_claim(probe, CFG):
+        if probe.tier == "green" and not should_ask_claim(probe, CFG, caller_in_circle=bool(ctx["caller_relative_id"])):
             self.s.next_counter("green_silent")
             self._record_sent(payer["id"], amount, payment["payee_vpa"], ctx["number"])
             return {"case_id": None, "triggered": True, "trigger": ctx["trigger"], "stage": "context", "tier": "green",
@@ -551,6 +563,12 @@ class CaseService:
         return [json.loads(r["message"]) for r in rows]
 
     def register_device(self, device_id: str, user_id: str, public_key_b64: str) -> dict:
+        cur = self.s.one("SELECT public_key_b64 FROM devices WHERE device_id=?", (device_id,))
+        if cur and cur["public_key_b64"] != public_key_b64 and self.s.one(
+                "SELECT 1 FROM challenges WHERE device_id=? AND status='pending' AND expires_at>=?", (device_id, self.ts())):
+            # SPEC v0.3 device binding: no swapping in another phone while a question is waiting on this one
+            raise CaseError(409, "A Family Verify question is waiting on this phone, so it can't be moved to a new key "
+                                 "until that is answered or expires.")
         self.s.x("INSERT OR REPLACE INTO devices(device_id, user_id, public_key_b64, bound_at) VALUES(?,?,?,?)",
                  (device_id, user_id, public_key_b64, self.ts()))
         return {"device_id": device_id, "user_id": user_id, "bound_at": self.ts(),

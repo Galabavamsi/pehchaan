@@ -86,6 +86,7 @@ class ActionsCfg(BaseModel):
     analyst_review_at_or_above_inr: float = 50000
     family_verify_timeout_sec: int = 180
     family_verify_auto: bool = True  # SPEC v0.2 A19: auto-send FV for a named, enrolled relative
+    family_verify_auto_green: bool = True  # SPEC v0.3: ... also when the result after the claim is Green
     family_verify_max_per_payer_hour: int = 3     # SPEC v0.3 section 6: Family Verify rate limit
     family_verify_max_per_relative_hour: int = 5
 

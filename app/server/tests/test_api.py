@@ -1,3 +1,4 @@
+import pytest
 from conftest import ANALYST
 
 
@@ -133,6 +134,12 @@ def test_fv_signature_and_device_binding_enforced(client, device_factory):
     wrong_dev = client.post(f"/v1/verify/family/{ch['challenge_id']}/respond",
                             json={"answer": "yes", "device_id": "dev_priya", "signature_b64": other.sign(ch["challenge_id"], nonce, "yes")})
     assert wrong_dev.status_code == 403
+    # SPEC v0.3: an attacker can't re-bind Rahul's phone to their own key while the question is waiting
+    with pytest.raises(AssertionError):
+        device_factory(client, "dev_rahul", "rel_rahul")
+    ok = client.post(f"/v1/verify/family/{ch['challenge_id']}/respond",
+                     json={"answer": "yes", "device_id": "dev_rahul", "signature_b64": dev.sign(ch["challenge_id"], nonce, "yes")})
+    assert ok.status_code == 200, ok.text
 
 
 def test_fv_timeout_falls_back(client, device_factory):
@@ -298,3 +305,25 @@ def test_jury_builds_their_own_case(client):
     assert not a["triggered"] and not a["trigger"]["call_condition"]
     _, a = custom(caller="saved", payee="usual", amount_inr=45000)
     assert a["tier"] == "green" and a["case_id"] is None
+
+
+def test_call_from_a_circle_members_saved_number_is_still_asked(client, device_factory):
+    """SPEC v0.3 (red-team run): the caller ID shows the son's saved number (spoofed, or his WhatsApp taken over).
+    The context alone is Green, yet the payer is asked, and "Family member" gets the son's own phone to confirm."""
+    sc = client.post("/v1/demo/custom", params={"background": False},
+                     json={"caller": "saved", "amount_inr": 40000, "payee": "new", "payee_name": "Arif Traders"}).json()
+    son = device_factory(client, "dev_rahul", "rel_rahul")  # bound long before the call
+    a = client.post("/v1/risk/assess", json={"payer_id": "u_sunita", "payment": sc["payment"], "call": sc["call"]}).json()
+    assert a["tier"] == "green" and a["ask_claim"] and a["case_id"]
+    b = client.post("/v1/risk/assess", json={"case_id": a["case_id"], "claim": "family", "claim_target": "rel_rahul"}).json()
+    ch = b["auto_family_verify"]
+    assert b["tier"] == "green" and ch["auto"] is True   # v0.3: the push goes out at Green too
+    nonce = client.get("/v1/devices/dev_rahul/challenges").json()[0]["nonce"]
+    r = client.post(f"/v1/verify/family/{ch['challenge_id']}/respond",
+                    json={"answer": "no", "device_id": "dev_rahul", "signature_b64": son.sign(ch["challenge_id"], nonce, "no")})
+    assert r.json()["tier"] == "red"
+    # "No one asked me" on the same call: no push to the son, so his honest "no" can't hold her own payment
+    a2 = client.post("/v1/risk/assess", json={"payer_id": "u_sunita", "payment": dict(sc["payment"], payee_vpa="shop@okdemo"),
+                                              "call": sc["call"]}).json()
+    b2 = client.post("/v1/risk/assess", json={"case_id": a2["case_id"], "claim": "none"}).json()
+    assert b2["tier"] == "green" and "auto_family_verify" not in b2

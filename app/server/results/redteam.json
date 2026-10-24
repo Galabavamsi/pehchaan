@@ -1,0 +1,136 @@
+{
+  "run_at": "2026-10-24T12:41:51+05:30",
+  "rows": [
+    {
+      "id": "R1",
+      "evasion": "Split the demand: ₹9,500 four times to one payee during the call",
+      "outcome": "paused",
+      "observed": "each of the 4 payments was paused, paused, paused, paused; the trigger counts what was already sent during the call and the payee stays new for the rest of the call",
+      "why": "v0.3: amounts sent during the call add up; a payee first paid during the call stays new."
+    },
+    {
+      "id": "R2",
+      "evasion": "Hang up, wait 30 minutes, then pay ₹60,000",
+      "outcome": "paused",
+      "observed": "assessed: call ended 30.0 min ago, new payee, amount >= 10,000",
+      "why": "v0.3: 60-minute window for amounts ≥ ₹50,000."
+    },
+    {
+      "id": "R3",
+      "evasion": "Hang up, wait 30 minutes, then pay ₹40,000",
+      "outcome": "missed",
+      "observed": "not assessed: the call ended 30 min ago, outside the window for this amount (payment rules met: new payee, amount >= 10,000)",
+      "why": "Open gap. Next: a per-user window, or the bank's velocity rules on new payees."
+    },
+    {
+      "id": "R4",
+      "evasion": "Coach the victim to answer \"No one asked me\"",
+      "outcome": "paused",
+      "observed": "tier green after the coached answer; the cue checklist comes first (cue_secrecy, cue_otp_pin, cue_arrest_threat). Coached to tap \"None of these\" as well: tier green, the payment can go",
+      "why": "The three questions come first, and the UI says being told what to tap is a warning sign. A victim coached through every question still gets through: the residual risk."
+    },
+    {
+      "id": "R5",
+      "evasion": "Coach the victim to say \"a shop or UPI app\"",
+      "outcome": "paused",
+      "observed": "tier green after the coached answer; the cue checklist comes first (cue_otp_pin, cue_remote_app, cue_refund_verification). Coached to tap \"None of these\" as well: tier green, the payment can go",
+      "why": "v0.3: the checklist now covers this claim too, with the refund-script questions. A victim coached through every question still gets through: the residual risk."
+    },
+    {
+      "id": "R6",
+      "evasion": "Call from a spoofed 1600 bank number",
+      "outcome": "stopped",
+      "observed": "registry: no_active_call; tier red, status held",
+      "why": "The bank's own call registry says it isn't calling: a decisive negative from outside the call."
+    },
+    {
+      "id": "R7",
+      "evasion": "Caller ID shows the son's saved number (spoofed, or his WhatsApp taken over)",
+      "outcome": "stopped",
+      "observed": "tier green after \"Family member\", and Family Verify still went to the son's own phone; he answered no: tier red, status held",
+      "why": "v0.3: Family Verify goes out even at Green. The son's own phone is the check the attacker can't fake."
+    },
+    {
+      "id": "R8",
+      "evasion": "Mule account opened in the son's name",
+      "outcome": "stopped",
+      "observed": "tier green after \"Family member\", and Family Verify still went to the son's own phone; he answered no: tier red, status held",
+      "why": "v0.3: no name mismatch to see, so the son's own answer decides, even at Green."
+    },
+    {
+      "id": "R9",
+      "evasion": "Swap in the attacker's phone as the son's, mid-attack",
+      "outcome": "stopped",
+      "observed": "re-binding refused (409); the attacker's 'yes' rejected (403); the son's real answer accepted (200)",
+      "why": "v0.3: no re-binding while a question waits. Production: bank-app device binding (not built)."
+    },
+    {
+      "id": "R10",
+      "evasion": "Forge or replay the son's \"yes\"",
+      "outcome": "stopped",
+      "observed": "a 'yes' signed for an earlier question: 403; tampered nonce: 403",
+      "why": "Each answer is signed over the challenge id and a fresh nonce by the son's device key."
+    },
+    {
+      "id": "R11",
+      "evasion": "Spam Family Verify until the son taps yes or tunes out",
+      "outcome": "stopped",
+      "observed": "push requests 2-4 returned [200, 200, 429]; then: \"Too many Family Verify requests in the last hour. Call Rahul on their saved number instead.\"",
+      "why": "v0.3: 3 pushes per payer and 5 per relative per hour, then \"call him on his saved number\"."
+    },
+    {
+      "id": "R12",
+      "evasion": "A clone the detector misses (cloned son, son says no)",
+      "outcome": "stopped",
+      "observed": "voice band no_strong_evidence (shadow); tier before red, after red; user message: \"Thanks — this is saved with your case. Voice checks can't yet confirm who is calling on a phone line, so please use the checks above.\"",
+      "why": "G2: voice is shadow-only, so a missed clone can't release money."
+    },
+    {
+      "id": "R13",
+      "evasion": "Detector false alarm on the real son (son says yes)",
+      "outcome": "passes",
+      "observed": "voice band likely_synthetic (shadow); tier before green, after green; user message: \"Thanks — this is saved with your case. Voice checks can't yet confirm who is calling on a phone line, so please use the checks above.\"",
+      "why": "G2 and G6: voice can't hold money and the copy never accuses the caller."
+    },
+    {
+      "id": "R14",
+      "evasion": "WhatsApp or VoIP call instead of a phone call",
+      "outcome": "paused",
+      "observed": "trigger: call active, new payee, amount >= 10,000; signals ['caller_unknown', 'caller_voip_unknown', 'payee_new']",
+      "why": "The Android audio mode shows an ongoing VoIP call; unknown VoIP callers add risk."
+    },
+    {
+      "id": "R15",
+      "evasion": "Many small payments to new payees, no call",
+      "outcome": "missed",
+      "observed": "no call, three new payees at ₹4,000: burst signal per payment [False, False, False], assessed [False, False, False]. With no call Pehchaan stays out by design (SPEC section 2); the burst signal counts once a call is on",
+      "why": "By design (SPEC section 2): no call, no Pehchaan. The bank's own fraud rules still apply."
+    },
+    {
+      "id": "R16",
+      "evasion": "Many small payments to new payees during a call",
+      "outcome": "paused",
+      "observed": "on a call, three new payees at ₹4,000: each paused; burst signal [False, True, True]",
+      "why": "burst_new_payees now counts real payments in the last 30 minutes."
+    }
+  ],
+  "declared": [
+    {
+      "evasion": "Pay from another UPI app that doesn't have Pehchaan",
+      "status": "Not covered by the app SDK. At a bank deployment the risk API sees every debit from the account, but without the call state, so only payee and amount context."
+    },
+    {
+      "evasion": "Screen-share or remote-control app (the scammer taps for the victim)",
+      "status": "Not detected today. Android can tell an app that screen sharing or an accessibility service is active: we would add that as a context signal."
+    },
+    {
+      "evasion": "The scammer coaches the real son, or the son is in on it",
+      "status": "Family Verify trusts the bound relative. The son sees the payee name and amount; the case stays in the analyst queue; large amounts need an analyst to release a hold."
+    },
+    {
+      "evasion": "The scammer adds their own phone to the family circle before the attack",
+      "status": "Both sides opt in. Production binding goes through the bank app's authenticated device binding with a waiting period for new relatives; the prototype binds the relative page when it opens."
+    }
+  ],
+  "note": "Fresh demo per row, fictional people, mock context adapters and mock voice service."
+}

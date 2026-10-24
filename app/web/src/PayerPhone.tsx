@@ -433,7 +433,7 @@ function OptionsScreen({ a, head, claim, relName, amountTxt, payee, busy, onActi
         <div className="sub">{lang === "hi" ? `${payee} को ${amountTxt} · ${t("amber_sub")}` : `${amountTxt} to ${payee} · ${t("amber_sub")}`}</div>
       </div>
       <div className="sbody">
-        {checklist && <CueChecklist busy={busy} onDone={onCues} />}
+        {checklist && <CueChecklist cues={checklist.produces} busy={busy} onDone={onCues} />}
         {(unknownReg || userNeg) && (
           <div className="warn-line" style={{ marginTop: 14 }}><ShieldCheck size={18} weight="bold" style={{ color: "var(--ink)" }} />
             <span>{bi((userNeg ?? unknownReg)!.text)}</span></div>
@@ -479,10 +479,17 @@ function OptionsScreen({ a, head, claim, relName, amountTxt, payee, busy, onActi
   );
 }
 
-function CueChecklist({ busy, onDone }: { busy: boolean; onDone: (cues: string[]) => void }) {
+const CUE_LABEL: Record<string, string> = {
+  cue_secrecy: "cl_secrecy", cue_otp_pin: "cl_otp", cue_arrest_threat: "cl_arrest",
+  cue_remote_app: "cl_remote", cue_refund_verification: "cl_refund",
+};
+
+function CueChecklist({ cues, busy, onDone }: { cues: string[]; busy: boolean; onDone: (cues: string[]) => void }) {
   const { t } = useT();
   const [on, setOn] = useState<Set<string>>(new Set());
-  const items: [string, string][] = [["cue_secrecy", t("cl_secrecy")], ["cue_otp_pin", t("cl_otp")], ["cue_arrest_threat", t("cl_arrest")]];
+  // the server picks the questions that fit the claim (SPEC v0.3: shop / UPI app gets the refund-script ones)
+  const items: [string, string][] = (cues.length ? cues : ["cue_secrecy", "cue_otp_pin", "cue_arrest_threat"])
+    .filter((c) => CUE_LABEL[c]).map((c) => [c, t(CUE_LABEL[c] as any)]);
   const flip = (c: string) => setOn((s) => { const n = new Set(s); n.has(c) ? n.delete(c) : n.add(c); return n; });
   return (
     <div className="checklist" data-testid="cue-checklist" style={{ marginTop: 16 }}>

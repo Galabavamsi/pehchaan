@@ -32,6 +32,7 @@ class Action(BaseModel):
 
 
 CUE_CODES = {"cue_secrecy", "cue_urgency", "cue_otp_pin", "cue_arrest_threat", "cue_remote_app", "cue_refund_verification"}
+CHECKLIST_CLAIMS = ("none", "other", "upi_or_shop")
 
 _P_EN = {"relative": "your family member", "bank": "your bank", "their": "their"}
 _P_HI = {"relative": "परिवार के सदस्य", "bank": "अपने बैंक"}
@@ -43,13 +44,14 @@ def _l(en: str, hi: str, params: dict) -> dict[str, str]:
 
 def checklist_offered(tier: str, claim: str | None, context_tier: str | None = None,
                       signals: list[str] | set[str] | None = None, done: set[str] | None = None) -> bool:
-    """SPEC v0.2 A20: the 3-tap cue checklist for 'No one' / 'Someone else'.
+    """SPEC v0.2 A20: the 3-tap cue checklist for 'No one' / 'Someone else', and since v0.3 for
+    'UPI app, shop or delivery' (with the questions that fit that script).
 
     Offered when the result is Amber, or when the context alone (K+P, before the
     claim) was Amber even though the claim lowered p below green_below. Never at
     Red (already held), never twice, never once a cue is known.
     """
-    if claim not in ("none", "other") or tier == "red" or "cue_checklist" in (done or set()):
+    if claim not in CHECKLIST_CLAIMS or tier == "red" or "cue_checklist" in (done or set()):
         return False
     if set(signals or []) & CUE_CODES:
         return False
@@ -59,18 +61,29 @@ def checklist_offered(tier: str, claim: str | None, context_tier: str | None = N
 def should_auto_family_verify(tier: str, claim: str | None, relative_enrolled: bool,
                               cfg: Config | None = None) -> bool:
     """SPEC v0.2 A19: send the Family Verify push without waiting for a tap when the
-    payer answered 'Family member', the named relative is in the circle (bound
-    phone) and the result needs a check (Amber or Red). Green proceeds as before."""
+    payer answered 'Family member' and the named relative is in the circle (bound
+    phone). v0.2 sent it at Amber or Red only; since v0.3 also at Green, because an
+    attacker who controls the caller ID or the payee name keeps the context Green."""
     cfg = cfg or default_config()
-    return bool(cfg.actions.family_verify_auto and claim == "family" and relative_enrolled and tier in ("amber", "red"))
+    tiers = ("green", "amber", "red") if cfg.actions.family_verify_auto_green else ("amber", "red")
+    return bool(cfg.actions.family_verify_auto and claim == "family" and relative_enrolled and tier in tiers)
 
 
 _CHECKLIST_LABEL = {"en": "Three quick questions about the call", "hi": "कॉल के बारे में तीन छोटे सवाल"}
 _CHECKLIST_DETAIL = {"en": "Did they ask for secrecy, an OTP or PIN, or say someone could be arrested?",
                      "hi": "क्या उन्होंने बात छिपाने, OTP या PIN, या किसी की गिरफ़्तारी की बात कही?"}
+# v0.3: the fake customer-care / refund script behind a coached "UPI app, shop or delivery"
+_CHECKLIST_DETAIL_SHOP = {"en": "Did they ask for an OTP or PIN, ask you to install an app or share your screen, "
+                                "or say you must pay to get a refund or to verify?",
+                          "hi": "क्या उन्होंने OTP या PIN माँगा, कोई ऐप डालने या स्क्रीन शेयर करने को कहा, "
+                                "या कहा कि रिफ़ंड पाने या वेरिफ़ाई करने के लिए पैसे भेजने होंगे?"}
 
 
-def _checklist_action() -> Action:
+def _checklist_action(claim: str | None = None) -> Action:
+    if claim == "upi_or_shop":
+        return Action(id="cue_checklist", kind="check", primary=True,
+                      produces=["cue_otp_pin", "cue_remote_app", "cue_refund_verification"],
+                      label=dict(_CHECKLIST_LABEL), detail=dict(_CHECKLIST_DETAIL_SHOP))
     return Action(id="cue_checklist", kind="check", primary=True,
                   produces=["cue_secrecy", "cue_otp_pin", "cue_arrest_threat"],
                   label=dict(_CHECKLIST_LABEL), detail=dict(_CHECKLIST_DETAIL))
@@ -100,7 +113,7 @@ def actions_for(
         if checklist_offered(tier, claim, context_tier, sig, done):
             # A20: the context alone was Amber, so a coached "No one" still gets the three questions
             pay.primary = False
-            return [_checklist_action(), pay]
+            return [_checklist_action(claim), pay]
         return [pay]
 
     def checks() -> list[Action]:
@@ -135,7 +148,7 @@ def actions_for(
             ]
         else:
             if checklist_offered(tier, claim, context_tier, sig, done):
-                c.append(_checklist_action())
+                c.append(_checklist_action(claim))
             c += [
                 Action(id="coached_warning", kind="info", label=copy_text("coached_warning")),
                 Action(id="callback_known", kind="check", primary=not any(a.primary for a in c),
