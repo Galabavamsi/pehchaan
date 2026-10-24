@@ -13,9 +13,11 @@ and key rules are enforced in dial.py/consent.py, not here.
   python -m realcall.agent dry --speaker S02 --mic                  # talk into the laptop mic, hear the son reply
 """
 import argparse
+import hashlib
 import io
 import json
 import math
+import re
 import time
 from collections import deque
 from dataclasses import asdict, dataclass
@@ -29,6 +31,34 @@ from realcall.settings import SRC, WORK, env
 
 SR_UP = 16000                                   # Vobiz inbound/outbound L16 sample rate
 EMOTIONS = ("stressed", "scared", "pleading", "neutral")
+
+# live-feel (SPEC §8 V4 v2.1): the opener is rendered before the ring, and short fillers in the clone voice fill the
+# gap while a reply is still being made. Everything is cached here (gitignored under realcall/work/).
+AGENT_DIR = WORK / "agent"
+FILLER_AFTER_S = 0.5                             # if the reply isn't ready this long after her turn, play a filler
+# Content-free "still here" sounds a stressed caller makes; one spoken turn never translated. Rendered once per
+# (speaker, tts, lang) and rotated, so they are cheap and varied.
+FILLERS = {
+    "hi": ["haan maa", "maa ek second", "haan sun na", "maa wo", "hmm", "maa suno na"],
+    "te": ["avunu amma", "amma oka nimisham", "haan vinu", "amma adi", "hmm"],
+    "en": ["yeah mom", "mom one sec", "hold on", "umm", "mom listen"],
+}
+
+
+def split_sentences(text: str) -> list:
+    """Break a reply into speakable pieces on sentence enders (Latin and Devanagari danda), keeping the ender.
+    Very short fragments are merged forward so a piece is always worth synthesising on its own."""
+    parts = re.split(r"(?<=[.!?।⁇])\s+", (text or "").strip())
+    out: list = []
+    for p in parts:
+        p = p.strip()
+        if not p:
+            continue
+        if out and len(p) < 12:
+            out[-1] = out[-1] + " " + p
+        else:
+            out.append(p)
+    return out
 
 
 def _ms(a: float, b: float) -> int:
@@ -396,39 +426,154 @@ def build_providers(card: ScriptCard, speaker: str, reg: Registry, stt: str = "s
     return Providers(stt_impl, llm_impl, tts_impl)
 
 
+# ------------------------------------------------------------------ live-feel: fillers and a pre-rendered opener
+
+def _filler_cache(speaker: str, tts_kind: str, lang: str):
+    return AGENT_DIR / f"fillers_{tts_kind}_{speaker}_{lang}.npz"
+
+
+def _fkey(text: str) -> str:
+    return "f_" + hashlib.sha1(text.encode("utf-8")).hexdigest()[:12]
+
+
+class FillerBank:
+    """Short "still here" sounds in the clone voice, rendered once and cached, then rotated through at call time.
+    prepare() (run before the call, e.g. in dial.py) synthesises any filler not already cached and keyed by its text
+    hash, so adding a line later renders only that one. At call time load() reads the cache and next() rotates; if the
+    cache is missing next() returns None and the call simply has no fillers."""
+
+    def __init__(self, speaker: str, tts_kind: str, lang: str):
+        self.path = _filler_cache(speaker, tts_kind, lang)
+        self.lang = lang
+        self.audios: list = []
+        self.i = 0
+
+    def load(self):
+        if self.path.exists():
+            with np.load(self.path) as d:
+                self.audios = [d[_fkey(t)] for t in FILLERS.get(self.lang, FILLERS["hi"]) if _fkey(t) in d]
+        return self
+
+    def prepare(self, tts):
+        texts = FILLERS.get(self.lang, FILLERS["hi"])
+        AGENT_DIR.mkdir(parents=True, exist_ok=True)
+        cache = {}
+        if self.path.exists():
+            with np.load(self.path) as d:
+                cache = {k: d[k] for k in d.files}
+        for t in texts:
+            if _fkey(t) not in cache:
+                cache[_fkey(t)] = tts.synth(t, "neutral", self.lang).astype(np.float32)
+        np.savez(self.path, **cache)
+        return self.load()
+
+    def next(self):
+        if not self.audios:
+            return None
+        a = self.audios[self.i % len(self.audios)]
+        self.i += 1
+        return a
+
+
+def _opener_file(call_id: str):
+    return AGENT_DIR / f"opener_{call_id}.npz"
+
+
+def render_opener(call_id: str, card: ScriptCard, providers: Providers):
+    """Make the son's opening line (LLM + TTS) BEFORE the phone rings and stash it for this call, so he speaks the
+    moment she answers. Called on the laptop by dial.py; the server picks it up with take_opener()."""
+    plan = providers.llm.reply([], None, card)
+    audio = providers.tts.synth(plan.text, plan.emotion, card.lang).astype(np.float32)
+    AGENT_DIR.mkdir(parents=True, exist_ok=True)
+    np.savez(_opener_file(call_id), audio=audio, text=plan.text, emotion=plan.emotion, done=plan.done)
+    return plan, audio
+
+
+def take_opener(call_id: str):
+    """Load and DELETE this call's pre-rendered opener, or None if there isn't one. Deleting it means an opener is
+    never reused and the folder doesn't fill up."""
+    p = _opener_file(call_id)
+    if not p.exists():
+        return None
+    try:
+        with np.load(p, allow_pickle=False) as d:
+            plan = TurnPlan(str(d["text"]), str(d["emotion"]), bool(d["done"]))
+            audio = d["audio"].astype(np.float32)
+        return plan, audio
+    finally:
+        try:
+            p.unlink()
+        except OSError:
+            pass
+
+
+def clear_openers():
+    """Drop any leftover opener files (e.g. from a call that never connected)."""
+    if AGENT_DIR.exists():
+        for p in AGENT_DIR.glob("opener_*.npz"):
+            try:
+                p.unlink()
+            except OSError:
+                pass
+
+
 # ------------------------------------------------------------------ the conversation
 
 class AgentConversation:
-    """One demo call's turn-taking. Sync (the server runs open()/respond() in a thread so the socket keeps draining).
-    Never stores audio or transcripts; the caller logs only latency/length metadata."""
+    """One demo call's turn-taking. The server drives it piece by piece (transcribe -> plan -> voice, speaking the
+    reply sentence by sentence) so a filler can cover the wait and barge-in can drop the rest; open()/respond() keep
+    the whole-turn path for the dry run and the tests. Never stores audio or transcripts; the caller logs only
+    latency/length metadata."""
 
     def __init__(self, card: ScriptCard, providers: Providers):
         self.card, self.p = card, providers
         self.history: list = []          # [("son", text) | ("mother", text)] in time order
         self.last_mother = None
 
+    # --- pieces (used by the live, streamed path) ---
+    def transcribe(self, utt_pcm: np.ndarray, sr: int) -> str:
+        self.last_mother = self.p.stt.transcribe(utt_pcm, sr)
+        return self.last_mother
+
+    def plan(self, mother_text) -> TurnPlan:
+        return self.p.llm.reply(self.history, mother_text, self.card)
+
+    def voice(self, text: str, emotion: str) -> np.ndarray:
+        return self.p.tts.synth(text, emotion, self.card.lang)
+
+    def record(self, mother_text, son_text):
+        """Commit a turn to the history. son_text is only what was actually spoken (barge-in may cut a reply short)."""
+        if mother_text:
+            self.history.append(("mother", mother_text))
+        if son_text:
+            self.history.append(("son", son_text))
+
+    def use_opener(self, plan: TurnPlan):
+        """Adopt a pre-rendered opener (take_opener) as the son's first turn."""
+        self.record(None, plan.text)
+
+    # --- whole-turn path (dry run + tests) ---
     def open(self):
-        """The son speaks first, as a scammer would. Returns (TurnPlan, audio, timings)."""
+        """The son speaks first. Returns (TurnPlan, audio, timings)."""
         t0 = time.perf_counter()
-        plan = self.p.llm.reply(self.history, None, self.card)
+        plan = self.plan(None)
         t1 = time.perf_counter()
-        audio = self.p.tts.synth(plan.text, plan.emotion, self.card.lang)
+        audio = self.voice(plan.text, plan.emotion)
         t2 = time.perf_counter()
-        self.history.append(("son", plan.text))
+        self.record(None, plan.text)
         return plan, audio, dict(stt_ms=0, llm_ms=_ms(t0, t1), tts_ms=_ms(t1, t2), total_ms=_ms(t0, t2),
                                  mother_chars=0, son_chars=len(plan.text))
 
     def respond(self, utt_pcm: np.ndarray, sr: int):
         """React to one of the mother's turns. Returns (TurnPlan, audio, timings)."""
         t0 = time.perf_counter()
-        text = self.p.stt.transcribe(utt_pcm, sr)
+        text = self.transcribe(utt_pcm, sr)
         t1 = time.perf_counter()
-        self.last_mother = text
-        plan = self.p.llm.reply(self.history, text, self.card)
+        plan = self.plan(text)
         t2 = time.perf_counter()
-        audio = self.p.tts.synth(plan.text, plan.emotion, self.card.lang)
+        audio = self.voice(plan.text, plan.emotion)
         t3 = time.perf_counter()
-        self.history += [("mother", text), ("son", plan.text)]
+        self.record(text, plan.text)
         return plan, audio, dict(stt_ms=_ms(t0, t1), llm_ms=_ms(t1, t2), tts_ms=_ms(t2, t3), total_ms=_ms(t0, t3),
                                  mother_chars=len(text), son_chars=len(plan.text))
 
@@ -495,6 +640,17 @@ def _dry(a):
                   flush=True)
     conv = AgentConversation(card, providers)
 
+    fillers = None
+    if a.mic and not a.fake and not getattr(a, "no_fillers", False):
+        kind = "gpu" if a.tts == "gpu" else "sarvam"
+        fillers = FillerBank(a.speaker, kind, card.lang).load()
+        if not fillers.audios:
+            try:
+                fillers.prepare(providers.tts)
+            except Exception as e:
+                print(f"(fillers off: {e!r})", flush=True)
+                fillers = None
+
     plan, open_audio, t = conv.open()
     print(f"son ({plan.emotion}) [{t['total_ms']} ms]: {plan.text}", flush=True)
     turns = 1
@@ -509,7 +665,7 @@ def _dry(a):
         return plan, audio
 
     if a.mic:
-        _dry_mic(conv, one, a, open_audio)
+        _dry_mic(conv, one, a, open_audio, fillers)
     elif a.mother:
         for w in a.mother:
             plan, _ = one(load(w, SR_UP))
@@ -533,9 +689,10 @@ MOTHER_PROMPTS = [
 ]
 
 
-def _dry_mic(conv: AgentConversation, one, a, open_audio=None):
+def _dry_mic(conv: AgentConversation, one, a, open_audio=None, fillers=None):
     """Talk into the laptop mic; the son replies through the speaker. ~0.7 s of silence ends your turn. A suggested
-    line is printed before each of your turns so you know what to say."""
+    line is printed before each of your turns so you know what to say. With fillers on, a short "still here" sound
+    plays the moment your turn ends, before the reply (the live call overlaps the two; here they are sequential)."""
     import sounddevice as sd
     vad = make_vad(a.vad, sr=SR_UP)
     if open_audio is not None:
@@ -551,6 +708,11 @@ def _dry_mic(conv: AgentConversation, one, a, open_audio=None):
                 if kind == "end":
                     if len(utt) / SR_UP < 0.4:          # a blurt or echo, not a real turn: keep listening
                         break
+                    if fillers is not None:
+                        fa = fillers.next()
+                        if fa is not None:
+                            sd.play(fa, SR_UP)
+                            sd.wait()
                     plan, audio = one(utt)
                     sd.play(audio, SR_UP)
                     sd.wait()
@@ -592,6 +754,7 @@ def main():
                    help="which offline engine the box serves (only used with --tts gpu)")
     d.add_argument("--gpu-host", default=GPU_HOST, help="serve_clone_tts.py over the SSH tunnel (--tts gpu)")
     d.add_argument("--vad", default="energy", choices=["energy", "silero"])
+    d.add_argument("--no-fillers", action="store_true", help="don't play filler sounds between turns (mic mode)")
     a = ap.parse_args()
     {"dry": _dry}[a.cmd](a)
 

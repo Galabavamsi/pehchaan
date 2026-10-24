@@ -430,3 +430,86 @@ def test_live_clone_consent_and_purge(tmp_path):
     with pytest.raises(PermissionError):
         Registry().require_clone("J01")
     assert (live_clone.FORMS / "J01.jpg").exists()   # the record that consent was given stays
+
+
+def test_split_sentences():
+    from realcall import agent
+    assert agent.split_sentences("Maa main hoon. Paise bhej do!") == ["Maa main hoon.", "Paise bhej do!"]
+    assert agent.split_sentences("Haan. Ab?") == ["Haan. Ab?"]              # the short 2nd piece merges back
+    assert agent.split_sentences("ठीक है। पैसे भेज दो।") == ["ठीक है।", "पैसे भेज दो।"]
+    assert agent.split_sentences("") == [] and agent.split_sentences("ek hi line") == ["ek hi line"]
+
+
+def test_filler_bank_cache_and_rotation():
+    from realcall import agent
+
+    class CountTTS(agent.FakeTTS):
+        n = 0
+
+        def synth(self, text, emotion, lang):
+            CountTTS.n += 1
+            return super().synth(text, emotion, lang)
+
+    CountTTS.n = 0
+    n_hi = len(agent.FILLERS["hi"])
+    b = agent.FillerBank("S02", "sarvam", "hi").prepare(CountTTS())
+    assert CountTTS.n == n_hi and len(b.audios) == n_hi                     # rendered once
+    CountTTS.n = 0
+    b2 = agent.FillerBank("S02", "sarvam", "hi").prepare(CountTTS())        # all cached now
+    assert CountTTS.n == 0 and len(b2.audios) == n_hi
+    got = [id(b2.next()) for _ in range(n_hi + 1)]
+    assert got[0] == got[n_hi]                                              # rotation wraps around
+    assert agent.FillerBank("NOPE", "sarvam", "hi").load().next() is None   # no cache -> no filler
+
+
+def test_opener_render_take_delete():
+    from realcall import agent
+    card = agent.ScriptCard()
+    providers = agent.Providers(agent.FakeSTT(), agent.FakeLLM(), agent.FakeTTS())
+    cid = "a1" * 16
+    plan, audio = agent.render_opener(cid, card, providers)
+    assert agent._opener_file(cid).exists() and len(audio) > 0
+    got = agent.take_opener(cid)
+    assert got is not None and got[0].text == plan.text and not agent._opener_file(cid).exists()
+    assert agent.take_opener(cid) is None                                   # already taken, and gone
+
+
+def test_agent_live_feel_opener_and_filler(monkeypatch):
+    """A slow reply is covered by a filler, and the son's opener is the one rendered before the ring (step 0
+    prerendered), consumed and deleted. Still metadata only."""
+    from fastapi.testclient import TestClient
+    from realcall import agent, server
+    server.config = lambda: {**settings.DEFAULTS, "public_base_url": "https://example.trycloudflare.com"}
+    card = agent.ScriptCard(max_turns=1)
+    agent.FillerBank("S02", "sarvam", card.lang).prepare(agent.FakeTTS())   # filler cache for this call
+
+    class SlowLLM(agent.FakeLLM):
+        def reply(self, history, mother_text, card):
+            if mother_text is not None:
+                time.sleep(agent.FILLER_AFTER_S + 0.4)                      # force a filler while we "think"
+            return super().reply(history, mother_text, card)
+
+    providers = agent.Providers(agent.FakeSTT(), SlowLLM(), agent.FakeTTS())
+    monkeypatch.setattr(server, "_make_agent", lambda c: (providers, agent.make_vad("energy", sr=agent.SR_UP), card))
+    cl = TestClient(server.app)
+    cid = "f" * 32
+    settings.log_event("call_registered", call_id=cid, kind="agent", device="D2", speaker="S02",
+                       card=card.as_dict(), fillers=True)
+    agent.render_opener(cid, card, providers)                               # opener made before the call
+    assert agent._opener_file(cid).exists()
+
+    speech = fake_speech(1.1, 150, 7)
+    with cl.websocket_connect(f"/ws/agent/{cid}") as ws:
+        ws.send_text(json.dumps({"event": "start", "start": {"streamId": "s1"}}))
+        inbound = np.concatenate([np.zeros(int(0.6 * SR), np.float32), speech, np.zeros(int(0.9 * SR), np.float32)])
+        for i in range(0, len(inbound) // 320 * 320, 320):
+            pcm = (inbound[i:i + 320] * 32767).astype("<i2").tobytes()
+            ws.send_text(json.dumps({"event": "media", "media": {"track": "inbound", "payload": base64.b64encode(pcm).decode()}}))
+        for _ in range(600):
+            if ws.receive_json()["event"] == "stop":
+                break
+    assert not agent._opener_file(cid).exists()                             # consumed and deleted
+    turns = {e["step"]: e for e in settings.read_ledger() if e.get("ev") == "agent_turn" and e.get("call_id") == cid}
+    assert turns[0]["prerendered"] is True and turns[0]["filler"] is False
+    assert turns[1]["filler"] is True                                       # the filler covered the slow reply
+    assert all("text" not in e and "transcript" not in e for e in turns.values())

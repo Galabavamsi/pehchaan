@@ -303,6 +303,15 @@ async def agent_ws(ws: WebSocket, call_id: str):
         await ws.close()
         return
 
+    fillers = None                                            # "still here" sounds while a reply is synthesised
+    if c.get("fillers", True):
+        try:
+            kind = "gpu" if c.get("tts") == "gpu" else "sarvam"
+            bank = agent.FillerBank(c.get("speaker") or "", kind, card.lang).load()
+            fillers = bank if bank.audios else None
+        except Exception:
+            fillers = None
+
     loop = asyncio.get_event_loop()
     utt_q: asyncio.Queue = asyncio.Queue()
     started, barge = asyncio.Event(), asyncio.Event()
@@ -342,6 +351,9 @@ async def agent_ws(ws: WebSocket, call_id: str):
             started.set()
             utt_q.put_nowait(None)
 
+    def _drain(fut):                                          # retrieve an abandoned synth future's result/exception
+        fut.add_done_callback(lambda f: f.cancelled() or f.exception())
+
     async def speak(audio):
         st["speaking"] = True
         barge.clear()
@@ -349,14 +361,77 @@ async def agent_ws(ws: WebSocket, call_id: str):
         st["speaking"] = False
         return ok
 
+    async def speak_reply(plan):
+        """Speak a reply sentence by sentence, synthesising the next while the current one plays; barge-in or hangup
+        drops the rest. Returns (text actually spoken, time the first frame went out)."""
+        sents = agent.split_sentences(plan.text) or [plan.text]
+        spoken, t_first = [], None
+        audio = await loop.run_in_executor(None, conv.voice, sents[0], plan.emotion)
+        for i, s in enumerate(sents):
+            if st["stop"]:
+                break
+            nxt = (loop.run_in_executor(None, conv.voice, sents[i + 1], plan.emotion)
+                   if i + 1 < len(sents) else None)
+            if t_first is None:
+                t_first = time.perf_counter()
+            ok = await speak(audio)
+            if not ok:                                                        # she barged in: drop the rest
+                if nxt is not None:
+                    _drain(nxt)
+                break
+            spoken.append(s)
+            if nxt is not None:
+                audio = await nxt
+        return " ".join(spoken), t_first
+
+    async def do_turn(utt):
+        """One of her turns: STT+LLM off-thread, a filler if that runs long, then the reply streamed by sentence."""
+        t0 = time.perf_counter()
+
+        def _blocking():
+            ta = time.perf_counter()
+            text = conv.transcribe(utt, agent.SR_UP)
+            tb = time.perf_counter()
+            plan = conv.plan(text)
+            return text, plan, agent._ms(ta, tb), agent._ms(tb, time.perf_counter())
+
+        fut = loop.run_in_executor(None, _blocking)
+        filler, t_first = False, None
+        done, _ = await asyncio.wait({fut}, timeout=agent.FILLER_AFTER_S)
+        if not done and fillers is not None and not st["stop"]:
+            fa = fillers.next()
+            if fa is not None:
+                filler, t_first = True, time.perf_counter()
+                await speak(fa)
+        text, plan, stt_ms, llm_ms = await fut
+        reply_ms = agent._ms(t0, time.perf_counter())
+        spoken, t_reply = await speak_reply(plan)
+        conv.record(text, spoken)
+        if t_first is None:
+            t_first = t_reply
+        return plan, dict(stt_ms=stt_ms, llm_ms=llm_ms, reply_ms=reply_ms, filler=filler,
+                          first_sound_ms=agent._ms(t0, t_first) if t_first else reply_ms,
+                          mother_chars=len(text), son_chars=len(spoken))
+
     async def brain():
         await started.wait()
         if st["stop"]:
             return
-        plan, audio, t = await loop.run_in_executor(None, conv.open)          # the son opens the call
-        log_event("agent_turn", call_id=call_id, step=0, emotion=plan.emotion, done=plan.done, **t)
+        t0 = time.perf_counter()
+        op = await loop.run_in_executor(None, agent.take_opener, call_id)     # rendered before the ring, if present
+        if op is not None:
+            plan, audio = op
+            conv.use_opener(plan)
+            llm_ms = 0
+        else:
+            plan, audio, ot = await loop.run_in_executor(None, conv.open)
+            llm_ms = ot["llm_ms"]
+        t_first = time.perf_counter()
+        await speak(audio)                                                    # opener is one pre-synthesised blob
+        log_event("agent_turn", call_id=call_id, step=0, emotion=plan.emotion, done=plan.done, prerendered=op is not None,
+                  stt_ms=0, llm_ms=llm_ms, reply_ms=agent._ms(t0, t_first), first_sound_ms=agent._ms(t0, t_first), filler=False,
+                  mother_chars=0, son_chars=len(plan.text))
         print(f"[agent {call_id[:8]}] son ({plan.emotion}): {plan.text}", flush=True)
-        await speak(audio)
         while not st["stop"] and st["turns"] < card.max_turns:
             utt = await utt_q.get()
             if utt is None:
@@ -364,10 +439,9 @@ async def agent_ws(ws: WebSocket, call_id: str):
             if len(utt) / agent.SR_UP < 0.3:                                  # too short to be a real turn
                 continue
             st["turns"] += 1
-            plan, audio, t = await loop.run_in_executor(None, conv.respond, utt, agent.SR_UP)
+            plan, t = await do_turn(utt)
             log_event("agent_turn", call_id=call_id, step=st["turns"], emotion=plan.emotion, done=plan.done, **t)
             print(f"[agent {call_id[:8]}] mother: {conv.last_mother!r} -> son ({plan.emotion}): {plan.text}", flush=True)
-            await speak(audio)
             if plan.done:
                 break
         st["stop"] = True
