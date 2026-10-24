@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowClockwise, Bank, ChartScatter, Compass, Handshake, HeartStraight, Phone, ShieldWarning, Siren,
   SlidersHorizontal, UserSound, Waveform, type Icon } from "@phosphor-icons/react";
 import { API, api, subscribe, urlParam, type Lang, type Scenario } from "./api";
@@ -73,13 +73,18 @@ function DemoControl() {
   const { sc, n, load } = useScenario(first);
   const [jury, setJury] = useState(() => urlParam("jury") === "1");
   const [scale, setScale] = useState(1);
+  const phoneTop = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const forced = Number(urlParam("scale"));
-    const f = () => setScale(forced || Math.min(1, Math.max(0.55, (innerHeight - (innerWidth > 1500 ? 170 : 230)) / 900)));
+    // fit the whole phone in the window: measure where it starts, since the header wraps on narrow screens
+    const f = () => {
+      const top = phoneTop.current ? phoneTop.current.getBoundingClientRect().top + scrollY : 230;
+      setScale(forced || Math.min(1, Math.max(0.45, (innerHeight - top - 26) / 866)));
+    };
     f();
     addEventListener("resize", f);
     return () => removeEventListener("resize", f);
-  }, []);
+  }, [sc]);
   const phoneW = 412 * scale, phoneH = 866 * scale;
   return (
     <div className="demo" data-testid="demo">
@@ -120,7 +125,7 @@ function DemoControl() {
         <div className="demo-stage">
           <div className="demo-col">
             <div className="cl">{sc.payer.name}'s phone <small>payer · {sc.payer.age_band}</small></div>
-            <div style={{ width: phoneW, height: phoneH }}>
+            <div ref={phoneTop} style={{ width: phoneW, height: phoneH }}>
               <div className="scaled" style={{ transform: `scale(${scale})` }}>
                 <PayerPhone key={`p${n}`} scenario={sc} initialLang={(urlParam("lang") as Lang) || "en"} />
               </div>
