@@ -8,7 +8,7 @@ import { API, api, subscribe, type Action, type Assessment, type FvSent, type La
 import { Device, ReasonIcon, Ring, Seal, StatusBar, useCountdown } from "./components";
 import { formatINR, UIContext, useT } from "./i18n";
 import { recordWav } from "./wav";
-import { isNative, Pehchaan, usePhoneCall, type CallInfo, type PhoneCall } from "./native";
+import { forRehearsal, isNative, Pehchaan, usePhoneCall, type CallInfo, type PhoneCall } from "./native";
 
 type Screen = "pay" | "who" | "family" | "bank" | "options" | "fv_wait" | "voice" | "hold" | "green" | "pin" | "sent" | "cancelled" | "report";
 type ClaimCode = "family" | "bank" | "upi_or_shop" | "authority" | "other" | "none";
@@ -92,7 +92,8 @@ function PayerFlow({ scenario, toggles, onBack, onOutcome }: {
   };
 
   async function onPay() {
-    const live = isNative ? (await Pehchaan.getCallContext().catch(() => phone))?.call ?? null : null;
+    const raw = isNative ? (await Pehchaan.getCallContext().catch(() => phone))?.call ?? null : null;
+    const live = raw ? forRehearsal(raw) : null;
     if (live) setSentCall(live);
     const r = await run(() => api.assess({
       payer_id: scenario.payer.id, scenario: live ? "live" : scenario.scenario,
@@ -368,7 +369,7 @@ function CallPill({ scenario }: { scenario: Scenario }) {
 /** The real call, as the phone sees it (Android app only). */
 function PhoneCallPill({ info }: { info: CallInfo }) {
   const { t } = useT();
-  const c = info.call;
+  const c = forRehearsal(info.call);
   const voip = c.channel === "voip";
   const n = c.number;
   const pretty = n ? (n.startsWith("+91") ? `+91 ${n.slice(3, 8)} ${n.slice(8)}` : n) : voip ? t("voip_call") : t("number_hidden");

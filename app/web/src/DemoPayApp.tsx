@@ -8,7 +8,7 @@ import {
 import { API, type Assessment, type Lang, type Scenario } from "./api";
 import { Seal } from "./components";
 import { formatINR } from "./i18n";
-import { usePhoneCall, type CallInfo, type PhoneCall } from "./native";
+import { rehearsal, usePhoneCall, type CallInfo, type PhoneCall } from "./native";
 import { PayerPhone, type PayOutcome } from "./PayerPhone";
 import { isVpa, PAID_BEFORE, paidBefore, parseUpi, resolvePayee, TRY_THESE, type Payee } from "./payees";
 
@@ -193,7 +193,8 @@ function CallStrip({ L, info }: { L: (en: string, hi: string) => string; info: C
   const c = info.call;
   const voip = c.channel === "voip";
   const who = c.number ? maskNumber(c.number) : voip ? L("Internet call", "इंटरनेट कॉल") : L("Number hidden", "नंबर छिपा है");
-  const tag = c.in_contacts === true ? L("Saved contact", "सेव नंबर") : c.in_contacts === false ? L("Not in your contacts", "आपके कॉन्टैक्ट में नहीं") : voip ? L("Caller not visible to apps", "कॉल करने वाला ऐप को नहीं दिखता") : "";
+  const tag = rehearsal.get() && c.number ? L("Rehearsal: treated as unknown", "रिहर्सल: अनजान माना गया")
+    : c.in_contacts === true ? L("Saved contact", "सेव नंबर") : c.in_contacts === false ? L("Not in your contacts", "आपके कॉन्टैक्ट में नहीं") : voip ? L("Caller not visible to apps", "कॉल करने वाला ऐप को नहीं दिखता") : "";
   const live = c.state === "active";
   const sec = c.duration_sec ?? 0;
   return (

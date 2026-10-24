@@ -6,7 +6,7 @@ import { PayerPhone } from "./PayerPhone";
 import { RelativePhone } from "./RelativePhone";
 import { Device, Seal } from "./components";
 import { DemoPayApp } from "./DemoPayApp";
-import { isNative, Pehchaan, ROLE_KEY, savedRole, type NativeStatus, type Role } from "./native";
+import { isNative, Pehchaan, rehearsal, ROLE_KEY, savedRole, type NativeStatus, type Role } from "./native";
 import { QrCards } from "./QrCards";
 import type { Relative } from "./api";
 
@@ -190,6 +190,7 @@ function NativeFamily() {
 function NativeSetup({ role, onDone }: { role: Role | null; onDone: (r: Role) => void }) {
   const [pick, setPick] = useState<Role | null>(role);
   const [st, setSt] = useState<NativeStatus | null>(null);
+  const [reh, setReh] = useState(rehearsal.get);
   const refresh = () => Pehchaan.status().then(setSt).catch(() => {});
   useEffect(() => {
     refresh();
@@ -246,6 +247,13 @@ function NativeSetup({ role, onDone }: { role: Role | null; onDone: (r: Role) =>
           </div>
         ))}
       </div>
+      {pick === "payer" && (
+        <label className="check rehearsal">
+          <input type="checkbox" checked={reh} onChange={(e) => { rehearsal.set(e.target.checked); setReh(e.target.checked); }} />
+          <span>Rehearsal mode: treat every caller as unknown
+            <small>For practice when all your numbers are saved on this phone. Turn it off for the real demo.</small></span>
+        </label>
+      )}
       <p style={{ fontSize: 13 }}>On Xiaomi phones also turn on Settings → Apps → DemoPay → Autostart.
         {st && !st.screen_share_detect && " Screen-share detection needs Android 15 or later."}</p>
       <div style={{ marginTop: "auto", display: "grid", gap: 10 }}>

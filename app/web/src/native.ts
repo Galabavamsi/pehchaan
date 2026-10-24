@@ -48,6 +48,18 @@ export function usePhoneCall(): CallInfo | null {
   return info;
 }
 
+/**
+ * Rehearsal mode: every caller is treated as unknown, so a team whose numbers are all saved on each other's
+ * phones can rehearse the full flow. It changes only `in_contacts` in what is sent, and the screens say it is on.
+ */
+const REHEARSAL_KEY = "demopay.rehearsal";
+export const rehearsal = {
+  get: () => { try { return localStorage.getItem(REHEARSAL_KEY) === "1"; } catch { return false; } },
+  set: (on: boolean) => { try { localStorage.setItem(REHEARSAL_KEY, on ? "1" : "0"); } catch { /* ignore */ } },
+};
+export const forRehearsal = (c: PhoneCall): PhoneCall =>
+  rehearsal.get() && c.state !== "none" && c.number ? { ...c, in_contacts: false } : c;
+
 export const ROLE_KEY = "pehchaan.role";
 export type Role = "payer" | "relative";
 export function savedRole(): Role | null {

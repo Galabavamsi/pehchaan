@@ -645,3 +645,6 @@ html.native .dp-scan { margin-top: calc(-1 * env(safe-area-inset-top)); padding-
 .qr-amt { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 4px; }
 .qr-amt.muted { font-size: 16px; font-weight: 600; color: var(--slate); }
 .qr-what { font-size: 14.5px; color: var(--ink-2); }
+.native-setup .rehearsal { align-items: flex-start; gap: 12px; border-bottom: 0; padding-top: 14px; }
+.native-setup .rehearsal input { width: 22px; height: 22px; margin-top: 2px; accent-color: var(--neel); flex: 0 0 auto; }
+.native-setup .rehearsal small { display: block; font-size: 13px; color: var(--slate); margin-top: 2px; }
