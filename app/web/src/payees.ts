@@ -17,14 +17,8 @@ const DIRECTORY: Payee[] = [
   { vpa: "kavya.ent.secure@okdemo", name: "Kavya Enterprises" },
   { vpa: "court.fee.desk@okdemo", name: "Gupta Traders" },
   { vpa: "fresh.mart@okdemo", name: "Fresh Mart" },
-];
-
-/** People Sunita has paid before (the server's payee history): count and usual amount. */
-export const PAID_BEFORE: { vpa: string; label: string; label_hi: string; times: number }[] = [
-  { vpa: "rahul.s@bdb", label: "Rahul (beta)", label_hi: "राहुल (बेटा)", times: 6 },
-  { vpa: "priya.sharma@okdemo", label: "Priya", label_hi: "प्रिया", times: 5 },
-  { vpa: "meena.gupta@okdemo", label: "Meena Gupta", label_hi: "मीना गुप्ता", times: 4 },
-  { vpa: "jvvnl.bill@okdemo", label: "Electricity bill", label_hi: "बिजली बिल", times: 12 },
+  { vpa: "sunita.sharma@bdb", name: "Sunita Sharma" },
+  { vpa: "thames.lettings@okdemo", name: "Thames Lettings" },
 ];
 
 /** Payees a tester can pick to vary the case; each one exercises a different signal. */
@@ -42,7 +36,7 @@ export function resolvePayee(vpa: string, nameFromQr?: string | null): Payee & {
   return { vpa: v, name: nameFromQr?.trim() || derived || "UPI user", verified: false };
 }
 
-export const paidBefore = (vpa: string) => PAID_BEFORE.find((p) => p.vpa === vpa.trim().toLowerCase());
+export const paidBefore = (list: { vpa: string }[], vpa: string) => list.find((p) => p.vpa === vpa.trim().toLowerCase());
 
 /** Parse a `upi://pay?pa=…&pn=…&am=…&tn=…` link (from a QR or an intent). */
 export function parseUpi(uri: string): { vpa: string; name: string | null; amount: number | null; note: string | null } | null {

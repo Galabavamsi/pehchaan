@@ -1,16 +1,19 @@
-// DemoPay: the payer's UPI app on the Android phone (SPEC §7 "Live payments, no scenario"). Any payee, any amount,
-// the phone's real call: Pehchaan decides. All people, banks and UPI IDs are fictional.
+// DemoPay: the UPI app on both demo phones (SPEC §7 "Live payments" and "Two people, two phones"). Any payee, any
+// amount, the phone's real call: Pehchaan decides. Each phone also answers Family Verify for the other person.
+// All people, banks and UPI IDs are fictional.
 import { useEffect, useRef, useState } from "react";
 import jsQR from "jsqr";
 import {
   ArrowLeft, At, CaretRight, CheckCircle, ClockCounterClockwise, Eye, HandPalm, Phone, QrCode, WhatsappLogo, XCircle,
 } from "@phosphor-icons/react";
 import { API, type Assessment, type Lang, type Scenario } from "./api";
-import { Seal } from "./components";
-import { formatINR } from "./i18n";
-import { rehearsal, usePhoneCall, type CallInfo, type PhoneCall } from "./native";
+import { Device, Seal } from "./components";
+import { formatINR, UIContext } from "./i18n";
+import { isNative, Pehchaan, rehearsal, usePhoneCall, type CallInfo, type PhoneCall } from "./native";
 import { PayerPhone, type PayOutcome } from "./PayerPhone";
-import { isVpa, PAID_BEFORE, paidBefore, parseUpi, resolvePayee, TRY_THESE, type Payee } from "./payees";
+import { isVpa, paidBefore, parseUpi, resolvePayee, TRY_THESE, type Payee } from "./payees";
+import type { Person } from "./people";
+import { callsPayer, FamilyAnswered, FamilyPrompt, LangBtn, useFamilyInbox, type FamilyInbox } from "./RelativePhone";
 
 type View =
   | { k: "home" } | { k: "payto" } | { k: "scan" } | { k: "history" }
@@ -23,14 +26,7 @@ interface Tx {
 }
 interface Why { tone: "ok" | "warn" | "stop"; title: [string, string]; lines: [string, string][] }
 
-const TX_KEY = "demopay.tx";
-const PROFILE_KEY = "demopay.profile";
-
-/** Signed-in payer (fictional, as seeded on the server). Refreshed from the API when it is the loaded payer. */
-const SUNITA = {
-  id: "u_sunita", name: "Sunita Sharma", name_hi: "सुनीता शर्मा", vpa: "sunita.sharma@bdb", vpa_masked: "sunita.s•••@bdb",
-  bank_name: "Bharat Demo Bank", bank_name_hi: "भारत डेमो बैंक", phone: "", lang: "hi" as Lang, circle: [] as any[],
-};
+type Profile = Person["payer"];
 const BANKS = [
   { id: "bdb", name: "Bharat Demo Bank", name_hi: "भारत डेमो बैंक", label: "Bharat Demo Bank", label_hi: "भारत डेमो बैंक", integrated: true, yours: true },
   { id: "other", name: "that bank", name_hi: "वो बैंक", label: "Another bank", label_hi: "कोई दूसरा बैंक", integrated: false, yours: false },
@@ -47,20 +43,25 @@ export const maskNumber = (n: string) => {
   return m.startsWith("+91") && m.length === 13 ? `+91 ${m.slice(3, 8)} ${m.slice(8)}` : m;
 };
 
-export function DemoPayApp({ incomingUpi, onUpiHandled }: { incomingUpi?: string | null; onUpiHandled?: () => void }) {
+export function DemoPayApp({ me, incomingUpi, onUpiHandled }: { me: Person; incomingUpi?: string | null; onUpiHandled?: () => void }) {
   const [lang, setLang] = useState<Lang>("en");
   const L = (en: string, hi: string) => (lang === "hi" ? hi : en);
   const [view, setView] = useState<View>({ k: "home" });
-  const [txs, setTxs] = useState<Tx[]>(() => load<Tx[]>(TX_KEY, []));
-  const [profile, setProfile] = useState(() => load(PROFILE_KEY, SUNITA));
+  const txKey = `demopay.tx.${me.key}`;
+  const [txs, setTxs] = useState<Tx[]>(() => load<Tx[]>(txKey, []));
+  const [profile, setProfile] = useState<Profile>(me.payer);
   const phone = usePhoneCall();
+  const inbox = useFamilyInbox(me.inbox.relative);
 
   useEffect(() => {
+    // The seeded profile on the server wins when it is the scenario's payer (same person, maybe updated)
     fetch(`${API}/v1/demo/current`).then((r) => (r.ok ? r.json() : null)).then((sc: Scenario | null) => {
-      if (sc?.payer?.id === "u_sunita") { setProfile(sc.payer as any); save(PROFILE_KEY, sc.payer); }
+      if (sc?.payer?.id === me.payer.id) setProfile({ ...me.payer, ...(sc.payer as any) });
     }).catch(() => {});
-  }, []);
-  useEffect(() => save(TX_KEY, txs.slice(0, 40)), [txs]);
+    // The phone's service watches calls and holds this phone's Family Verify inbox while the app is closed
+    if (isNative) Pehchaan.startProtection({ role: "payer", deviceId: me.inbox.relative.device_id, api: API }).catch(() => {});
+  }, [me.key]);
+  useEffect(() => save(txKey, txs.slice(0, 40)), [txs]);
 
   // Android back: every screen other than home sits on one history entry
   const go = (v: View) => { if (view.k === "home" && v.k !== "home") history.pushState({ dp: 1 }, ""); setView(v); };
@@ -92,40 +93,68 @@ export function DemoPayApp({ incomingUpi, onUpiHandled }: { incomingUpi?: string
     if (o.status === "paid") setView({ k: "receipt", txId: tx.id });
   }
 
+  // Family Verify for the other person opens over whatever screen is up
+  const overlay = (inbox.push || inbox.done) && (
+    <FamilyLayer inbox={inbox} me={me} lang={lang} setLang={setLang} />
+  );
+
   if (view.k === "pay") {
-    const known = paidBefore(view.payee.vpa);
+    const known = paidBefore(me.paidBefore, view.payee.vpa);
     const sc = {
       scenario: "live", title: "", pattern: "", script: "", expected: {},
       payer: profile as any, relative: null, call: { state: "none", number: "", channel: "pstn", duration_sec: 0 },
       payment: { payee_vpa: view.payee.vpa, payee_name: view.payee.name, amount_inr: view.amount ?? 0 },
       bank: { name: profile.bank_name, name_hi: profile.bank_name_hi }, banks: BANKS, payee_new: !known,
     } as unknown as Scenario;
-    return <PayerPhone key={view.txId} scenario={sc} initialLang={lang} onBack={home} onOutcome={(o) => onOutcome(view, o)} />;
+    return <>
+      <PayerPhone key={view.txId} scenario={sc} initialLang={lang} onBack={home} onOutcome={(o) => onOutcome(view, o)} />
+      {overlay}
+    </>;
   }
 
   return (
     <div className="dp" lang={lang}>
       {view.k === "home" && (
-        <Home L={L} lang={lang} setLang={setLang} profile={profile} phone={phone} txs={txs}
+        <Home L={L} lang={lang} setLang={setLang} me={me} profile={profile} phone={phone} txs={txs} inbox={inbox}
           onScan={() => go({ k: "scan" })} onPayTo={() => go({ k: "payto" })} onHistory={() => go({ k: "history" })}
           onPerson={(vpa) => startPay(vpa, null)} onTx={(id) => go({ k: "receipt", txId: id })} />
       )}
-      {view.k === "payto" && <PayTo L={L} lang={lang} onBack={home} onPick={(vpa) => startPay(vpa, null)} />}
+      {view.k === "payto" && <PayTo L={L} lang={lang} me={me} onBack={home} onPick={(vpa) => startPay(vpa, null)} />}
       {view.k === "scan" && <Scan L={L} onBack={home} onUpi={(u) => startPay(u.vpa, u.amount, u.name)} onTypeInstead={() => setView({ k: "payto" })} />}
       {view.k === "history" && <History L={L} txs={txs} onBack={home} onTx={(id) => setView({ k: "receipt", txId: id })} />}
       {view.k === "receipt" && (() => {
         const tx = txs.find((x) => x.id === view.txId);
         return tx ? <Receipt L={L} lang={lang} tx={tx} bank={L(profile.bank_name, profile.bank_name_hi)} onDone={home} /> : null;
       })()}
+      {overlay}
+    </div>
+  );
+}
+
+/** Family Verify for the other person, full screen over DemoPay (their name, signed answer, then back). */
+function FamilyLayer({ inbox, me, lang, setLang }: { inbox: FamilyInbox; me: Person; lang: Lang; setLang: (l: Lang) => void }) {
+  const calls = callsPayer(me.inbox.relative, lang, me.inbox.payerName, me.inbox.payerNameHi);
+  const payerShe = me.key === "rahul";
+  const langBtn = <LangBtn lang={lang} setLang={setLang} />;
+  return (
+    <div className="fv-overlay">
+      <UIContext.Provider value={{ lang, large: false }}>
+        <Device lang={lang}>
+          {inbox.done
+            ? <FamilyAnswered done={inbox.done} calls={calls} langBtn={langBtn} payerShe={payerShe} onHome={inbox.dismiss} />
+            : <FamilyPrompt push={inbox.push} calls={calls} keyId={inbox.keyId} busy={inbox.busy} onAnswer={inbox.answer} langBtn={langBtn} payerShe={payerShe} />}
+        </Device>
+      </UIContext.Provider>
     </div>
   );
 }
 
 // ------------------------------------------------------------------ home
 
-function Home({ L, lang, setLang, profile, phone, txs, onScan, onPayTo, onHistory, onPerson, onTx }: {
-  L: (en: string, hi: string) => string; lang: Lang; setLang: (l: Lang) => void; profile: typeof SUNITA; phone: CallInfo | null;
-  txs: Tx[]; onScan: () => void; onPayTo: () => void; onHistory: () => void; onPerson: (vpa: string) => void; onTx: (id: string) => void;
+function Home({ L, lang, setLang, me, profile, phone, txs, inbox, onScan, onPayTo, onHistory, onPerson, onTx }: {
+  L: (en: string, hi: string) => string; lang: Lang; setLang: (l: Lang) => void; me: Person; profile: Profile; phone: CallInfo | null;
+  txs: Tx[]; inbox: FamilyInbox; onScan: () => void; onPayTo: () => void; onHistory: () => void; onPerson: (vpa: string) => void;
+  onTx: (id: string) => void;
 }) {
   const [bal, setBal] = useState(false);
   return (
@@ -165,7 +194,7 @@ function Home({ L, lang, setLang, profile, phone, txs, onScan, onPayTo, onHistor
       <section className="dp-sec">
         <h2>{L("People you've paid", "जिन्हें पहले भेजा")}</h2>
         <div className="dp-people">
-          {PAID_BEFORE.map((p) => (
+          {me.paidBefore.map((p) => (
             <button key={p.vpa} className="dp-person" onClick={() => onPerson(p.vpa)}>
               <span className="dp-av sm">{initials(p.label)}</span>
               <span>{L(p.label, p.label_hi)}</span>
@@ -173,6 +202,8 @@ function Home({ L, lang, setLang, profile, phone, txs, onScan, onPayTo, onHistor
           ))}
         </div>
       </section>
+
+      <FamilySection L={L} lang={lang} me={me} inbox={inbox} />
 
       <section className="dp-sec">
         <h2>{L("Recent payments", "हाल के पेमेंट")}</h2>
@@ -185,6 +216,44 @@ function Home({ L, lang, setLang, profile, phone, txs, onScan, onPayTo, onHistor
 
       <footer className="dp-foot"><Seal size={16} />{L("Payments are checked by Pehchaan during calls", "कॉल के दौरान पेमेंट की जाँच पहचान करता है")}</footer>
     </>
+  );
+}
+
+/** Both directions of the family check: who protects my payments, and whose payments this phone answers for. */
+function FamilySection({ L, lang, me, inbox }: { L: (en: string, hi: string) => string; lang: Lang; me: Person; inbox: FamilyInbox }) {
+  const calls = callsPayer(me.inbox.relative, lang, me.inbox.payerName, me.inbox.payerNameHi);
+  const circle = me.payer.circle.map((r) => (lang === "hi" ? r.name_hi || r.name : r.name)).join(L(" or ", " या "));
+  const said = { yes: L("You said: yes, it's me", "आपने कहा: हाँ, मैं हूँ"), no: L("You said: not me. Payment held", "आपने कहा: मैं नहीं। पेमेंट रोका गया"),
+    expired: L("No answer in time", "समय पर जवाब नहीं"), pending: L("Waiting for your answer", "आपके जवाब का इंतज़ार") };
+  return (
+    <section className="dp-sec">
+      <h2>{L("Family Verify", "फ़ैमिली वेरिफ़ाई")}</h2>
+      <div className="dp-list dp-fam">
+        <div className="dp-row">
+          <span className={`fam-dot ${inbox.linked ? "on" : ""}`} />
+          <span className="dp-row-t">
+            <b>{inbox.linked ? L(`This phone answers for ${calls}`, `यह फ़ोन ${calls} के लिए जवाब देता है`) : L("Connecting to Pehchaan…", "पहचान से जुड़ रहा है…")}</b>
+            <span>{L(`If someone uses your name to ask ${calls} for money, you're asked here first.`, `अगर कोई आपके नाम से ${calls} से पैसे माँगे, तो पहले आपसे यहीं पूछा जाएगा।`)}</span>
+          </span>
+        </div>
+        <div className="dp-row">
+          <span className="dp-av sm">{me.payer.circle[0]?.name[0]}</span>
+          <span className="dp-row-t">
+            <b>{L(`Your circle: ${circle}`, `आपका सर्कल: ${circle}`)}</b>
+            <span>{L("If a caller says they're one of them, their own phone is asked.", "अगर कॉल करने वाला कहे कि वो इनमें से कोई है, तो उनके अपने फ़ोन पर पूछा जाता है।")}</span>
+          </span>
+        </div>
+        {inbox.reqs.slice(0, 3).map((r) => (
+          <div className="dp-row" key={r.id}>
+            <span className={`fam-ans ${r.answer ?? "pending"}`}>{r.answer === "no" ? "✕" : r.answer === "yes" ? "✓" : "…"}</span>
+            <span className="dp-row-t">
+              <b>{r.amount} {L("to", "को")} {r.payee}</b>
+              <span>{said[r.answer ?? "pending"]} · {new Date(r.at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -225,7 +294,7 @@ function TxRow({ L, tx, onClick }: { L: (en: string, hi: string) => string; tx: 
 
 // ------------------------------------------------------------------ choose a payee
 
-function PayTo({ L, lang, onBack, onPick }: { L: (en: string, hi: string) => string; lang: Lang; onBack: () => void; onPick: (vpa: string) => void }) {
+function PayTo({ L, lang, me, onBack, onPick }: { L: (en: string, hi: string) => string; lang: Lang; me: Person; onBack: () => void; onPick: (vpa: string) => void }) {
   const [q, setQ] = useState("");
   const ok = isVpa(q);
   const found = ok ? resolvePayee(q) : null;
@@ -264,7 +333,7 @@ function PayTo({ L, lang, onBack, onPick }: { L: (en: string, hi: string) => str
 
         <h2 className="dp-h2">{L("People you've paid", "जिन्हें पहले भेजा")}</h2>
         <div className="dp-list">
-          {PAID_BEFORE.map((p) => (
+          {me.paidBefore.map((p) => (
             <button key={p.vpa} className="dp-row" onClick={() => onPick(p.vpa)}>
               <span className="dp-av sm">{initials(p.label)}</span>
               <span className="dp-row-t"><b>{L(p.label, p.label_hi)}</b><span>{p.vpa} · {L(`paid ${p.times} times`, `${p.times} बार भेजा`)}</span></span>

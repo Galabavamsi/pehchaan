@@ -60,8 +60,4 @@ export const rehearsal = {
 export const forRehearsal = (c: PhoneCall): PhoneCall =>
   rehearsal.get() && c.state !== "none" && c.number ? { ...c, in_contacts: false } : c;
 
-export const ROLE_KEY = "pehchaan.role";
 export type Role = "payer" | "relative";
-export function savedRole(): Role | null {
-  try { return (localStorage.getItem(ROLE_KEY) as Role | null) || null; } catch { return null; }
-}

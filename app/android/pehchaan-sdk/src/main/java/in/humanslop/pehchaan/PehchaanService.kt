@@ -10,11 +10,12 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 
 /**
- * Keeps the process alive so call state is seen even when the app is closed (payer), and holds the
- * Family Verify WebSocket (relative). Shows one quiet ongoing notification, as Android requires.
+ * Keeps the process alive so call state is seen even when the app is closed, and holds this phone's Family Verify
+ * WebSocket (every phone answers for someone in a circle). Shows one quiet ongoing notification, as Android requires.
  */
 class PehchaanService : Service() {
     private var fv: FamilyVerifyListener? = null
+    private var fvDevice: String? = null
     private var linked = false
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -26,7 +27,13 @@ class PehchaanService : Service() {
             if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0)
         if (cfg == null) { stopSelf(); return START_NOT_STICKY }
         CallMonitor.start(this)
-        if (cfg.role == "relative" && cfg.deviceId != null && fv == null) {
+        if (cfg.deviceId != fvDevice) {  // first start, or someone else now uses this phone
+            fv?.stop()
+            fv = null
+            fvDevice = cfg.deviceId
+            linked = false
+        }
+        if (cfg.deviceId != null && fv == null) {
             val ws = cfg.apiBase.replaceFirst(Regex("^http"), "ws") + "/ws/device/" + cfg.deviceId
             fv = FamilyVerifyListener(ws,
                 onRequest = { Pehchaan.showFamilyVerify(this, it) },
@@ -43,15 +50,15 @@ class PehchaanService : Service() {
 
     private fun ongoing(cfg: Pehchaan.Config?) = NotificationCompat.Builder(this, Pehchaan.CH_SVC)
         .setSmallIcon(R.drawable.ic_pehchaan)
-        .setContentTitle(if (cfg?.role == "relative") "Pehchaan Family is on" else "Pehchaan is protecting your payments")
+        .setContentTitle("Pehchaan is protecting your payments")
         .setContentText(when {
-            cfg?.role != "relative" -> "Checks payments made during or just after a call. Never listens to calls."
-            linked -> "Connected. You'll be asked if someone uses your name to ask for money."
+            cfg?.deviceId == null -> "Checks payments made during or just after a call. Never listens to calls."
+            linked -> "Checks payments during calls, and asks you first when someone uses your name."
             else -> "Connecting…"
         })
         .setOngoing(true)
         .setPriority(NotificationCompat.PRIORITY_LOW)
-        .setContentIntent(Pehchaan.openAppIntent(this, cfg?.role ?: "payer", 1))
+        .setContentIntent(Pehchaan.openAppIntent(this, "home", 1))
         .addAction(0, "Setup", Pehchaan.openAppIntent(this, "setup", 3))
         .build()
 

@@ -211,3 +211,21 @@ def test_evidence_pack_signed_and_prefilled(client, device_factory):
     assert pack["prefill"]["ncrp"]["fields"]["Suspect mobile number"] == "+447700900123"
     assert pack["payer"]["phone_masked"].endswith("210") and "98123" not in pack["payer"]["phone_masked"]
     assert pack["hash_chain"]["verified"] and pack["hash_chain"]["length"] >= 6
+
+
+def test_rahul_pays_and_mummy_verifies_on_her_phone(client, device_factory):
+    """Both demo phones can pay (SPEC §7): Rahul is a payer whose circle is his mother on dev_sunita."""
+    client.post("/v1/demo/scenario/T1")
+    call = {"state": "active", "number": "+919800001234", "channel": "pstn", "duration_sec": 60, "in_contacts": False}
+    a = client.post("/v1/risk/assess", json={"payer_id": "u_rahul", "scenario": "live", "call": call,
+                                             "payment": {"payee_vpa": "ariftraders@okdemo", "payee_name": "Arif Traders", "amount_inr": 50000}}).json()
+    assert a["triggered"] and a["ask_claim"] and a["case_id"]
+    b = client.post("/v1/risk/assess", json={"case_id": a["case_id"], "claim": "family", "claim_target": "rel_sunita"}).json()
+    assert b["tier"] in ("amber", "red") and b["auto_family_verify"]["auto"] is True
+    mummy = device_factory(client, "dev_sunita", "rel_sunita")
+    pending = client.get("/v1/devices/dev_sunita/challenges").json()
+    assert pending and pending[0]["case_id"] == a["case_id"] and "Rahul" in pending[0]["message"]["en"]
+    ch, nonce = pending[0]["challenge_id"], pending[0]["nonce"]
+    r = client.post(f"/v1/verify/family/{ch}/respond",
+                    json={"answer": "no", "device_id": "dev_sunita", "signature_b64": mummy.sign(ch, nonce, "no")}).json()
+    assert r["result"] == "denied" and r["tier"] == "red"

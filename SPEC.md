@@ -154,6 +154,11 @@ Every decision returns `reasons[]`: code, plain-language text (EN + HI), contrib
   - A fictional UPI directory in the app stands in for the PSP's "verify UPI ID" lookup and gives the registered name. An unknown handle gets a name derived from the handle.
   - Every payment ends with a "Pehchaan check" line saying why it did or didn't ask. The sources are the API's trigger (call condition, payment condition) and its reasons. Not checking is explained too.
   - The family app keeps a history of the requests it received and the answers given, on the phone only.
+- **Two people, two phones, both directions (added 24 Oct, on site).**
+  - Every phone runs the same DemoPay. Setup asks who is using the phone: Sunita (`u_sunita`) or Rahul.
+  - Rahul is a seeded payer too (`u_rahul`, fictional, `rahul.s@bdb`). His circle is his mother, on device `dev_sunita`.
+  - Each phone pays as its own person and answers Family Verify for the other: Sunita's phone (`dev_sunita`) for Rahul's payments, Rahul's phone (`dev_rahul`) for Sunita's.
+  - Family Verify is part of DemoPay, not a separate role. The service holds the phone's device WebSocket, and the prompt opens over whatever screen is up.
 - Not in this build: iOS (CallKit's `CXCallObserver` says whether a call is active but gives no number), keys in Android Keystore, and call audio.
 
 **Bank/PSP cloud (AWS; production in ap-south-1 for RBI payment-data localisation):**
