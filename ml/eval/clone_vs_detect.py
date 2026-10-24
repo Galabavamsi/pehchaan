@@ -429,6 +429,8 @@ def tables(res, old=None):
         pd_ = [d for d in DET if any(d in r for r in pre["all"].values())]
         md += ["Same clips, v1 and A from their **stored scores** (the pre-registered numbers' source; "
                "full precision, up to 8 windows, silence kept):", ""] + _table(pre["all"], pd_, res, sim=False) + [""]
+        for dv, rows in sorted(pre["by_device"].items()):
+            md += [f"Stored scores, handset {dv} only:", ""] + _table(rows, pd_, res, sim=False) + [""]
     return "\n".join(md)
 
 

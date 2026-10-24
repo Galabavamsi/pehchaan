@@ -1,0 +1,827 @@
+{
+ "method": "python eval/clone_vs_detect.py --service http://127.0.0.1:8510\n        through a running voice service started with PEHCHAAN_PANEL=v1,A,nii,la (run from ml/; ~2.5 h on a laptop\n        CPU, resumable). One POST /v1/voice/panel per clip: the bench itself, and the models stay loaded once.\n  python eval/clone_vs_detect.py                 (no service: loads the four detectors here, one at a time)\n  python eval/clone_vs_detect.py --tables [--compare OLD.json]   (markdown tables for FINDINGS.md from the JSON)\n\nHow convincing (\"speaker similarity\"), following ClonEval (arXiv:2504.20581): cosine similarity between WavLM\nspeaker embeddings (microsoft/wavlm-base-plus-sv, 16 kHz) of a clone and its real speaker. ClonEval compares each\nclone with its own reference prompt; we compare with the mean over the speaker's genuine recordings, and report\ngenuine-vs-genuine similarity of the same speaker as the ceiling a real voice reaches against itself.\n\nHow detectable: every panel detector (serve/panel_config.json: ours v1, ours A, NII MMS-300M, off-the-shelf\nXLS-R+AASIST LA) and the fused verdict (equal-weight z-mean of A, NII, v1), each at its own threshold (EER point on\nthe shared simulated test sample). Every clip is scored exactly as on the bench (serve/panel.py), by the rules in\ncommon/scoring.py: the first 60 s of the clip, XLS-R+AASIST models as the mean logit over ~4 s windows with mostly\nsilent windows dropped (Silero VAD), NII as the mean over chunks of up to 16 s, CPU int8. v1 is the served export\n(serve/model_config.json), as on the bench. Through a service, each clip is sent as its WAV file (the AMR condition\nas a float32 WAV of the processed waveform, so the service decodes exactly those samples), and each verdict is the\nservice's own (its raw scores are rounded to 3 decimals; the verdicts use the unrounded scores).\n  clean    the consented corpus files (realcall/work/src: S01, S02 genuine lines and content-matched clones)\n  amr      the same files through the repo's AMR-NB 8 kHz phone channel (channel/channels.py, seeded per file)\n  realcall pre-registered real-call test clips (realcall/work/d2/scores/realcall_eval.csv, split == test), all four\n           detectors scored here by the same rules: the benchmark's own scoring. The pre-registered numbers in\n           realcall/FINDINGS.md come from each model's stored scores (training checkpoints at full precision, up to 8\n           windows per clip, silence kept); those are under realcall.preregistered_stored_scores for v1 and A.\nNever trained on: speaker S02 (held out by protocol), Chatterbox, Seed-VC and Sarvam instant voice cloning\n(held-out generators). Every row says which. Output: ml/results/clone_vs_detect.json; per-clip scores in\nrealcall/work/bench_v2/ (speaker similarity, which no detector touches, is reused from realcall/work/bench/).",
+ "models": {
+  "v1": "Pehchaan v1 (Round 1)",
+  "A": "Pehchaan A (real-call retrain)",
+  "nii": "NII AntiDeepfake MMS-300M (off the shelf)",
+  "la": "XLS-R + AASIST LA (off the shelf)"
+ },
+ "fused_members": [
+  "A",
+  "nii",
+  "v1"
+ ],
+ "max_seconds": 60.0,
+ "sample_rate": 16000,
+ "conditions": {
+  "clean": {
+   "all_speakers": {
+    "genuine": {
+     "n": 124,
+     "v1": 0.3548,
+     "A": 0.3226,
+     "nii": 0.3306,
+     "la": 0.6855,
+     "fused": 0.3548
+    },
+    "chatterbox": {
+     "n": 50,
+     "v1": 0.8,
+     "A": 0.9,
+     "nii": 1.0,
+     "la": 0.36,
+     "fused": 1.0
+    },
+    "cosyvoice2": {
+     "n": 26,
+     "v1": 0.6154,
+     "A": 0.6538,
+     "nii": 1.0,
+     "la": 0.0769,
+     "fused": 0.7692
+    },
+    "f5": {
+     "n": 26,
+     "v1": 0.7692,
+     "A": 0.8462,
+     "nii": 0.8846,
+     "la": 0.1538,
+     "fused": 0.8077
+    },
+    "f5hi": {
+     "n": 24,
+     "v1": 0.9583,
+     "A": 1.0,
+     "nii": 1.0,
+     "la": 0.7917,
+     "fused": 1.0
+    },
+    "sarvam_ivc": {
+     "n": 71,
+     "v1": 0.0,
+     "A": 0.0,
+     "nii": 1.0,
+     "la": 0.3239,
+     "fused": 0.0
+    },
+    "seedvc": {
+     "n": 110,
+     "v1": 0.7182,
+     "A": 0.6273,
+     "nii": 1.0,
+     "la": 0.9636,
+     "fused": 0.9455
+    },
+    "xtts": {
+     "n": 50,
+     "v1": 1.0,
+     "A": 0.98,
+     "nii": 1.0,
+     "la": 0.9,
+     "fused": 1.0
+    }
+   },
+   "heldout_speaker_S02": {
+    "genuine": {
+     "n": 79,
+     "v1": 0.557,
+     "A": 0.5063,
+     "nii": 0.519,
+     "la": 0.8987,
+     "fused": 0.557
+    },
+    "chatterbox": {
+     "n": 26,
+     "v1": 0.6923,
+     "A": 0.8462,
+     "nii": 1.0,
+     "la": 0.4615,
+     "fused": 1.0
+    },
+    "cosyvoice2": {
+     "n": 13,
+     "v1": 0.3846,
+     "A": 0.3846,
+     "nii": 1.0,
+     "la": 0.0,
+     "fused": 0.5385
+    },
+    "f5": {
+     "n": 13,
+     "v1": 0.5385,
+     "A": 0.6923,
+     "nii": 0.7692,
+     "la": 0.0,
+     "fused": 0.6154
+    },
+    "f5hi": {
+     "n": 13,
+     "v1": 0.9231,
+     "A": 1.0,
+     "nii": 1.0,
+     "la": 0.8462,
+     "fused": 1.0
+    },
+    "sarvam_ivc": {
+     "n": 30,
+     "v1": 0.0,
+     "A": 0.0,
+     "nii": 1.0,
+     "la": 0.6,
+     "fused": 0.0
+    },
+    "seedvc": {
+     "n": 50,
+     "v1": 0.62,
+     "A": 0.48,
+     "nii": 1.0,
+     "la": 0.94,
+     "fused": 0.88
+    },
+    "xtts": {
+     "n": 26,
+     "v1": 1.0,
+     "A": 0.9615,
+     "nii": 1.0,
+     "la": 0.8462,
+     "fused": 1.0
+    }
+   },
+   "never_trained_rows": {
+    "genuine": {
+     "n": 124,
+     "v1": 0.3548,
+     "A": 0.3226,
+     "nii": 0.3306,
+     "la": 0.6855,
+     "fused": 0.3548
+    },
+    "chatterbox": {
+     "n": 50,
+     "v1": 0.8,
+     "A": 0.9,
+     "nii": 1.0,
+     "la": 0.36,
+     "fused": 1.0
+    },
+    "cosyvoice2": {
+     "n": 13,
+     "v1": 0.3846,
+     "A": 0.3846,
+     "nii": 1.0,
+     "la": 0.0,
+     "fused": 0.5385
+    },
+    "f5": {
+     "n": 13,
+     "v1": 0.5385,
+     "A": 0.6923,
+     "nii": 0.7692,
+     "la": 0.0,
+     "fused": 0.6154
+    },
+    "f5hi": {
+     "n": 13,
+     "v1": 0.9231,
+     "A": 1.0,
+     "nii": 1.0,
+     "la": 0.8462,
+     "fused": 1.0
+    },
+    "sarvam_ivc": {
+     "n": 71,
+     "v1": 0.0,
+     "A": 0.0,
+     "nii": 1.0,
+     "la": 0.3239,
+     "fused": 0.0
+    },
+    "seedvc": {
+     "n": 110,
+     "v1": 0.7182,
+     "A": 0.6273,
+     "nii": 1.0,
+     "la": 0.9636,
+     "fused": 0.9455
+    },
+    "xtts": {
+     "n": 26,
+     "v1": 1.0,
+     "A": 0.9615,
+     "nii": 1.0,
+     "la": 0.8462,
+     "fused": 1.0
+    }
+   },
+   "plan": {
+    "clips": 481,
+    "windows_mean": 2.44,
+    "windows_max": 7,
+    "cut_at_max_s": 0
+   }
+  },
+  "amr": {
+   "all_speakers": {
+    "genuine": {
+     "n": 124,
+     "v1": 0.3468,
+     "A": 0.2419,
+     "nii": 0.5484,
+     "la": 0.8629,
+     "fused": 0.3468
+    },
+    "chatterbox": {
+     "n": 50,
+     "v1": 0.7,
+     "A": 0.72,
+     "nii": 0.98,
+     "la": 0.66,
+     "fused": 0.8
+    },
+    "cosyvoice2": {
+     "n": 26,
+     "v1": 0.5,
+     "A": 0.5385,
+     "nii": 0.9231,
+     "la": 0.1923,
+     "fused": 0.6923
+    },
+    "f5": {
+     "n": 26,
+     "v1": 0.8846,
+     "A": 0.7692,
+     "nii": 1.0,
+     "la": 0.6154,
+     "fused": 0.9615
+    },
+    "f5hi": {
+     "n": 24,
+     "v1": 0.9583,
+     "A": 0.8333,
+     "nii": 1.0,
+     "la": 0.9167,
+     "fused": 1.0
+    },
+    "sarvam_ivc": {
+     "n": 71,
+     "v1": 0.0,
+     "A": 0.0,
+     "nii": 1.0,
+     "la": 0.5915,
+     "fused": 0.0
+    },
+    "seedvc": {
+     "n": 110,
+     "v1": 0.5818,
+     "A": 0.4364,
+     "nii": 1.0,
+     "la": 0.9727,
+     "fused": 0.6909
+    },
+    "xtts": {
+     "n": 50,
+     "v1": 1.0,
+     "A": 0.92,
+     "nii": 1.0,
+     "la": 0.96,
+     "fused": 1.0
+    }
+   },
+   "heldout_speaker_S02": {
+    "genuine": {
+     "n": 79,
+     "v1": 0.5443,
+     "A": 0.3797,
+     "nii": 0.7342,
+     "la": 0.962,
+     "fused": 0.5443
+    },
+    "chatterbox": {
+     "n": 26,
+     "v1": 0.6154,
+     "A": 0.5769,
+     "nii": 1.0,
+     "la": 0.6538,
+     "fused": 0.6538
+    },
+    "cosyvoice2": {
+     "n": 13,
+     "v1": 0.0,
+     "A": 0.0769,
+     "nii": 0.9231,
+     "la": 0.0769,
+     "fused": 0.3846
+    },
+    "f5": {
+     "n": 13,
+     "v1": 0.7692,
+     "A": 0.5385,
+     "nii": 1.0,
+     "la": 0.3846,
+     "fused": 0.9231
+    },
+    "f5hi": {
+     "n": 13,
+     "v1": 0.9231,
+     "A": 0.6923,
+     "nii": 1.0,
+     "la": 1.0,
+     "fused": 1.0
+    },
+    "sarvam_ivc": {
+     "n": 30,
+     "v1": 0.0,
+     "A": 0.0,
+     "nii": 1.0,
+     "la": 0.6,
+     "fused": 0.0
+    },
+    "seedvc": {
+     "n": 50,
+     "v1": 0.44,
+     "A": 0.26,
+     "nii": 1.0,
+     "la": 0.94,
+     "fused": 0.54
+    },
+    "xtts": {
+     "n": 26,
+     "v1": 1.0,
+     "A": 0.8462,
+     "nii": 1.0,
+     "la": 0.9231,
+     "fused": 1.0
+    }
+   },
+   "never_trained_rows": {
+    "genuine": {
+     "n": 124,
+     "v1": 0.3468,
+     "A": 0.2419,
+     "nii": 0.5484,
+     "la": 0.8629,
+     "fused": 0.3468
+    },
+    "chatterbox": {
+     "n": 50,
+     "v1": 0.7,
+     "A": 0.72,
+     "nii": 0.98,
+     "la": 0.66,
+     "fused": 0.8
+    },
+    "cosyvoice2": {
+     "n": 13,
+     "v1": 0.0,
+     "A": 0.0769,
+     "nii": 0.9231,
+     "la": 0.0769,
+     "fused": 0.3846
+    },
+    "f5": {
+     "n": 13,
+     "v1": 0.7692,
+     "A": 0.5385,
+     "nii": 1.0,
+     "la": 0.3846,
+     "fused": 0.9231
+    },
+    "f5hi": {
+     "n": 13,
+     "v1": 0.9231,
+     "A": 0.6923,
+     "nii": 1.0,
+     "la": 1.0,
+     "fused": 1.0
+    },
+    "sarvam_ivc": {
+     "n": 71,
+     "v1": 0.0,
+     "A": 0.0,
+     "nii": 1.0,
+     "la": 0.5915,
+     "fused": 0.0
+    },
+    "seedvc": {
+     "n": 110,
+     "v1": 0.5818,
+     "A": 0.4364,
+     "nii": 1.0,
+     "la": 0.9727,
+     "fused": 0.6909
+    },
+    "xtts": {
+     "n": 26,
+     "v1": 1.0,
+     "A": 0.8462,
+     "nii": 1.0,
+     "la": 0.9231,
+     "fused": 1.0
+    }
+   },
+   "plan": {
+    "clips": 481,
+    "windows_mean": 2.44,
+    "windows_max": 7,
+    "cut_at_max_s": 0
+   }
+  },
+  "realcall": {
+   "all": {
+    "genuine": {
+     "n": 256,
+     "v1": 0.0938,
+     "A": 0.0508,
+     "nii": 0.5703,
+     "la": 0.7383,
+     "fused": 0.0469
+    },
+    "cosyvoice2": {
+     "n": 32,
+     "v1": 0.25,
+     "A": 0.7188,
+     "nii": 0.3125,
+     "la": 0.8438,
+     "fused": 0.4062
+    },
+    "xtts": {
+     "n": 52,
+     "v1": 0.5385,
+     "A": 0.8846,
+     "nii": 0.8462,
+     "la": 0.8269,
+     "fused": 0.8269
+    },
+    "f5hi": {
+     "n": 36,
+     "v1": 0.4722,
+     "A": 0.8889,
+     "nii": 0.25,
+     "la": 0.7222,
+     "fused": 0.5833
+    },
+    "seedvc": {
+     "n": 35,
+     "v1": 0.4,
+     "A": 0.6,
+     "nii": 0.4286,
+     "la": 0.8,
+     "fused": 0.4286
+    },
+    "f5": {
+     "n": 48,
+     "v1": 0.2917,
+     "A": 0.5,
+     "nii": 0.4167,
+     "la": 0.8542,
+     "fused": 0.3333
+    },
+    "chatterbox": {
+     "n": 39,
+     "v1": 0.359,
+     "A": 0.6154,
+     "nii": 0.3333,
+     "la": 0.9231,
+     "fused": 0.4872
+    },
+    "sarvam_ivc": {
+     "n": 12,
+     "v1": 0.0,
+     "A": 0.0,
+     "nii": 0.9167,
+     "la": 0.0,
+     "fused": 0.0
+    }
+   },
+   "by_device": {
+    "D1": {
+     "genuine": {
+      "n": 118,
+      "v1": 0.0424,
+      "A": 0.0085,
+      "nii": 0.822,
+      "la": 0.8983,
+      "fused": 0.0254
+     },
+     "cosyvoice2": {
+      "n": 16,
+      "v1": 0.3125,
+      "A": 0.6875,
+      "nii": 0.5625,
+      "la": 1.0,
+      "fused": 0.4375
+     },
+     "xtts": {
+      "n": 32,
+      "v1": 0.625,
+      "A": 0.875,
+      "nii": 0.8438,
+      "la": 0.9062,
+      "fused": 0.8438
+     },
+     "f5hi": {
+      "n": 17,
+      "v1": 0.5882,
+      "A": 0.8235,
+      "nii": 0.4118,
+      "la": 1.0,
+      "fused": 0.6471
+     },
+     "seedvc": {
+      "n": 13,
+      "v1": 0.5385,
+      "A": 0.6154,
+      "nii": 0.6923,
+      "la": 1.0,
+      "fused": 0.6154
+     },
+     "f5": {
+      "n": 26,
+      "v1": 0.1923,
+      "A": 0.3846,
+      "nii": 0.5769,
+      "la": 0.9615,
+      "fused": 0.2692
+     },
+     "chatterbox": {
+      "n": 14,
+      "v1": 0.0714,
+      "A": 0.3571,
+      "nii": 0.5714,
+      "la": 1.0,
+      "fused": 0.2857
+     }
+    },
+    "D2": {
+     "xtts": {
+      "n": 20,
+      "v1": 0.4,
+      "A": 0.9,
+      "nii": 0.85,
+      "la": 0.7,
+      "fused": 0.8
+     },
+     "chatterbox": {
+      "n": 25,
+      "v1": 0.52,
+      "A": 0.76,
+      "nii": 0.2,
+      "la": 0.88,
+      "fused": 0.6
+     },
+     "seedvc": {
+      "n": 22,
+      "v1": 0.3182,
+      "A": 0.5909,
+      "nii": 0.2727,
+      "la": 0.6818,
+      "fused": 0.3182
+     },
+     "genuine": {
+      "n": 138,
+      "v1": 0.1377,
+      "A": 0.087,
+      "nii": 0.3551,
+      "la": 0.6014,
+      "fused": 0.0652
+     },
+     "f5": {
+      "n": 22,
+      "v1": 0.4091,
+      "A": 0.6364,
+      "nii": 0.2273,
+      "la": 0.7273,
+      "fused": 0.4091
+     },
+     "cosyvoice2": {
+      "n": 16,
+      "v1": 0.1875,
+      "A": 0.75,
+      "nii": 0.0625,
+      "la": 0.6875,
+      "fused": 0.375
+     },
+     "f5hi": {
+      "n": 19,
+      "v1": 0.3684,
+      "A": 0.9474,
+      "nii": 0.1053,
+      "la": 0.4737,
+      "fused": 0.5263
+     },
+     "sarvam_ivc": {
+      "n": 12,
+      "v1": 0.0,
+      "A": 0.0,
+      "nii": 0.9167,
+      "la": 0.0,
+      "fused": 0.0
+     }
+    }
+   },
+   "scoring": "the benchmark's own: every detector re-scored by the bench's rules (common/scoring.py)",
+   "plan": {
+    "clips": 510,
+    "windows_mean": 3.16,
+    "windows_max": 12,
+    "cut_at_max_s": 0
+   },
+   "preregistered_stored_scores": {
+    "note": "v1 and A from their stored scores, as in realcall/FINDINGS.md (training checkpoints at full precision, up to 8 windows per clip, silence kept); for comparison with the benchmark's own scoring above",
+    "all": {
+     "genuine": {
+      "n": 256,
+      "v1": 0.0781,
+      "A": 0.043
+     },
+     "cosyvoice2": {
+      "n": 32,
+      "v1": 0.3125,
+      "A": 0.9062
+     },
+     "xtts": {
+      "n": 52,
+      "v1": 0.6154,
+      "A": 0.9615
+     },
+     "f5hi": {
+      "n": 36,
+      "v1": 0.4444,
+      "A": 0.9722
+     },
+     "seedvc": {
+      "n": 35,
+      "v1": 0.4,
+      "A": 0.7429
+     },
+     "f5": {
+      "n": 48,
+      "v1": 0.3542,
+      "A": 0.6875
+     },
+     "chatterbox": {
+      "n": 39,
+      "v1": 0.5385,
+      "A": 0.7949
+     },
+     "sarvam_ivc": {
+      "n": 12,
+      "v1": 0.0,
+      "A": 0.0
+     }
+    },
+    "by_device": {
+     "D1": {
+      "genuine": {
+       "n": 118,
+       "v1": 0.0339,
+       "A": 0.0
+      },
+      "cosyvoice2": {
+       "n": 16,
+       "v1": 0.3125,
+       "A": 0.875
+      },
+      "xtts": {
+       "n": 32,
+       "v1": 0.7188,
+       "A": 0.9375
+      },
+      "f5hi": {
+       "n": 17,
+       "v1": 0.7059,
+       "A": 0.9412
+      },
+      "seedvc": {
+       "n": 13,
+       "v1": 0.5385,
+       "A": 0.6154
+      },
+      "f5": {
+       "n": 26,
+       "v1": 0.2308,
+       "A": 0.5769
+      },
+      "chatterbox": {
+       "n": 14,
+       "v1": 0.2857,
+       "A": 0.4286
+      }
+     },
+     "D2": {
+      "xtts": {
+       "n": 20,
+       "v1": 0.45,
+       "A": 1.0
+      },
+      "chatterbox": {
+       "n": 25,
+       "v1": 0.68,
+       "A": 1.0
+      },
+      "seedvc": {
+       "n": 22,
+       "v1": 0.3182,
+       "A": 0.8182
+      },
+      "genuine": {
+       "n": 138,
+       "v1": 0.1159,
+       "A": 0.0797
+      },
+      "f5": {
+       "n": 22,
+       "v1": 0.5,
+       "A": 0.8182
+      },
+      "cosyvoice2": {
+       "n": 16,
+       "v1": 0.3125,
+       "A": 0.9375
+      },
+      "f5hi": {
+       "n": 19,
+       "v1": 0.2105,
+       "A": 1.0
+      },
+      "sarvam_ivc": {
+       "n": 12,
+       "v1": 0.0,
+       "A": 0.0
+      }
+     }
+    }
+   }
+  }
+ },
+ "generators": {
+  "chatterbox": {
+   "n": 50,
+   "similarity_mean": 0.9323,
+   "similarity_sd": 0.0188,
+   "heldout": true,
+   "kind": "clone"
+  },
+  "cosyvoice2": {
+   "n": 26,
+   "similarity_mean": 0.9378,
+   "similarity_sd": 0.0247,
+   "heldout": false,
+   "kind": "clone"
+  },
+  "f5": {
+   "n": 26,
+   "similarity_mean": 0.942,
+   "similarity_sd": 0.0163,
+   "heldout": false,
+   "kind": "clone"
+  },
+  "f5hi": {
+   "n": 24,
+   "similarity_mean": 0.915,
+   "similarity_sd": 0.0305,
+   "heldout": false,
+   "kind": "clone"
+  },
+  "genuine": {
+   "n": 124,
+   "similarity_mean": 0.9358,
+   "similarity_sd": 0.0255,
+   "heldout": false,
+   "kind": "genuine"
+  },
+  "sarvam_ivc": {
+   "n": 71,
+   "similarity_mean": 0.9431,
+   "similarity_sd": 0.0208,
+   "heldout": true,
+   "kind": "clone"
+  },
+  "seedvc": {
+   "n": 110,
+   "similarity_mean": 0.8898,
+   "similarity_sd": 0.0939,
+   "heldout": true,
+   "kind": "clone"
+  },
+  "xtts": {
+   "n": 50,
+   "similarity_mean": 0.8447,
+   "similarity_sd": 0.0638,
+   "heldout": false,
+   "kind": "clone"
+  }
+ },
+ "run": {
+  "started": "2026-10-24T14:14:13+05:30",
+  "finished": "2026-10-24T16:19:22+05:30",
+  "device": "cpu int8",
+  "runs": 1,
+  "voice_service": {
+   "model_version": "pehchaan-xlsr-aasist-ft-v1+819e67f7f86e",
+   "device": "cpu",
+   "max_seconds": 60.0,
+   "url": "http://127.0.0.1:8510"
+  }
+ }
+}
