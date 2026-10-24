@@ -1,13 +1,16 @@
 package `in`.humanslop.pehchaan
 
+import android.Manifest
 import android.app.Service
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
 
 /**
  * Keeps the process alive so call state is seen even when the app is closed, and holds this phone's Family Verify
@@ -45,7 +48,14 @@ class PehchaanService : Service() {
     }
 
     private fun refresh() {
-        runCatching { NotificationManagerCompat.from(this).notify(Pehchaan.NOTIF_SVC, ongoing(Pehchaan.config(this))) }
+        // Updating the status line needs POST_NOTIFICATIONS on Android 13+; without it there is nothing to update
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
+        try {
+            NotificationManagerCompat.from(this).notify(Pehchaan.NOTIF_SVC, ongoing(Pehchaan.config(this)))
+        } catch (e: SecurityException) {
+            // permission withdrawn meanwhile: keep the service running without the status update
+        }
     }
 
     private fun ongoing(cfg: Pehchaan.Config?) = NotificationCompat.Builder(this, Pehchaan.CH_SVC)

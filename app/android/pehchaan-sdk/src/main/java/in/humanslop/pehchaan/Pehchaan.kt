@@ -67,7 +67,9 @@ object Pehchaan {
         "fullscreen" -> if (Build.VERSION.SDK_INT >= 34)
             Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:${ctx.packageName}"))
         else appDetails(ctx)
-        "notifications" -> Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+        "notifications" -> if (Build.VERSION.SDK_INT >= 26)
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+        else appDetails(ctx)
         else -> appDetails(ctx)
     }.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
