@@ -9,6 +9,12 @@ Engines:
   openai    OpenAI gpt-4o-mini-tts (hi, en), POST https://api.openai.com/v1/audio/speech
   deepgram  Deepgram Aura-2 (English only), POST https://api.deepgram.com/v1/speak
 All of them are HELD-OUT generators in our protocol (test split only).
+
+2026-10-24, training set (common/protocol.py note of that date): `build2` writes jobs for new generators
+sarvam_v3t, sarvam_v4f (Bulbul v4 Flash), openai_t and deepgram_t, split by voice person (api2_split) and reading
+FLEURS sentences of the same split (CC-BY-4.0 text, fetched from Hugging Face):
+  python ml/gen/run_api.py build2                     # -> data/generated/api2/jobs_<engine>.jsonl + manifest.csv
+  python ml/gen/run_api.py run --jobs data/generated/api2/jobs_sarvam_v3t.jsonl --workers 4
 """
 import argparse
 import base64
@@ -25,6 +31,7 @@ import requests
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "ml"))
 from common.lines import EN, HI_F, HI_M  # noqa: E402
+from common.protocol import api2_split  # noqa: E402
 
 SARVAM_VOICES = {"m": ["shubh", "rahul", "amit", "rohan"], "f": ["ritu", "priya", "kavya", "neha"]}
 OPENAI_VOICES = ["marin", "cedar", "alloy", "ash", "coral", "nova", "onyx", "sage"]
@@ -102,16 +109,109 @@ def build(a):
         print(e, len(js))
 
 
-LANG = {"hi": "hi-IN", "en": "en-IN", "te": "te-IN", "ta": "ta-IN"}
+LANG = {"hi": "hi-IN", "en": "en-IN", "te": "te-IN", "ta": "ta-IN", "bn": "bn-IN", "gu": "gu-IN", "kn": "kn-IN",
+        "ml": "ml-IN", "mr": "mr-IN", "pa": "pa-IN", "od": "od-IN"}
+FLEURS = {"hi": "hi_in", "en": "en_us", "bn": "bn_in", "gu": "gu_in", "kn": "kn_in", "ml": "ml_in", "mr": "mr_in",
+          "ta": "ta_in", "te": "te_in", "pa": "pa_in", "od": "or_in"}
+SARVAM_V3_ALL = ["shubh", "aditya", "ritu", "priya", "neha", "rahul", "pooja", "rohan", "simran", "kavya", "amit", "dev",
+                 "ishita", "shreya", "ratan", "varun", "manan", "sumit", "roopa", "kabir", "aayan", "ashutosh", "advait",
+                 "anand", "tanya", "tarun", "sunny", "mani", "gokul", "vijay", "shruti", "suhani", "mohit", "kavitha",
+                 "rehan", "soham", "rupali"]
+OPENAI_ALL = ["alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse", "marin", "cedar"]
+DEEPGRAM_ALL = ["amalthea", "andromeda", "apollo", "arcas", "aries", "asteria", "athena", "atlas", "aurora", "callista",
+                "cora", "cordelia", "delia", "draco", "electra", "harmonia", "helena", "hera", "hermes", "hyperion", "iris",
+                "janus", "juno", "jupiter", "luna", "mars", "minerva", "neptune", "odysseus", "ophelia", "orion", "orpheus",
+                "pandora", "phoebe", "pluto", "saturn", "selene", "thalia", "theia", "vesta", "zeus"]
+# clips per split for each training engine (the ~7,000-clip plan agreed on 2026-10-24)
+API2_TARGETS = {"sarvam_v3t": (2200, 300, 500), "sarvam_v4f": (1100, 150, 250), "openai_t": (1100, 150, 250),
+                "deepgram_t": (880, 120, 200)}
+
+
+def fleurs_text(cache):
+    """{(lang, split): [(sentence_id, text)]} from FLEURS transcripts; 40-150 characters, one row per sentence."""
+    cache.mkdir(parents=True, exist_ok=True)
+    out = {}
+    for lang, code in FLEURS.items():
+        for split in ("train", "dev", "test"):
+            p = cache / f"{code}_{split}.tsv"
+            if not p.exists():
+                r = requests.get(f"https://huggingface.co/datasets/google/fleurs/resolve/main/data/{code}/{split}.tsv",
+                                 timeout=120)
+                r.raise_for_status()
+                p.write_bytes(r.content)
+            seen, rows = set(), []
+            for line in p.read_text(encoding="utf-8").splitlines():
+                c = line.split("\t")
+                if len(c) < 3 or c[0] in seen or not 40 <= len(c[2]) <= 150:
+                    continue
+                seen.add(c[0])
+                rows.append((c[0], c[2]))
+            out[(lang, split)] = rows
+    return out
+
+
+def build2(a):
+    import csv
+    out = Path(a.out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    rnd = random.Random(24)
+    text = fleurs_text(out / "fleurs_text")
+    pools = {k: rnd.sample(v, len(v)) for k, v in text.items()}
+    used = {k: 0 for k in pools}
+
+    def sentence(lang, split):
+        k = (lang, split)
+        sid, t = pools[k][used[k] % len(pools[k])]
+        used[k] += 1
+        return sid, t
+
+    v4 = [v for v in json.loads((Path(__file__).parent / "sarvam_v4f_speakers.json").read_text())
+          if v.split("_")[1] in ("hi", "en", "enhi", "bn", "gu", "kn", "mr", "ta", "te", "pa")]
+    voices = {"sarvam_v3t": SARVAM_V3_ALL, "sarvam_v4f": v4, "openai_t": OPENAI_ALL,
+              "deepgram_t": [f"aura-2-{v}-en" for v in DEEPGRAM_ALL]}
+    langs_of = {"sarvam_v3t": list(FLEURS), "openai_t": ["hi", "en"], "deepgram_t": ["en"]}
+    family = {"sarvam_v3t": "sarvam", "sarvam_v4f": "sarvam", "openai_t": "openai", "deepgram_t": "deepgram"}
+    model = {"sarvam_v3t": "bulbul:v3", "sarvam_v4f": "bulbul:v4-flash"}
+    manifest = []
+    for eng, targets in API2_TARGETS.items():
+        jobs = []
+        for split, n in zip(("train", "dev", "test"), targets):
+            vs = [v for v in voices[eng] if api2_split(eng, v) == split]
+            for i in range(n):
+                v = vs[i % len(vs)]
+                if eng == "sarvam_v4f":   # each v4 Flash voice is tied to a language; Hinglish voices read hi or en
+                    tag = v.split("_")[1]
+                    lang = ("hi", "en")[i % 2] if tag == "enhi" else tag
+                else:
+                    ls = langs_of[eng]
+                    lang = ls[(i // len(vs)) % len(ls)] if len(vs) < len(ls) else ls[i % len(ls)]
+                sid, t = sentence(lang, split)
+                jid = f"{eng}__{v}__{lang}__f{sid}"
+                jobs.append(dict(id=jid, engine=eng, family=family[eng], model=model.get(eng), voice=v, lang=lang,
+                                 line_id=f"fleurs{sid}", text=t, gender="", split=split,
+                                 out=str(out / eng / f"{jid}.wav")))
+        uniq = {j["id"]: j for j in jobs}   # a repeated (voice, sentence) pair is generated once
+        with open(out / f"jobs_{eng}.jsonl", "w", encoding="utf-8") as f:
+            for j in uniq.values():
+                f.write(json.dumps(j, ensure_ascii=False) + "\n")
+        manifest += uniq.values()
+        print(eng, {s: sum(1 for j in uniq.values() if j["split"] == s) for s in ("train", "dev", "test")},
+              f"{sum(len(j['text']) for j in uniq.values()):,} characters")
+    with open(out / "manifest.csv", "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=["id", "engine", "voice", "lang", "split", "line_id", "text", "out"])
+        w.writeheader()
+        for j in manifest:
+            w.writerow({k: j[k] for k in w.fieldnames})
 
 
 def call(j, K):
-    e = j["engine"]
+    e = j.get("family", j["engine"])
     if e == "sarvam":
         r = requests.post("https://api.sarvam.ai/text-to-speech", timeout=60,
                           headers={"api-subscription-key": K["SARVAM_API_KEY"], "Content-Type": "application/json"},
-                          json={"text": j["text"], "target_language_code": LANG[j["lang"]], "model": "bulbul:v3",
-                                "speaker": j["voice"], "pace": 1.0, "speech_sample_rate": 24000})
+                          json={"text": j["text"], "target_language_code": LANG[j["lang"]],
+                                "model": j.get("model") or "bulbul:v3", "speaker": j["voice"], "pace": 1.0,
+                                "speech_sample_rate": 24000})
         r.raise_for_status()
         return base64.b64decode(r.json()["audios"][0])
     if e == "openai":
@@ -174,11 +274,12 @@ def run(a):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("mode", choices=["build", "run"])
+    ap.add_argument("mode", choices=["build", "build2", "run"])
     ap.add_argument("--fleurs")
-    ap.add_argument("--out_dir", default=str(ROOT / "data/generated/api"))
+    ap.add_argument("--out_dir")
     ap.add_argument("--jobs")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--limit", type=int, default=0)
     a = ap.parse_args()
-    build(a) if a.mode == "build" else run(a)
+    a.out_dir = a.out_dir or str(ROOT / ("data/generated/api2" if a.mode == "build2" else "data/generated/api"))
+    {"build": build, "build2": build2, "run": run}[a.mode](a)
