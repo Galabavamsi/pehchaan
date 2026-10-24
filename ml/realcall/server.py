@@ -416,8 +416,20 @@ async def agent_ws(ws: WebSocket, call_id: str):
                           first_sound_ms=agent._ms(t0, t_first) if t_first else reply_ms,
                           mother_chars=len(text), son_chars=len(spoken))
 
+    async def warm_providers():
+        """Open the STT/LLM/TTS connections (and load their models) while the opener plays, so the first real turn
+        isn't a cold start. The opener itself is pre-rendered, so nothing in this process is warm until now."""
+        for p in (providers.stt, providers.llm, providers.tts):
+            w = getattr(p, "warm", None)
+            if w and not st["stop"]:
+                try:
+                    await loop.run_in_executor(None, w)
+                except Exception:
+                    pass
+
     async def brain():
         await started.wait()
+        asyncio.create_task(warm_providers())            # fire-and-forget; it swallows its own errors
         if st["stop"]:
             return
         t0 = time.perf_counter()

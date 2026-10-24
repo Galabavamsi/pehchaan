@@ -256,6 +256,13 @@ class SarvamSTT:
                                                       model=self.model, mode=self.mode, language_code=self.language_code)
         return (getattr(r, "transcript", None) or "").strip()
 
+    def warm(self):
+        """Open the TLS connection and load the model before the first real turn (saves the cold-start on turn 1)."""
+        try:
+            self.transcribe(np.zeros(int(0.4 * SR_UP), np.float32), SR_UP)
+        except Exception:
+            pass
+
 
 class DeepgramSTT:
     """Deepgram nova (HTTP; the SDK isn't installed). Hindi support is good; Hinglish code-switching is weaker than
@@ -284,22 +291,36 @@ class OpenAILLM:
 
     def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.7):
         self.model, self.temperature = model, temperature
+        self._cli = None
+
+    def _client(self):
+        if self._cli is None:   # one keep-alive connection reused across turns (no TLS handshake per turn)
+            import httpx
+            self._cli = httpx.Client(timeout=20, headers={"Authorization": f"Bearer {env('OPENAI_API_KEY')}"})
+        return self._cli
 
     def reply(self, history, mother_text, card: ScriptCard) -> TurnPlan:
-        import httpx
         msgs = [{"role": "system", "content": card.system_prompt()}]
         for who, txt in history:
             msgs.append({"role": "assistant" if who == "son" else "user", "content": txt})
         msgs.append({"role": "user", "content": mother_text if mother_text else
                      "(the call has just connected — say your opening line)"})
-        r = httpx.post("https://api.openai.com/v1/chat/completions",
-                       headers={"Authorization": f"Bearer {env('OPENAI_API_KEY')}"},
-                       json={"model": self.model, "messages": msgs, "temperature": self.temperature,
-                             "max_tokens": 80, "response_format": {"type": "json_object"}}, timeout=20)
+        r = self._client().post("https://api.openai.com/v1/chat/completions",
+                                json={"model": self.model, "messages": msgs, "temperature": self.temperature,
+                                      "max_tokens": 80, "response_format": {"type": "json_object"}})
         r.raise_for_status()
         d = json.loads(r.json()["choices"][0]["message"]["content"])
         emo = d.get("emotion", "neutral")
         return TurnPlan(str(d.get("text", "")).strip(), emo if emo in EMOTIONS else "neutral", bool(d.get("done", False)))
+
+    def warm(self):
+        """Open the TLS connection before the first real turn (OpenAI's first call paid ~several seconds otherwise)."""
+        try:
+            self._client().post("https://api.openai.com/v1/chat/completions",
+                                json={"model": self.model, "messages": [{"role": "user", "content": "hi"}],
+                                      "max_tokens": 1}, timeout=10)
+        except Exception:
+            pass
 
 
 class SarvamCloneTTS:
@@ -361,6 +382,13 @@ class SarvamCloneTTS:
         b = getattr(r, "audio_b64", None) or getattr(r, "audio", None)
         x, sr = sf.read(io.BytesIO(base64.b64decode(b)), dtype="float32", always_2d=True)
         return resample(x.mean(1), sr, SR_UP)
+
+    def warm(self):
+        """Resolve the voice and run a tiny synth so the first real turn doesn't pay the model/TLS cold-start."""
+        try:
+            self.synth("haan", "neutral", self.lang)
+        except Exception:
+            pass
 
 
 GPU_ENGINES = ("xtts", "f5", "f5hi", "cosyvoice2", "chatterbox")
