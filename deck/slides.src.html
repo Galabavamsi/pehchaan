@@ -606,7 +606,7 @@
       <table class="tb" style="margin-top:6px">
         <tr><td class="k">Your case</td><td>Judges set the caller, call state, amount, payee and registry flags; the case runs live on the two phones and the console</td></tr>
         <tr><td class="k">Detector bench</td><td>Drop or record any audio, any format: every detector side by side, a fused verdict, named failure cases, CSV</td></tr>
-        <tr><td class="k">Clone vs detect</td><td>ClonEval-style benchmark: how convincing each cloner is (speaker similarity) against how often each detector catches it</td></tr>
+        <tr><td class="k">Clone vs detect</td><td>ClonEval-style benchmark: how convincing each cloner is against how often each detector catches it; plus a paid-API retrain that didn't beat A on real calls (appendix A3 · 6/6)</td></tr>
         <tr><td class="k">Red team</td><td>15 attacks scripted through the live API; the holes it found became rules v0.3 (slide 11)</td></tr>
         <tr><td class="k">Analyst</td><td>Voice hits go to a review queue, never to the payer's decision; privacy shown from each case's own records; seconds to outcome</td></tr>
         <tr><td class="k">Live clone</td><td>Consent → record → clone → call → delete on screen, for a consenting volunteer</td></tr>
@@ -855,21 +855,21 @@
 
 <!-- =============================== APPENDIX: DETECTOR RESULTS =============================== -->
 <section class="slide"><div class="inner">
-  <div class="kicker">Appendix A3 · 1/5 <span class="tag">detector evaluation · measured</span></div>
+  <div class="kicker">Appendix A3 · 1/6 <span class="tag">detector evaluation · measured</span></div>
   <h1 class="t" style="font-size:24px">Off-the-shelf detectors collapse on Indian phone audio; ours holds up on every channel, including generators it never saw.</h1>
   <div class="body"><div class="card" style="padding:10px 14px"><div class="chart">{{svg:../ml/results/figures/heldout_gap_bars.svg}}</div></div></div>
-<div class="foot"><span class="src">Test set: 7,809 genuine / 11,265 cloned clips; one global threshold; channels simulated. Held-out generators were never in training. Off-the-shelf = XLS-R + AASIST (ASVspoof LA checkpoint).</span><span class="pg">APPENDIX A3 · 1/5</span></div>
+<div class="foot"><span class="src">Test set: 7,809 genuine / 11,265 cloned clips; one global threshold; channels simulated. Held-out generators were never in training. Off-the-shelf = XLS-R + AASIST (ASVspoof LA checkpoint).</span><span class="pg">APPENDIX A3 · 1/6</span></div>
 </section>
 
 <section class="slide"><div class="inner">
-  <div class="kicker">Appendix A3 · 2/5 <span class="tag">detector evaluation · DET curves</span></div>
+  <div class="kicker">Appendix A3 · 2/6 <span class="tag">detector evaluation · DET curves</span></div>
   <h1 class="t" style="font-size:24px">Trade-off curves: at every operating point, ours misses fewer clones and flags fewer real callers.</h1>
   <div class="body"><div class="card" style="padding:10px 14px"><div class="chart">{{svg:../ml/results/figures/det_baseline_vs_ours.svg}}</div></div></div>
-<div class="foot"><span class="src">NII MMS-300M AntiDeepfake weights are non-commercial and were used for evaluation only. Ours: XLS-R-300M + AASIST, fine-tuned from the LA checkpoint with codec and RawBoost-style augmentation, temperature-calibrated (ECE 0.048).</span><span class="pg">APPENDIX A3 · 2/5</span></div>
+<div class="foot"><span class="src">NII MMS-300M AntiDeepfake weights are non-commercial and were used for evaluation only. Ours: XLS-R-300M + AASIST, fine-tuned from the LA checkpoint with codec and RawBoost-style augmentation, temperature-calibrated (ECE 0.048).</span><span class="pg">APPENDIX A3 · 2/6</span></div>
 </section>
 
 <section class="slide"><div class="inner">
-  <div class="kicker">Appendix A3 · 3/5 <span class="tag">per generator × channel · calibration · limitations</span></div>
+  <div class="kicker">Appendix A3 · 3/6 <span class="tag">per generator × channel · calibration · limitations</span></div>
   <h1 class="t" style="font-size:24px">Where it still fails, and why voice stays in shadow mode until it passes a real-call gate.</h1>
   <div class="body row" style="gap:14px;align-items:flex-start">
     <div class="card" style="width:690px;padding:10px 12px"><div class="lbl">EER by generator × channel (ours)</div><div class="chart" style="margin-top:4px">{{svg:../ml/results/figures/eer_heatmap_generator_channel.svg}}</div></div>
@@ -901,12 +901,12 @@
       </div>
     </div>
   </div>
-<div class="foot"><span class="src">Latency for a 10 s clip: 32 ms model-only on an A10G (fp16); 0.34 s end-to-end on an RTX 4070; 0.98 s on CPU (int8). Full tables: ml/results/SUMMARY.md, metrics.json; licences: ml/DATA_CARD.md.</span><span class="pg">APPENDIX A3 · 3/5</span></div>
+<div class="foot"><span class="src">Latency for a 10 s clip: 32 ms model-only on an A10G (fp16); 0.34 s end-to-end on an RTX 4070; 0.98 s on CPU (int8). Full tables: ml/results/SUMMARY.md, metrics.json; licences: ml/DATA_CARD.md.</span><span class="pg">APPENDIX A3 · 3/6</span></div>
 </section>
 
 <!-- =============================== APPENDIX: REAL CALLS =============================== -->
 <section class="slide"><div class="inner">
-  <div class="kicker">Appendix A3 · 4/5 <span class="tag">real phone calls · method · retraining · held-out handset</span></div>
+  <div class="kicker">Appendix A3 · 4/6 <span class="tag">real phone calls · method · retraining · held-out handset</span></div>
   <h1 class="t" style="font-size:24px">Real phone calls: what we measured, what retraining fixed, and what still gets through.</h1>
   <div class="body row" style="gap:14px;align-items:flex-start">
     <div class="card" style="width:330px;padding:10px 13px">
@@ -953,12 +953,12 @@
       </div>
     </div>
   </div>
-<div class="foot"><span class="src">Caveats: two speakers, one carrier, one seed; sessions differ in conditions; Sarvam n = 12; the live-caller gate (≤5% false flags on ≥50 live calls) is not yet run. 95% Wilson intervals. Source: ml/realcall/FINDINGS.md.</span><span class="pg">APPENDIX A3 · 4/5</span></div>
+<div class="foot"><span class="src">Caveats: two speakers, one carrier, one seed; sessions differ in conditions; Sarvam n = 12; the live-caller gate (≤5% false flags on ≥50 live calls) is not yet run. 95% Wilson intervals. Source: ml/realcall/FINDINGS.md.</span><span class="pg">APPENDIX A3 · 4/6</span></div>
 </section>
 
 <!-- =============================== APPENDIX: CONSENT =============================== -->
 <section class="slide"><div class="inner">
-  <div class="kicker">Appendix A3 · 5/5 <span class="tag">consent · data handling for real calls and the live demo</span></div>
+  <div class="kicker">Appendix A3 · 5/6 <span class="tag">consent · data handling for real calls and the live demo</span></div>
   <h1 class="t" style="font-size:24px">Every voice we cloned or recorded belongs to a consenting team member, and the code refuses anyone else.</h1>
   <div class="body q4" style="align-content:start">
 
@@ -996,8 +996,51 @@
       </ul>
     </div>
   </div>
-<div class="foot"><span class="src">Consent forms: data/recording-kit/CONSENT_FORM (cloning) and CONSENT_LIVE_CALLS.md (recording only). Enforcement: ml/realcall/consent.py, server.py, phone.py.</span><span class="pg">APPENDIX A3 · 5/5</span></div>
+<div class="foot"><span class="src">Consent forms: data/recording-kit/CONSENT_FORM (cloning) and CONSENT_LIVE_CALLS.md (recording only). Enforcement: ml/realcall/consent.py, server.py, phone.py.</span><span class="pg">APPENDIX A3 · 5/6</span></div>
 </section>
+
+<section class="slide"><div class="inner">
+  <div class="kicker">Appendix A3 · 6/6 <span class="tag">on site 24 Oct · clone vs detect · paid-API retrain · real-call verdict</span></div>
+  <h1 class="t" style="font-size:24px">On site we scored every detector on every cloner and retrained ours with paid-API voices. Synthetic scores rose; real calls didn't, so model A stays.</h1>
+  <div class="body row" style="gap:14px;align-items:flex-start">
+    <div class="card" style="width:430px;padding:10px 13px">
+      <div class="lbl">Clone vs detect · clean audio, scored like the bench</div>
+      <table class="tb" style="margin-top:5px;font-size:11.5px">
+        <tr><th>Cloner</th><th>Similarity</th><th>Ours A</th><th>NII</th><th>Off-shelf</th></tr>
+        <tr><td class="k">Sarvam IVC*</td><td>0.943</td><td>0/71</td><td>71/71</td><td>23/71</td></tr>
+        <tr><td class="k">Chatterbox*</td><td>0.932</td><td>45/50</td><td>50/50</td><td>18/50</td></tr>
+        <tr><td class="k">Seed-VC*</td><td>0.890</td><td>69/110</td><td>110/110</td><td>106/110</td></tr>
+        <tr><td class="k">XTTS-v2</td><td>0.845</td><td>49/50</td><td>50/50</td><td>45/50</td></tr>
+        <tr><td class="k">All 7 cloners</td><td>–</td><td>226/357</td><td>354/357</td><td>217/357</td></tr>
+        <tr><td class="k">Real voices flagged</td><td>0.936</td><td><b>40/124</b></td><td><b>41/124</b></td><td><b>85/124</b></td></tr>
+      </table>
+      <p class="xs" style="margin-top:6px">* never trained on. Similarity = ClonEval's WavLM speaker similarity to the real speaker. On real calls A flags 13/256 real voices; NII catches Sarvam 11/12 but flags 146/256.</p>
+    </div>
+    <div class="card" style="width:455px;padding:10px 13px">
+      <div class="lbl">Retrain with paid-API voices · single seed</div>
+      <table class="tb" style="margin-top:5px;font-size:11.5px">
+        <tr><th>Model</th><th>Fixed dev EER</th><th>New engines caught</th><th>D2 real-call EER</th><th>D2 caught</th><th>D2 real flagged</th></tr>
+        <tr><td class="k">A (served)</td><td>2.86 %</td><td>91.1 %</td><td><b>11.7 %</b></td><td>115/136</td><td>11/138</td></tr>
+        <tr><td class="k">A2</td><td>2.29 %</td><td>95.9 %</td><td>13.9 %</td><td>110/136</td><td>10/138</td></tr>
+        <tr><td class="k">A2-ivc</td><td>2.04 %</td><td>96.3 %</td><td>13.1 %</td><td>120/136</td><td>18/138</td></tr>
+      </table>
+      <p class="xs" style="margin-top:6px">D2 = the held-out handset, 274 real-call clips. A2-ivc also trained on Sarvam clones of S01: on real calls it caught S01's 5/5 (seen speaker) and S02's <b>0/7</b> (unseen speaker). Differences on D2 sit inside the 95 % intervals.</p>
+    </div>
+    <div class="col fill" style="gap:10px">
+      <div class="card dark" style="padding:11px 13px">
+        <div class="lbl" style="color:#cfc6b8">What it means</div>
+        <ul class="tight" style="margin-top:6px">
+          <li class="sm">Synthetic gains don't transfer to real calls: <b>A stays served</b>, A2 and A2-ivc are not promoted.</li>
+          <li class="sm">A commercial cloner on a new person's voice beats every model we trained, even one trained on that cloner.</li>
+          <li class="sm">Clean recordings of real voices are flagged about a third of the time.</li>
+          <li class="sm">So the voice score never moves money: the decision rests on verifying the person.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+<div class="foot"><span class="src">Source: ml/realcall/FINDINGS.md, on-site sections of 24 Oct (benchmark: ml/eval/clone_vs_detect.py, JSON ml/results/clone_vs_detect.json; retrain: infra/retrain_v4.sh). Two consenting speakers, one carrier, one seed. Sarvam IVC entered A2-ivc's training on 24 Oct after its 0/12 result (dated protocol note).</span><span class="pg">APPENDIX A3 · 6/6</span></div>
+</section>
+
 
 <!-- =============================== APPENDIX: SIM RESULTS =============================== -->
 <section class="slide"><div class="inner">
