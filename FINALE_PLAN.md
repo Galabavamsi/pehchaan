@@ -22,15 +22,20 @@ commits from 24 Oct.
 | D2 + C3: longer window for large amounts, split payments, Family Verify rate limit (SPEC v0.3) | `52d2b05` |
 | B1 jury builds their own case on `#/demo` ("Your case") | `7a02ae7` |
 | D1 red-team matrix run through the live pipeline, 16 attacks + 4 declared (`RED_TEAM.md`), and the four fixes it led to | `aa77d95` |
+| Closing-demo tooling: `realcall.live_clone` consent / record / clone / purge | `ffffe65` |
+| B2 voice hits → analyst Needs review (shadow only); C1 privacy panel from each case's records; no-audio-on-disk test | `db520cf` |
+| C2 false-positive drill timers (payer: seconds to sent; analyst: seconds to outcome) | `845ba4e` |
+| Deck: red-team slide, built-on-site + delivery slide (12 pitch pages); problem slide's numbers checked at source | `f711e97`, `5cbf770` |
 
 | Next | Owner |
 |---|---|
 | A7 clone-vs-detect results (running on the laptop) → FINDINGS on-site section + `#/benchmark` page | Varun |
-| Live-clone closing demo: `sarvam_clone --ref`, live-clone screen, rehearse with a teammate | Varun |
-| B2 voice clip into the case; C1 privacy proof panel; C2 timed false-positive drill | Varun |
+| Rehearse the live-clone closing demo with a teammate (commands in §2b) | Varun |
+| Deploy: add an SSH rule for the venue IP to the `pehchaan-demo` security group, then `bash deploy/push.sh pehchaan-demo` | Varun |
+| Open the next PR to Galabavamsi/pehchaan (`finale` is ahead of PR #4 with no conflicts) | Varun |
 | D3 red-team round with mentors (use `RED_TEAM.md` and "Your case") | both |
 | B4 Android app from `app/ANDROID_BRIEF.md` (now documents the v0.3 API behaviour) | Vamsi |
-| E/F/G slides, deck rebuild; the deck's simulator numbers are v0.2 (SPEC §4 note) unless `sim.py` is re-run with v0.3 | Varun |
+| F deployability slide; slide 10 refresh; the deck's simulator numbers are v0.2 (SPEC §4 note) unless `sim.py` is re-run with v0.3 | Varun |
 
 ---
 
