@@ -13,6 +13,25 @@ commits from 24 Oct.
 - Consent rules unchanged: clone or record only consenting team members; fictional names on screens.
 - GPU costs real money (g5.2xlarge ≈ $1.21/h): start it only when the run is ready, stop it when idle.
 
+## Status, 24 Oct afternoon (branch `finale`)
+
+| Done on site | Commit |
+|---|---|
+| A1 decode any format, A2 whole-clip window scoring, detector panel in the voice service | `9c7560a` |
+| A3 detector bench `#/bench` (every detector side by side, fused verdict, CSV, failure cases) | `b82bc55` |
+| D2 + C3: longer window for large amounts, split payments, Family Verify rate limit (SPEC v0.3) | `52d2b05` |
+| B1 jury builds their own case on `#/demo` ("Your case") | `7a02ae7` |
+| D1 red-team matrix run through the live pipeline, 16 attacks + 4 declared (`RED_TEAM.md`), and the four fixes it led to | `aa77d95` |
+
+| Next | Owner |
+|---|---|
+| A7 clone-vs-detect results (running on the laptop) → FINDINGS on-site section + `#/benchmark` page | Varun |
+| Live-clone closing demo: `sarvam_clone --ref`, live-clone screen, rehearse with a teammate | Varun |
+| B2 voice clip into the case; C1 privacy proof panel; C2 timed false-positive drill | Varun |
+| D3 red-team round with mentors (use `RED_TEAM.md` and "Your case") | both |
+| B4 Android app from `app/ANDROID_BRIEF.md` (now documents the v0.3 API behaviour) | Vamsi |
+| E/F/G slides, deck rebuild; the deck's simulator numbers are v0.2 (SPEC §4 note) unless `sim.py` is re-run with v0.3 | Varun |
+
 ---
 
 ## 1. What the new rubric rewards, and our move
