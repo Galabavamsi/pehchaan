@@ -263,3 +263,38 @@ def test_family_verify_rate_limit(client):
     a2 = client.post("/v1/risk/assess", json={"payer_id": sc["payer"]["id"], "payment": sc["payment"], "call": sc["call"]}).json()
     a3 = client.post("/v1/risk/assess", json={"case_id": a2["case_id"], "claim": "family", "claim_target": "rel_rahul"})
     assert a3.status_code == 200 and "saved number" in a3.json()["auto_family_verify"]["skipped"]
+
+
+def test_jury_builds_their_own_case(client):
+    """FINALE_PLAN B1: the jury sets the inputs; the case runs through the same pipeline as the fixed scenarios."""
+    def custom(**kw):
+        r = client.post("/v1/demo/custom", params={"background": False}, json=kw)
+        assert r.status_code == 200, r.text
+        sc = r.json()
+        a = client.post("/v1/risk/assess", json={"payer_id": sc["payer"]["id"], "payment": sc["payment"],
+                                                 "call": sc["call"], "scenario": sc["scenario"]}).json()
+        return sc, a
+
+    sc, a = custom(caller="international", channel="whatsapp", amount_inr=50000, payee="new", payee_name="Arif Traders")
+    assert sc["scenario"] == "CUSTOM" and sc["payee_new"] and sc["relative"]["id"] == "rel_rahul"
+    assert a["triggered"] and a["ask_claim"]
+    a2 = client.post("/v1/risk/assess", json={"case_id": a["case_id"], "claim": "family", "claim_target": "rel_rahul"}).json()
+    assert "payee_name_mismatch" in a2["signals"] and a2["auto_family_verify"]["auto"] is True
+    # Restart rebuilds the same case
+    assert client.post("/v1/demo/scenario/CUSTOM", params={"background": False}).json()["payment"] == sc["payment"]
+
+    # 1600 number: the registry tells a real bank call from a spoofed one
+    for calling, want in ((True, "active_call_1600"), (False, "no_active_call")):
+        sc, a = custom(caller="bank_1600", amount_inr=35000, payee="new", payee_name="Safe Account Desk", bank_calling=calling)
+        client.post("/v1/risk/assess", json={"case_id": a["case_id"], "claim": "bank", "claim_target": "bdb"})
+        r = client.post(f"/v1/cases/{a['case_id']}/checks/bank_registry").json()
+        assert r["checks"]["bank_registry"]["result"] == want, (calling, r["checks"])
+        assert (r["tier"] == "red") == (not calling)
+
+    # SPEC v0.3: half an hour after the call, a large amount is still assessed and a smaller one isn't
+    _, a = custom(caller="unknown", call_state="ended", ended_min=30, amount_inr=60000, payee="new")
+    assert a["triggered"] and a["trigger"]["call_condition"]
+    _, a = custom(caller="unknown", call_state="ended", ended_min=30, amount_inr=40000, payee="new")
+    assert not a["triggered"] and not a["trigger"]["call_condition"]
+    _, a = custom(caller="saved", payee="usual", amount_inr=45000)
+    assert a["tier"] == "green" and a["case_id"] is None

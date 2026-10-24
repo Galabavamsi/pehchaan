@@ -174,6 +174,7 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
         <>
           <StatusBar />
           {call.state === "active" && screen !== "sent" && <CallPill scenario={scenario} />}
+          {call.state === "ended" && screen !== "sent" && <CallPill scenario={scenario} ended />}
           <div className="body">
             {screen === "pay" && (
               <PayScreen scenario={scenario} amountStr={amountStr} setAmountStr={setAmountStr} busy={busy}
@@ -197,7 +198,7 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
           {head("plain")}
           <div className="sbody">
             <h1 className="q" lang={lang}>{t("who_asked")}</h1>
-            <p className="lede">{t("who_sub", { amount: amountTxt, payee })}</p>
+            <p className="lede">{t(call.state === "ended" ? "who_sub_after" : "who_sub", { amount: amountTxt, payee })}</p>
             <div className="options">
               <Opt icon={<Users size={24} weight="duotone" />} t={t("opt_family")} st={t("opt_family_s")} onClick={() => setScreen("family")} testid="claim-family" />
               <Opt icon={<Bank size={24} weight="duotone" />} t={t("opt_bank")} st={t("opt_bank_s")} onClick={() => setScreen("bank")} testid="claim-bank" />
@@ -321,22 +322,23 @@ function LangToggle({ toggles, dark = false }: { toggles: Toggles; dark?: boolea
   );
 }
 
-function CallPill({ scenario }: { scenario: Scenario }) {
+function CallPill({ scenario, ended = false }: { scenario: Scenario; ended?: boolean }) {
   const { t, lang } = useT();
-  const [sec, setSec] = useState(scenario.call.duration_sec);
+  const [sec, setSec] = useState(ended ? scenario.call.ended_sec_ago ?? 0 : scenario.call.duration_sec);
   useEffect(() => { const x = setInterval(() => setSec((s) => s + 1), 1000); return () => clearInterval(x); }, []);
-  const n = scenario.call.number;
-  const pretty = n.startsWith("+44") ? `+44 ${n.slice(3, 7)} ${n.slice(7)}` : n.startsWith("+91") ? `+91 ${n.slice(3, 8)} ${n.slice(8)}` : n;
+  const n = scenario.call.number ?? "";
+  const pretty = n.startsWith("+911600") ? `1600 ${n.slice(7, 10)} ${n.slice(10)}`
+    : n.startsWith("+44") ? `+44 ${n.slice(3, 7)} ${n.slice(7)}` : n.startsWith("+91") ? `+91 ${n.slice(3, 8)} ${n.slice(8)}` : n;
   const saved = (scenario as any).caller_saved_as as string | null;
   const wa = scenario.call.channel === "whatsapp";
   return (
-    <div className="callpill" data-testid="callpill">
+    <div className={`callpill${ended ? " ended" : ""}`} data-testid="callpill">
       <span className="dot">{wa ? <WhatsappLogo size={17} weight="fill" /> : <Phone size={16} weight="fill" />}</span>
       <span>
         <div className="num">{saved ?? pretty}</div>
-        <div className="meta">{wa ? t("whatsapp_call") : t("phone_call")}{!saved && <span className="flag">{t("unknown_number")}</span>}</div>
+        <div className="meta">{ended ? t("call_ended_ago", { min: String(Math.floor(sec / 60)) }) : wa ? t("whatsapp_call") : t("phone_call")}{!saved && <span className="flag">{t("unknown_number")}</span>}</div>
       </span>
-      <span className="timer">{Math.floor(sec / 60)}:{String(sec % 60).padStart(2, "0")}</span>
+      {!ended && <span className="timer">{Math.floor(sec / 60)}:{String(sec % 60).padStart(2, "0")}</span>}
       <span style={{ display: "none" }}>{lang}</span>
     </div>
   );

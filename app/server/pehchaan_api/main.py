@@ -29,7 +29,7 @@ from pehchaan.evidence import ist_iso, render_pack_pdf, verify_chain, verify_pac
 from . import voice as voice_svc  # noqa: E402
 from .db import Store  # noqa: E402
 from .risk import CaseError, CaseService  # noqa: E402
-from .scenarios import SCENARIOS, load_scenario, seed_background, seed_people  # noqa: E402
+from .scenarios import SCENARIOS, build_custom, load_scenario, seed_background, seed_people  # noqa: E402
 
 DATA_DIR = Path(os.environ.get("PEHCHAAN_DATA", SERVER_DIR / "data"))
 
@@ -124,6 +124,22 @@ class ActionIn(BaseModel):
 class DecisionIn(BaseModel):
     decision: Literal["release_hold", "confirm_fraud", "false_positive"]
     note: str | None = None
+
+
+class CustomCaseIn(BaseModel):
+    """The jury's own case on the demo page (FINALE_PLAN B1)."""
+    payer_id: Literal["u_sunita", "u_ramesh", "u_kamala"] = "u_sunita"
+    caller: Literal["saved", "unknown", "international", "bank_1600"] = "unknown"
+    channel: Literal["pstn", "whatsapp"] = "pstn"
+    call_state: Literal["active", "ended", "none"] = "active"
+    duration_min: float = Field(6, ge=0, le=240)
+    ended_min: float = Field(5, ge=0, le=24 * 60)
+    amount_inr: float = Field(50000, gt=0, le=10_000_000)
+    payee: Literal["usual", "new"] = "new"
+    payee_name: str = Field("Arif Traders", max_length=60)
+    payee_flagged: bool = False
+    caller_fri: Literal["medium", "high", "very_high"] | None = None
+    bank_calling: bool = False
 
 
 # --------------------------------------------------------------------------- app
@@ -376,12 +392,24 @@ def create_app(db_path: str | None = None, key_path: str | None = None) -> FastA
     # ------------------------------------------------------------- demo
     @app.post("/v1/demo/scenario/{name}")
     async def demo_scenario(name: str, background: bool = True):
+        cur = getattr(app.state, "current", None) or {}
+        if name.upper() == "CUSTOM" and cur.get("custom"):  # Restart on the jury's own case
+            return await demo_custom(CustomCaseIn(**cur["custom"]), background)
         if name.upper() not in SCENARIOS:
             raise HTTPException(404, f"scenario must be one of {sorted(SCENARIOS)}")
         for t in timers.values():
             t.cancel()
         timers.clear()
-        sc = load_scenario(svc, name, with_background=background)
+        return await _announce(load_scenario(svc, name, with_background=background))
+
+    @app.post("/v1/demo/custom")
+    async def demo_custom(body: CustomCaseIn, background: bool = True):
+        for t in timers.values():
+            t.cancel()
+        timers.clear()
+        return await _announce(build_custom(svc, body.model_dump(), with_background=background))
+
+    async def _announce(sc: dict) -> dict:
         app.state.current = sc
         await hub.send("demo", {"type": "scenario", "data": sc})
         await hub.send("console", {"type": "reset", "scenario": sc["scenario"]})

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import { ArrowClockwise, Phone } from "@phosphor-icons/react";
 import { API, api, subscribe, urlParam, type Lang, type Scenario } from "./api";
 import { Bench } from "./Bench";
+import { JuryPanel } from "./JuryPanel";
 import { Console } from "./Console";
 import { PayerPhone } from "./PayerPhone";
 import { RelativePhone } from "./RelativePhone";
@@ -64,6 +65,7 @@ function Standalone({ kind, lang }: { kind: "payer" | "relative"; lang?: Lang })
 function DemoControl() {
   const first = urlParam("scenario") || "T1";
   const { sc, n, load } = useScenario(first);
+  const [jury, setJury] = useState(false);
   const [scale, setScale] = useState(1);
   useLayoutEffect(() => {
     const forced = Number(urlParam("scale"));
@@ -86,11 +88,14 @@ function DemoControl() {
             </button>
           ))}
         </div>
+        <button className="chipbtn" aria-pressed={sc?.scenario === "CUSTOM"} onClick={() => setJury(true)} data-testid="jury-open"
+          style={{ minHeight: 40, padding: "0 12px" }}>Your case</button>
         <button className="chipbtn" onClick={() => sc && load(sc.scenario)} aria-label="Restart scenario" style={{ minHeight: 40, padding: "0 12px" }}>
           <ArrowClockwise size={16} weight="bold" /> Restart
         </button>
         <a className="chipbtn" href="#/bench" style={{ minHeight: 40, padding: "0 12px", textDecoration: "none" }}>Detector bench</a>
       </header>
+      {jury && <JuryPanel current={sc} onClose={() => setJury(false)} />}
       {sc && (
         <div className="demo-script">
           <Phone size={16} weight="fill" />

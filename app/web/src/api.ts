@@ -61,10 +61,18 @@ export interface Payer {
 }
 export interface Scenario {
   scenario: string; title: string; pattern: string; script: string; payer: Payer; relative: Relative | null;
-  call: { state: string; number: string; channel: string; duration_sec: number };
+  call: { state: string; number: string | null; channel: string; duration_sec: number; ended_sec_ago?: number };
   payment: { payee_vpa: string; payee_name: string; amount_inr: number };
   expected: Record<string, any>; bank: { name: string; name_hi: string };
   banks?: { id: string; name: string; name_hi: string; label?: string; label_hi?: string; integrated: boolean; yours: boolean }[];
+  custom?: CustomCase;
+}
+/** The jury's own case (POST /v1/demo/custom). */
+export interface CustomCase {
+  payer_id: "u_sunita" | "u_ramesh" | "u_kamala"; caller: "saved" | "unknown" | "international" | "bank_1600";
+  channel: "pstn" | "whatsapp"; call_state: "active" | "ended" | "none"; duration_min: number; ended_min: number;
+  amount_inr: number; payee: "usual" | "new"; payee_name: string; payee_flagged: boolean;
+  caller_fri: "medium" | "high" | "very_high" | null; bank_calling: boolean;
 }
 
 const qs = new URLSearchParams(location.search || location.hash.split("?")[1] || "");
@@ -92,6 +100,7 @@ async function req<T>(path: string, init?: RequestInit & { json?: unknown }): Pr
 
 export const api = {
   scenario: (name: string) => req<Scenario>(`/v1/demo/scenario/${name}`, { method: "POST" }),
+  custom: (c: CustomCase) => req<Scenario>("/v1/demo/custom", { method: "POST", json: c }),
   assess: (body: unknown) => req<Assessment>("/v1/risk/assess", { method: "POST", json: body }),
   verifyFamily: (case_id: string, relative_id?: string) =>
     req<FvSent & { assessment: Assessment }>("/v1/verify/family", { method: "POST", json: { case_id, relative_id } }),

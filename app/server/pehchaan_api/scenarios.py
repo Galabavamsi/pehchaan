@@ -6,6 +6,8 @@ the UK regulator's reserved drama range; 'Bharat Demo Bank' and '@okdemo' /
 """
 from __future__ import annotations
 
+import re
+
 from .adapters import BANKS, contact_hash  # noqa: F401  (contact_hash kept for callers/tests)
 from .risk import CaseService
 
@@ -199,4 +201,60 @@ def load_scenario(svc: CaseService, name: str, with_background: bool = True) -> 
         "bank": {"name": BANK, "name_hi": BANK_HI},
         "banks": [{**b, "yours": b["id"] == "bdb"} for b in BANKS.values()],
         "note": "All people, numbers, banks and UPI IDs are fictional. Context adapters are mocks.",
+    }
+
+
+# The jury's own case (POST /v1/demo/custom). Fictional numbers only: +44 7700 900xxx is the UK drama range, the
+# 1600 number is a made-up BFSI-series number, and the Indian mobile is in the style of the scenarios above.
+CALLERS = {
+    "saved": {"label": "the relative's saved number", "number": None},
+    "unknown": {"label": "an unknown Indian mobile", "number": "+918765432110"},
+    "international": {"label": "an unknown +44 number", "number": "+447700900789"},
+    "bank_1600": {"label": "a 1600-series bank number", "number": "+911600123456"},
+}
+
+
+def build_custom(svc: CaseService, p: dict, with_background: bool = True) -> dict:
+    """A case the jury sets up: who calls, the call state, amount, payee and the registry flags. The claim, the
+    relative's answer and every check are then given on the phones, as in the fixed scenarios."""
+    src = PAYERS[p["payer_id"]]
+    svc.s.reset(keep_devices=True)
+    seed_people(svc)
+    if with_background:
+        seed_background(svc)
+    payer = svc.s.get_user(p["payer_id"])
+    rel = payer["circle"][0]
+    number = rel["saved_number"] if p["caller"] == "saved" else CALLERS[p["caller"]]["number"]
+    if p["payee"] == "usual":
+        vpa, name = src["payees"][0][0], rel["full_name"]
+    else:
+        name = p["payee_name"].strip() or "Arif Traders"
+        vpa = (re.sub(r"[^a-z0-9]", "", name.lower()) or "payee")[:24] + "@okdemo"
+    if p.get("caller_fri") and p["call_state"] != "none":
+        svc.fri.set(number, p["caller_fri"])
+    if p.get("payee_flagged"):
+        svc.i4c.set(vpa, "high", "I4C suspect registry (mock)")
+    if p["caller"] == "bank_1600" and p.get("bank_calling") and p["call_state"] != "none":
+        svc.bank.start_call(payer["id"], number, svc.ts())
+    if p["call_state"] == "none":
+        call = {"state": "none", "number": None, "channel": "pstn", "duration_sec": 0}
+    else:
+        call = {"state": p["call_state"], "number": number, "channel": p["channel"],
+                "duration_sec": int(p["duration_min"] * 60)}
+        if p["call_state"] == "ended":
+            call["ended_sec_ago"] = int(p["ended_min"] * 60)
+    payment = {"payee_vpa": vpa, "payee_name": name, "amount_inr": p["amount_inr"]}
+    saved_as = next((label for num, label in src["contacts"] if num == number), None)
+    when = {"active": "on the call", "ended": f"{p['ended_min']:g} min after the call", "none": "with no call"}
+    return {
+        "caller_saved_as": saved_as, "payee_new": svc.history.payee(payer["id"], vpa) is None,
+        "scenario": "CUSTOM", "title": "The jury's own case", "pattern": "Your case",
+        "script": (f"{CALLERS[p['caller']]['label'][0].upper()}{CALLERS[p['caller']]['label'][1:]}"
+                   f"{' on WhatsApp' if p['channel'] == 'whatsapp' else ''}; "
+                   f"{payer['name']} pays ₹{p['amount_inr']:,.0f} to {name} {when[p['call_state']]}."),
+        "payer": payer, "relative": rel, "call": call, "payment": payment, "expected": {},
+        "bank": {"name": BANK, "name_hi": BANK_HI},
+        "banks": [{**b, "yours": b["id"] == "bdb"} for b in BANKS.values()],
+        "note": "All people, numbers, banks and UPI IDs are fictional. Context adapters are mocks.",
+        "custom": p,
     }
