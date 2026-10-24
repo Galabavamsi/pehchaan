@@ -1,8 +1,9 @@
 """When Pehchaan runs (SPEC section 2). No audio is used here.
 
 Pehchaan assesses a payment only if BOTH hold:
-  * a phone/VoIP call is active, or ended <= 10 minutes ago; and
-  * the payee is new, or the amount is above the user's p95, or >= Rs 10,000.
+  * a phone/VoIP call is active, or ended <= 10 minutes ago (<= 60 minutes for amounts >= Rs 50,000); and
+  * the payee is new, or the amount is above the user's p95, or >= Rs 10,000, or what was already sent during
+    the same call plus this payment reaches Rs 10,000 (split payments, SPEC v0.3).
 Trusted bypass (G5): payee paid >= 3 times and amount <= 1.5x usual -> Green.
 """
 from __future__ import annotations
@@ -18,6 +19,7 @@ class TriggerInput(BaseModel):
     payee_new: bool = False
     amount_inr: float = 0
     amount_p95_inr: float | None = None
+    sent_this_call_inr: float = 0      # payments this payer already made during the same call
 
 
 class TriggerResult(BaseModel):
@@ -30,8 +32,10 @@ class TriggerResult(BaseModel):
 def evaluate_trigger(t: TriggerInput, cfg: Config | None = None) -> TriggerResult:
     cfg = cfg or default_config()
     why: list[str] = []
+    window_min = (cfg.trigger.call_window_large_min if t.amount_inr >= cfg.trigger.large_amount_inr
+                  else cfg.trigger.call_window_min)
     call_ok = t.call_active or (
-        t.call_ended_sec_ago is not None and t.call_ended_sec_ago <= cfg.trigger.call_window_min * 60
+        t.call_ended_sec_ago is not None and t.call_ended_sec_ago <= window_min * 60
     )
     if t.call_active:
         why.append("call active")
@@ -47,4 +51,7 @@ def evaluate_trigger(t: TriggerInput, cfg: Config | None = None) -> TriggerResul
     if t.amount_inr >= cfg.trigger.amount_abs_inr:
         pay_ok = True
         why.append(f"amount >= {cfg.trigger.amount_abs_inr:,.0f}")
+    elif t.sent_this_call_inr > 0 and t.amount_inr + t.sent_this_call_inr >= cfg.trigger.amount_abs_inr:
+        pay_ok = True
+        why.append(f"{t.amount_inr + t.sent_this_call_inr:,.0f} sent during this call (split payments)")
     return TriggerResult(fired=call_ok and pay_ok, call_condition=call_ok, payment_condition=pay_ok, why=why)

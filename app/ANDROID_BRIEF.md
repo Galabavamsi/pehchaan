@@ -44,10 +44,15 @@ If a piece isn't working by the end of its box, ship without it: the web pages (
 }
 ```
 - `call.state`: `active` | `ended` | `none`; `channel`: `pstn` | `whatsapp` | `voip`; for an ended call set
-  `state: "ended"` and `ended_sec_ago` (the trigger window is 10 minutes).
+  `state: "ended"` and `ended_sec_ago` (the trigger window is 10 minutes, 60 minutes for amounts ≥ ₹50,000).
+  Send the same `call.number` for every payment during one call: what was already sent during that call counts
+  toward ₹10,000 (SPEC v0.3 split payments).
 - Then the claim: `POST /v1/risk/assess` with `{"case_id": "...", "claim": "family", "claim_target": "rel_rahul"}`.
   A family claim for an enrolled relative sends Family Verify automatically (check the response's
   `auto_family_verify`). Claims: `family`, `bank`, `upi_or_shop`, `authority`, `other`, `none`.
+  If `auto_family_verify` is `{"skipped": "..."}`, no push went out (rate limit: 3 per payer, 5 per relative
+  per hour): show that text, which tells the payer to call the relative's saved number. A manual
+  `POST /v1/verify/family` over the limit returns 429 with the same text.
 - Live updates for the payer: `wss://api.humanslop.in/ws/case/{case_id}`.
 
 **Relative's phone (Phone B):**

@@ -221,3 +221,45 @@ def test_voice_panel_needs_the_real_service_and_long_uploads_are_not_cut(client,
     long = wav * 4                                                          # > 12 s: used to be cut mid-stream
     v = client.post("/v1/voice/score", files={"file": ("l.wav", long, "audio/wav")}).json()
     assert v["audio_retained"] is False and "band" in v
+
+
+def test_split_payments_during_one_call_are_still_assessed(client):
+    """SPEC v0.3: Rs 9,500 again and again to one payee during one call. Every payment after the first is still
+    assessed (the running total reaches Rs 10,000, and a payee first paid during this call stays new), and the
+    payments made during the call never earn the trusted bypass (G5)."""
+    client.post("/v1/demo/scenario/T1")
+    call = {"state": "active", "number": "+919000012345", "channel": "pstn"}
+    pay = {"payee_vpa": "split.test@okdemo", "payee_name": "Split Test", "amount_inr": 9500}
+
+    def assess(c=call):
+        return client.post("/v1/risk/assess", json={"payer_id": "u_sunita", "call": c, "payment": pay}).json()
+
+    for i in range(4):
+        a = assess()
+        assert a["triggered"] and a["ask_claim"] and a["case_id"], (i, a)
+        assert "new payee" in a["trigger"]["why"]
+        assert ("split payments" in " ".join(a["trigger"]["why"])) == (i > 0)
+        assert not any(g["id"] == "G5" for g in a.get("guardrails", []))
+        assert client.post(f"/v1/cases/{a['case_id']}/user-action", json={"action": "continue"}).json()["status"] == "sent"
+    # a later, different call: the payee was paid before it, and Rs 9,500 alone is below every rule
+    assert assess(dict(call, number="+919000054321"))["triggered"] is False
+
+
+def test_family_verify_rate_limit(client):
+    """SPEC v0.3 section 6: at most 3 Family Verify pushes per payer per hour. After that the payer is told to call
+    the relative, and the auto-sent push is skipped instead of failing the assessment."""
+    sc, a1 = start(client, "L2")
+    cid = a1["case_id"]
+    ch = client.post("/v1/risk/assess", json={"case_id": cid, "claim": "family", "claim_target": "rel_rahul"}).json()[
+        "auto_family_verify"]
+    for _ in range(2):
+        assert client.post(f"/v1/verify/family/{ch['challenge_id']}/cancel").status_code == 200
+        r = client.post("/v1/verify/family", json={"case_id": cid, "relative_id": "rel_rahul"})
+        assert r.status_code == 200, r.text
+        ch = r.json()
+    assert client.post(f"/v1/verify/family/{ch['challenge_id']}/cancel").status_code == 200
+    r = client.post("/v1/verify/family", json={"case_id": cid, "relative_id": "rel_rahul"})
+    assert r.status_code == 429 and "saved number" in r.json()["detail"]
+    a2 = client.post("/v1/risk/assess", json={"payer_id": sc["payer"]["id"], "payment": sc["payment"], "call": sc["call"]}).json()
+    a3 = client.post("/v1/risk/assess", json={"case_id": a2["case_id"], "claim": "family", "claim_target": "rel_rahul"})
+    assert a3.status_code == 200 and "saved number" in a3.json()["auto_family_verify"]["skipped"]

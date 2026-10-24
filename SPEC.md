@@ -28,10 +28,12 @@ All three end in an **authorised push payment**: the victim enters their own UPI
 ## 2. When Pehchaan runs (the trigger, no audio)
 
 Pehchaan assesses a payment only if **both** hold:
-- a phone call is active, a VoIP call is active (the audio mode shows an ongoing call, e.g. WhatsApp), **or** a call ended ≤ 10 minutes ago; **and**
-- the payee is new, **or** the amount is above the user's 95th percentile, **or** the amount is ≥ ₹10,000.
+- a phone call is active, a VoIP call is active (the audio mode shows an ongoing call, e.g. WhatsApp), **or** a call ended ≤ 10 minutes ago (≤ **60 minutes** when the amount is ≥ ₹50,000); **and**
+- the payee is new, **or** the amount is above the user's 95th percentile, **or** the amount is ≥ ₹10,000, **or** the amounts this payer has already sent during the same call plus this one reach ₹10,000.
 
-Every other payment is untouched, which keeps friction at zero for the large majority. **Trusted bypass:** payees paid ≥ 3 times before, with an amount ≤ 1.5× their usual, go Green.
+*v0.3 (24 Oct 2026, on site): two evasions closed. "Hang up, wait 15 minutes, then pay" is covered by the longer window for large amounts (RBI's April 2026 paper: ~92% of fraud value is in payments above ₹50,000). "Send ₹9,500 five times" is covered by counting what was already sent during the same call, so splitting a demand under ₹10,000 no longer escapes the trigger. Payments made during the call also don't make a payee familiar: a payee first paid during this call stays **new** for the rest of the call, and those payments don't count toward the trusted bypass. Without this, the second ₹9,500 would go through silently (the payee already "paid once") and the fourth would be trusted.*
+
+Every other payment is untouched, which keeps friction at zero for the large majority. **Trusted bypass:** payees paid ≥ 3 times before this call, with an amount ≤ 1.5× their usual, go Green.
 
 ## 3. Signals — six independent families
 
@@ -123,6 +125,7 @@ Every decision returns `reasons[]`: code, plain-language text (EN + HI), contrib
 - **Family Verify:** both sides opt in to the "Pehchaan circle". The verify message shows the amount band and payee name only. It is sent per payment and started by the payer, so there is no ongoing monitoring. Abuse guard: a relative cannot see your transactions or trigger checks.
 - **Security:**
   - Device-bound keys for Family Verify responses (signed challenge).
+  - Family Verify rate limit (v0.3): at most 3 requests per payer and 5 per relative in any hour. Beyond that no push is sent; the payer is asked to call the relative's saved number instead. This stops an attacker from spamming a relative into tapping "yes" or tuning them out.
   - mTLS from app to API.
   - Analyst RBAC with immutable access logs.
   - Evidence hash chain, plus S3 Object Lock for saved evidence.

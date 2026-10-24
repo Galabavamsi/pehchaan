@@ -234,9 +234,22 @@ def test_actions_per_claim():
 def test_trigger_rules():
     assert evaluate_trigger(TriggerInput(call_active=True, payee_new=True, amount_inr=500)).fired
     assert evaluate_trigger(TriggerInput(call_ended_sec_ago=540, amount_inr=10000)).fired
-    assert not evaluate_trigger(TriggerInput(call_ended_sec_ago=660, amount_inr=50000, payee_new=True)).fired
+    assert not evaluate_trigger(TriggerInput(call_ended_sec_ago=660, amount_inr=49999, payee_new=True)).fired
     assert not evaluate_trigger(TriggerInput(call_active=True, amount_inr=900, amount_p95_inr=2000)).fired
     assert evaluate_trigger(TriggerInput(call_active=True, amount_inr=2500, amount_p95_inr=2000)).fired
+
+
+def test_trigger_v03_delayed_and_split_payments():
+    # "hang up, wait 15 minutes, then pay": large amounts keep the call context for an hour (SPEC v0.3)
+    assert evaluate_trigger(TriggerInput(call_ended_sec_ago=15 * 60, amount_inr=50000, payee_new=True)).fired
+    assert not evaluate_trigger(TriggerInput(call_ended_sec_ago=61 * 60, amount_inr=50000, payee_new=True)).fired
+    # "send 9,500 five times" to a payee first paid earlier in this call: the running total trips the 10,000 rule
+    first = evaluate_trigger(TriggerInput(call_active=True, amount_inr=9500, amount_p95_inr=20000))
+    assert not first.fired
+    second = evaluate_trigger(TriggerInput(call_active=True, amount_inr=9500, amount_p95_inr=20000, sent_this_call_inr=9500))
+    assert second.fired and any("split payments" in w for w in second.why)
+    # nothing sent before during this call: a small payment stays untouched
+    assert not evaluate_trigger(TriggerInput(call_active=True, amount_inr=900, amount_p95_inr=2000, sent_this_call_inr=0)).fired
 
 
 # --------------------------------------------------------------------------- measured voice swap

@@ -98,7 +98,10 @@ guardrails:
 
 trigger:                       # SPEC section 2 (no audio)
   call_window_min: 10
-  amount_abs_inr: 10000
+  # SPEC v0.3: "hang up, wait, then pay" coaching. Large payments keep the call context for an hour.
+  call_window_large_min: 60
+  large_amount_inr: 50000
+  amount_abs_inr: 10000        # also reached by the total sent during the same call (split payments)
   long_call_min: 15
   burst_window_min: 30
   burst_min_new_payees: 2
@@ -112,6 +115,9 @@ actions:
   # Pehchaan circle (bound phone), send the Family Verify push automatically if the result is
   # Amber or Red. The payer sees "We've asked <name> to confirm" with a small Cancel request link.
   family_verify_auto: true
+  # SPEC v0.3 section 6: rate limit, so an attacker can't spam a relative's phone with requests.
+  family_verify_max_per_payer_hour: 3
+  family_verify_max_per_relative_hour: 5
 
 voice:
   # SPEC v0.2 (ML results, 2026-10-06): the detector reaches 4.8% EER on simulated

@@ -92,9 +92,13 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
     if (rel) setRelative(rel);
     const r = await run(() => api.assess({ case_id: caseId, claim: c, claim_target: rel?.id ?? target }));
     if (!r) return;
-    if (r.auto_family_verify) {  // SPEC v0.2 A19: the push is already on the relative's phone
-      setA(r); setFv(r.auto_family_verify); setScreen("fv_wait");
-    } else route(r);
+    const auto = r.auto_family_verify;
+    if (auto && "challenge_id" in auto) {  // SPEC v0.2 A19: the push is already on the relative's phone
+      setA(r); setFv(auto); setScreen("fv_wait");
+    } else {
+      if (auto) setToast(auto.skipped);  // SPEC v0.3 rate limit: no push, call them instead
+      route(r);
+    }
   }
 
   async function cancelFvRequest() {

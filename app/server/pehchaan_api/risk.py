@@ -98,19 +98,50 @@ class CaseService:
         return f"PCH-{self.now():%y%m%d}-{n:04d}"
 
     # ------------------------------------------------------------- context
+    def _sent_this_call(self, payer_id: str, number: str | None, payee_vpa: str | None = None) -> tuple[int, float]:
+        """(count, total) this payer already sent while on (or just after) a call with this number, optionally
+        to one payee: SPEC v0.3 split payments."""
+        if not number:
+            return 0, 0.0
+        since = ist_iso(self.now() - timedelta(minutes=CFG.trigger.call_window_large_min))
+        sql = "SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS s FROM sent_payments WHERE payer_id=? AND caller=? AND ts>=?"
+        args: tuple = (payer_id, number, since)
+        if payee_vpa:
+            sql, args = sql + " AND payee_vpa=?", args + (payee_vpa.lower(),)
+        r = self.s.one(sql, args)
+        return int(r["n"]), float(r["s"])
+
+    def _payee_before_call(self, payer_id: str, payee_vpa: str, number: str | None) -> dict | None:
+        """Payee history as it stood before this call. SPEC v0.3: paying someone during the call doesn't make
+        them familiar, so a payee first paid during this call stays new and isn't trusted (G5)."""
+        hist = self.history.payee(payer_id, payee_vpa)
+        n, total = self._sent_this_call(payer_id, number, payee_vpa)
+        if hist is None or not n:
+            return hist
+        before = hist["count"] - n
+        if before <= 0:
+            return None
+        return {"count": before, "usual_amount": (hist["usual_amount"] * hist["count"] - total) / before}
+
+    def _record_sent(self, payer_id: str, amount: float, payee_vpa: str, caller: str | None) -> None:
+        self.s.x("INSERT INTO sent_payments(payer_id, ts, amount, payee_vpa, caller) VALUES(?,?,?,?,?)",
+                 (payer_id, self.ts(), amount, payee_vpa.lower(), caller or ""))
+        self.history.record_sent(payer_id, payee_vpa, amount)
+
     def _context(self, payer: dict, payment: dict, call: dict | None) -> dict:
         call = call or {}
         uid = payer["id"]
         number = normalise_number(call.get("number"))
         state = call.get("state", "active" if number else "none")
         channel = call.get("channel", "pstn")
-        hist = self.history.payee(uid, payment["payee_vpa"])
+        hist = self._payee_before_call(uid, payment["payee_vpa"], number)
         amount = float(payment["amount_inr"])
         p95, p99 = payer.get("amount_p95"), payer.get("amount_p99")
         trig = evaluate_trigger(TriggerInput(
             call_active=state == "active",
             call_ended_sec_ago=call.get("ended_sec_ago") if state == "ended" else None,
             payee_new=hist is None, amount_inr=amount, amount_p95_inr=p95,
+            sent_this_call_inr=self._sent_this_call(uid, number)[1],
         ), CFG)
         sig: list[str] = []
         in_contacts = call.get("in_contacts")
@@ -298,6 +329,7 @@ class CaseService:
         ctx = self._context(payer, payment, call)
         if not ctx["trigger"]["fired"]:
             self.s.next_counter("not_triggered")
+            self._record_sent(payer["id"], float(payment["amount_inr"]), payment["payee_vpa"], ctx["number"])
             return {"case_id": None, "triggered": False, "trigger": ctx["trigger"], "tier": "green", "p": None,
                     "reasons": [], "top_reasons": [], "actions": [x.model_dump() for x in actions_for("green", None)],
                     "guardrails": [], "ask_claim": False, "status": "not_assessed",
@@ -323,6 +355,7 @@ class CaseService:
                        params=ctx["params"], cfg=CFG)
         if probe.tier == "green" and not should_ask_claim(probe, CFG):
             self.s.next_counter("green_silent")
+            self._record_sent(payer["id"], amount, payment["payee_vpa"], ctx["number"])
             return {"case_id": None, "triggered": True, "trigger": ctx["trigger"], "stage": "context", "tier": "green",
                     "p": probe.p, "log_odds": probe.log_odds, "reasons": [r.model_dump() for r in probe.reasons],
                     "top_reasons": [], "guardrails": [g.model_dump() for g in probe.guardrails_applied],
@@ -412,6 +445,15 @@ class CaseService:
             raise CaseError(409, f"{rel['name']} has not joined the Pehchaan circle on a phone")
         if (case["checks"].get("family_verify") or {}).get("status") == "pending":
             raise CaseError(409, "a Family Verify request is already pending for this case")
+        # SPEC v0.3 section 6: rate limit, so nobody can spam a relative's phone into tapping "yes"
+        since = ist_iso(self.now() - timedelta(hours=1))
+        n_payer = self.s.one("SELECT COUNT(*) AS n FROM challenges ch JOIN cases c ON c.id = ch.case_id "
+                             "WHERE c.payer_id=? AND ch.created_at>=?", (case["payer_id"], since))["n"]
+        n_rel = self.s.one("SELECT COUNT(*) AS n FROM challenges WHERE relative_id=? AND created_at>=?",
+                           (rel["id"], since))["n"]
+        if n_payer >= CFG.actions.family_verify_max_per_payer_hour or n_rel >= CFG.actions.family_verify_max_per_relative_hour:
+            raise CaseError(429, f"Too many Family Verify requests in the last hour. "
+                                 f"Call {rel['name']} on their saved number instead.")
         ch_id = "fv_" + secrets.token_hex(6)
         nonce = secrets.token_hex(16)
         created = self.now()
@@ -523,11 +565,13 @@ class CaseService:
                 raise CaseError(409, "payment is on a cooling-off hold; use release paths")
             case["status"] = "sent"
             case["utr"] = f"DEMO{secrets.randbelow(10**10):010d}"
+            self._record_sent(case["payer_id"], case["amount_inr"], case["payee_vpa"], case.get("caller_number"))
         elif action == "pay":
             if case["tier"] != "green" or st == "held":
                 raise CaseError(409, "payment needs a check first")
             case["status"] = "sent"
             case["utr"] = f"DEMO{secrets.randbelow(10**10):010d}"
+            self._record_sent(case["payer_id"], case["amount_inr"], case["payee_vpa"], case.get("caller_number"))
         elif action == "cancel":
             case["status"] = "cancelled"
         elif action == "report":

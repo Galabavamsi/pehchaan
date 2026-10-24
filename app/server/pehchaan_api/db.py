@@ -28,10 +28,11 @@ CREATE TABLE IF NOT EXISTS access_log (id INTEGER PRIMARY KEY AUTOINCREMENT, ts 
 CREATE TABLE IF NOT EXISTS feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT, case_id TEXT, label TEXT,
     analyst TEXT, note TEXT);
 CREATE TABLE IF NOT EXISTS counters (name TEXT PRIMARY KEY, value INTEGER);
+CREATE TABLE IF NOT EXISTS sent_payments (payer_id TEXT, ts TEXT, amount REAL, payee_vpa TEXT, caller TEXT);
 """
 
 RESETTABLE = ["users", "contacts", "payee_history", "mock_fri", "mock_i4c", "mock_bank_calls", "cases",
-              "events", "challenges", "feedback", "counters"]
+              "events", "challenges", "feedback", "counters", "sent_payments"]
 
 
 class Store:

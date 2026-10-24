@@ -185,9 +185,15 @@ def create_app(db_path: str | None = None, key_path: str | None = None) -> FastA
             await publish(case)
             if body.claim and svc.auto_family_verify_due(res["case_id"]):
                 # SPEC v0.2 A19: "Family member" + an enrolled relative -> the push goes out without a tap
-                fv = await _send_fv(res["case_id"], (case.get("relative") or {}).get("id"), auto=True)
-                res = fv.pop("assessment")
-                res["auto_family_verify"] = fv
+                try:
+                    fv = await _send_fv(res["case_id"], (case.get("relative") or {}).get("id"), auto=True)
+                except CaseError as exc:
+                    if exc.status != 429:
+                        raise
+                    res["auto_family_verify"] = {"skipped": exc.msg}  # SPEC v0.3 rate limit: the payer calls instead
+                else:
+                    res = fv.pop("assessment")
+                    res["auto_family_verify"] = fv
         return res
 
     # ------------------------------------------------------------- voice

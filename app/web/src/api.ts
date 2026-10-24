@@ -53,7 +53,7 @@ export interface Assessment {
   copy: { title: Bi; body: Bi }; claim?: string | null; relative?: Relative | null;
   checks?: Record<string, any>; amount_display?: string; payee_name?: string; payee_vpa?: string;
   caller_display?: string; latency_ms?: number; utr?: string; release_requested?: boolean;
-  context_tier?: Tier; auto_family_verify?: FvSent; voice_mode?: "shadow" | "calibrated";
+  context_tier?: Tier; auto_family_verify?: FvSent | { skipped: string }; voice_mode?: "shadow" | "calibrated";
 }
 export interface Payer {
   id: string; name: string; name_hi?: string; gender?: string; age_band?: string; city?: string; phone: string;
