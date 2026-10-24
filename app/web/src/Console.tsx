@@ -3,6 +3,7 @@ import { Bank, CheckCircle, Eye, LockKey, SealCheck, ShieldCheck, UserCircle, Wa
 import { api, subscribe, type Reason, type Tier } from "./api";
 import { famName, Seal, TierChip, Waterfall } from "./components";
 import { FAMILY_COLOR, formatINR, SHORT } from "./i18n";
+import { maskPhones } from "./native";
 
 type Filter = "all" | "held" | "review";
 
@@ -157,6 +158,8 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
   const held = d.status === "held";
   const closed = ["confirmed_fraud", "false_positive", "released"].includes(d.status);
   const sortedReasons = useMemo(() => [...reasons].sort((a, b) => b.contribution - a.contribution), [reasons]);
+  // The server's reason text names the caller ("You are on a call with +91 …"); mask it like the caller field
+  const live = (s: string) => (d.scenario === "live" ? maskPhones(s) : s);
   return (
     <div data-testid="case-detail">
       <div className="dh-row">
@@ -202,7 +205,7 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
                     <tr key={r.code}>
                       <td><span className="fam" style={{ background: FAMILY_COLOR[r.family] }} title={famName(r.family)}>{r.family}</span></td>
                       <td><div style={{ fontWeight: 600 }}>{SHORT[r.code]?.[0] ?? r.code}</div><div className="mono" style={{ fontSize: 11.5, color: "var(--slate)" }}>{r.code} · {r.basis}</div>{r.basis === "shadow" && <span className="shadow-badge">shadow: not used in decision</span>}</td>
-                      <td>{r.text.en}<div className="hi" lang="hi">{r.text.hi}</div></td>
+                      <td>{live(r.text.en)}<div className="hi" lang="hi">{live(r.text.hi)}</div></td>
                       <td className="num">{r.lr < 1 ? r.lr.toFixed(2) : r.lr.toFixed(r.lr < 10 ? 1 : 0)}</td>
                       <td className="num" style={{ color: r.contribution > 0 ? "#c4452a" : "var(--teal)", fontWeight: 600 }}>{r.contribution > 0 ? "+" : "−"}{Math.abs(r.contribution).toFixed(2)}</td>
                     </tr>

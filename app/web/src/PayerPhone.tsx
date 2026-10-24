@@ -941,6 +941,8 @@ function VoiceScreen({ caseId, head, onBack }: { caseId: string | null; head: Re
 
 const prettyNum = (n?: string) => !n ? "" : n.startsWith("+44") ? `+44 ${n.slice(3, 7)} ${n.slice(7)}` :
   n.startsWith("+91") ? `+91 ${n.slice(3, 8)} ${n.slice(8)}` : n;
+/** On the phones the caller is a real number (the live demo's attack call): masked like everywhere else on screen. */
+const shownNum = (n?: string) => (isNative && n ? maskNumber(n) : prettyNum(n));
 
 function ReportScreen({ pack, head, bankName }: { pack: any; head: React.ReactNode; bankName: string }) {
   const { t, lang } = useT();
@@ -972,7 +974,7 @@ function ReportScreen({ pack, head, bankName }: { pack: any; head: React.ReactNo
             <dl className="fields">
               <dt>Category</dt><dd>{nc["Category of complaint"]}</dd>
               <dt>Sub-category</dt><dd>{nc["Sub-category of complaint"]}</dd>
-              <dt>Suspect mobile</dt><dd>{prettyNum(nc["Suspect mobile number"])}</dd>
+              <dt>Suspect mobile</dt><dd>{shownNum(nc["Suspect mobile number"])}</dd>
               <dt>Suspect UPI ID</dt><dd>{nc["Suspect UPI ID / bank account"]}</dd>
             </dl>
           </div>
@@ -983,7 +985,7 @@ function ReportScreen({ pack, head, bankName }: { pack: any; head: React.ReactNo
             <dl className="fields">
               <dt>Medium</dt><dd>{ch["Medium of suspected fraud communication"]}</dd>
               <dt>Category</dt><dd>{ch["Suspected fraud communication category"]}</dd>
-              <dt>Number</dt><dd>{prettyNum(ch["Number from which communication received"])}</dd>
+              <dt>Number</dt><dd>{shownNum(ch["Number from which communication received"])}</dd>
             </dl>
           </div>
         </div>
