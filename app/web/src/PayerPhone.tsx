@@ -802,7 +802,7 @@ function VoiceScreen({ caseId, head, onBack }: { caseId: string | null; head: Re
             <button className="chipbtn" onClick={() => demo("bonafide", "bonafide")} data-testid="clip-real">{lang === "hi" ? "असली आवाज़" : "Real voice"}</button>
             <button className="chipbtn" onClick={() => demo("noisy", "synthetic")}>{lang === "hi" ? "शोर वाली लाइन" : "Noisy line"}</button>
             <button className="chipbtn" onClick={() => fileRef.current?.click()}><UploadSimple size={14} /> {t("voice_upload")}</button>
-            <input ref={fileRef} type="file" accept="audio/wav,.wav" hidden onChange={(e) => e.target.files?.[0] && score(e.target.files[0])} />
+            <input ref={fileRef} type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.opus,.webm,.flac" hidden onChange={(e) => e.target.files?.[0] && score(e.target.files[0])} />
           </div>
         </>)}
         {state === "listening" && <p className="lede" style={{ textAlign: "center", marginTop: 12 }}>{t("voice_listening", { s: left })}</p>}

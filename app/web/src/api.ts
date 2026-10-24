@@ -32,6 +32,17 @@ export interface VoiceResult {
   mock_notice?: string; assessment?: Assessment;
   voice_mode?: "shadow" | "calibrated"; used_in_decision?: boolean; user_message?: Bi | null;
 }
+export interface PanelModel {
+  id: string; name: string; trained_on: string; licence?: string | null; raw: number; threshold: number; z: number;
+  verdict: "synthetic" | "genuine"; sim_eer: number; in_fusion: boolean; latency_ms: number;
+}
+export interface PanelResult {
+  models: PanelModel[];
+  fused: { members: string[]; z: number; threshold: number; sim_eer: number; verdict: "synthetic" | "genuine" } | null;
+  skipped: Record<string, string>; quality: { speech_sec: number; snr_db: number; ok: boolean };
+  audio_seconds: number; seconds_scored: number; n_windows: number; latency_ms: number;
+  audio_retained: boolean; used_in_decision: boolean;
+}
 export interface Assessment {
   case_id: string | null; triggered: boolean; stage?: string; tier: Tier; raw_tier?: Tier; p: number | null;
   log_odds?: number; prior?: number; prior_log_odds?: number;
@@ -106,6 +117,11 @@ export const api = {
     if (case_id) fd.append("case_id", case_id);
     if (demo_hint) fd.append("demo_hint", demo_hint);
     return req<VoiceResult>("/v1/voice/score", { method: "POST", body: fd });
+  },
+  panel: async (blob: Blob, filename: string) => {
+    const fd = new FormData();
+    fd.append("file", blob, filename);
+    return req<PanelResult>("/v1/voice/panel", { method: "POST", body: fd });
   },
   demoAudio: async (kind: string) => (await fetch(`${API}/v1/demo/audio/${kind}.wav`)).blob(),
   forceTimeout: (challenge_id: string) => req<any>(`/v1/demo/fv/${challenge_id}/timeout`, { method: "POST" }),

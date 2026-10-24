@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { ArrowClockwise, Phone } from "@phosphor-icons/react";
 import { API, api, subscribe, urlParam, type Lang, type Scenario } from "./api";
+import { Bench } from "./Bench";
 import { Console } from "./Console";
 import { PayerPhone } from "./PayerPhone";
 import { RelativePhone } from "./RelativePhone";
@@ -41,6 +42,7 @@ export function App() {
   const route = useRoute();
   const lang = (urlParam("lang") as Lang) || undefined;
   if (route === "console") return <Console follow={urlParam("follow") === "1"} />;
+  if (route === "bench") return <Bench />;
   if (route === "payer") return <Standalone kind="payer" lang={lang} />;
   if (route === "relative") return <Standalone kind="relative" lang={lang} />;
   return <DemoControl />;
@@ -87,6 +89,7 @@ function DemoControl() {
         <button className="chipbtn" onClick={() => sc && load(sc.scenario)} aria-label="Restart scenario" style={{ minHeight: 40, padding: "0 12px" }}>
           <ArrowClockwise size={16} weight="bold" /> Restart
         </button>
+        <a className="chipbtn" href="#/bench" style={{ minHeight: 40, padding: "0 12px", textDecoration: "none" }}>Detector bench</a>
       </header>
       {sc && (
         <div className="demo-script">
