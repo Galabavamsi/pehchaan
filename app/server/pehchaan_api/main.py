@@ -428,6 +428,14 @@ def create_app(db_path: str | None = None, key_path: str | None = None) -> FastA
     def demo_list():
         return {k: {"title": v["title"], "pattern": v["pattern"]} for k, v in SCENARIOS.items()}
 
+    @app.get("/v1/redteam")
+    def redteam():
+        """The red-team matrix from the last `python redteam.py` run (also written to RED_TEAM.md)."""
+        f = SERVER_DIR / "results" / "redteam.json"
+        if not f.exists():
+            raise HTTPException(404, "no red-team run yet: python app/server/redteam.py")
+        return json.loads(f.read_text())
+
     @app.post("/v1/demo/fv/{challenge_id}/timeout")
     async def demo_force_timeout(challenge_id: str):
         t = timers.pop(challenge_id, None)

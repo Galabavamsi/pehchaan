@@ -327,3 +327,10 @@ def test_call_from_a_circle_members_saved_number_is_still_asked(client, device_f
                                               "call": sc["call"]}).json()
     b2 = client.post("/v1/risk/assess", json={"case_id": a2["case_id"], "claim": "none"}).json()
     assert b2["tier"] == "green" and "auto_family_verify" not in b2
+
+
+def test_redteam_results_are_served(client):
+    r = client.get("/v1/redteam")
+    assert r.status_code == 200
+    rows = r.json()["rows"]
+    assert len(rows) >= 16 and all({"id", "evasion", "outcome", "observed", "why"} <= set(x) for x in rows)

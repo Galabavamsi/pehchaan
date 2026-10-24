@@ -3,6 +3,7 @@ import { ArrowClockwise, Phone } from "@phosphor-icons/react";
 import { API, api, subscribe, urlParam, type Lang, type Scenario } from "./api";
 import { Bench } from "./Bench";
 import { JuryPanel } from "./JuryPanel";
+import { RedTeamPage, Tour } from "./Tour";
 import { Console } from "./Console";
 import { PayerPhone } from "./PayerPhone";
 import { RelativePhone } from "./RelativePhone";
@@ -44,6 +45,8 @@ export function App() {
   const lang = (urlParam("lang") as Lang) || undefined;
   if (route === "console") return <Console follow={urlParam("follow") === "1"} />;
   if (route === "bench") return <Bench />;
+  if (route === "tour") return <Tour />;
+  if (route === "redteam") return <RedTeamPage />;
   if (route === "payer") return <Standalone kind="payer" lang={lang} />;
   if (route === "relative") return <Standalone kind="relative" lang={lang} />;
   return <DemoControl />;
@@ -65,7 +68,7 @@ function Standalone({ kind, lang }: { kind: "payer" | "relative"; lang?: Lang })
 function DemoControl() {
   const first = urlParam("scenario") || "T1";
   const { sc, n, load } = useScenario(first);
-  const [jury, setJury] = useState(false);
+  const [jury, setJury] = useState(() => urlParam("jury") === "1");
   const [scale, setScale] = useState(1);
   useLayoutEffect(() => {
     const forced = Number(urlParam("scale"));
