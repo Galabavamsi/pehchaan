@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useState } from "react";
-import { ArrowClockwise, Phone } from "@phosphor-icons/react";
+import { ArrowClockwise, CheckCircle, GearSix, Phone, Users, Wallet, XCircle } from "@phosphor-icons/react";
 import { API, api, subscribe, urlParam, type Lang, type Scenario } from "./api";
 import { Console } from "./Console";
 import { PayerPhone } from "./PayerPhone";
 import { RelativePhone } from "./RelativePhone";
 import { Seal } from "./components";
+import { isNative, Pehchaan, ROLE_KEY, savedRole, type NativeStatus, type Role } from "./native";
 
 const SCEN: { id: string; label: string }[] = [
   { id: "T1", label: "Cloned son, +44" },
@@ -38,6 +39,11 @@ function useScenario(loadName: string | null) {
 }
 
 export function App() {
+  if (isNative) return <NativeApp />;
+  return <WebApp />;
+}
+
+function WebApp() {
   const route = useRoute();
   const lang = (urlParam("lang") as Lang) || undefined;
   if (route === "console") return <Console follow={urlParam("follow") === "1"} />;
@@ -49,11 +55,13 @@ export function App() {
 function Standalone({ kind, lang }: { kind: "payer" | "relative"; lang?: Lang }) {
   const { sc, n } = useScenario(kind === "payer" ? urlParam("scenario") : null);
   if (!sc) return <div className="empty">Load a scenario from the demo page first.</div>;
+  // The Android app stays enrolled as the payer's relative whichever scenario the demo page has loaded.
+  const relative = sc.relative ?? (isNative ? sc.payer.circle[0] : null);
   return (
-    <div style={{ padding: 24, display: "flex", justifyContent: "center" }}>
+    <div style={{ padding: isNative ? 0 : 24, display: "flex", justifyContent: "center" }}>
       {kind === "payer"
         ? <PayerPhone key={n} scenario={sc} initialLang={lang ?? "en"} initialLarge={urlParam("large") === "1"} />
-        : sc.relative ? <RelativePhone key={n} relative={sc.relative} payerName={sc.payer.name} payerNameHi={sc.payer.name_hi} initialLang={lang ?? "en"} />
+        : relative ? <RelativePhone key={n} relative={relative} payerName={sc.payer.name} payerNameHi={sc.payer.name_hi} initialLang={lang ?? "en"} />
           : <div className="empty">This scenario has no relative.</div>}
     </div>
   );
@@ -123,6 +131,98 @@ function DemoControl() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ Android app (SPEC §7)
+
+/** One APK, two roles: the payer's phone (DemoPay) or the relative's phone (Pehchaan Family). */
+function NativeApp() {
+  const [role, setRole] = useState<Role | null>(savedRole);
+  const [setup, setSetup] = useState(() => !savedRole());
+  useEffect(() => {
+    if (role === "payer") Pehchaan.startProtection({ role: "payer", api: API }).catch(() => {});
+  }, [role]);
+  if (!role || setup) {
+    return <NativeSetup role={role} onDone={(r) => {
+      try { localStorage.setItem(ROLE_KEY, r); } catch { /* ignore */ }
+      setRole(r); setSetup(false);
+    }} />;
+  }
+  return (
+    <>
+      <Standalone kind={role} />
+      <button className="native-gear" aria-label="Setup" onClick={() => setSetup(true)}><GearSix size={18} weight="bold" /></button>
+    </>
+  );
+}
+
+function NativeSetup({ role, onDone }: { role: Role | null; onDone: (r: Role) => void }) {
+  const [pick, setPick] = useState<Role | null>(role);
+  const [st, setSt] = useState<NativeStatus | null>(null);
+  const refresh = () => Pehchaan.status().then(setSt).catch(() => {});
+  useEffect(() => {
+    refresh();
+    const f = () => { if (document.visibilityState === "visible") refresh(); };
+    document.addEventListener("visibilitychange", f);
+    return () => document.removeEventListener("visibilitychange", f);
+  }, []);
+
+  async function choose(r: Role) {
+    setPick(r);
+    setSt(await Pehchaan.requestAll().catch(() => null) ?? await Pehchaan.status().catch(() => null));
+  }
+
+  if (!pick) {
+    return (
+      <div className="native-setup">
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Seal size={26} /><b>Pehchaan</b><span>पहचान</span></span>
+        <h1>Who is using this phone?</h1>
+        <button className="role" onClick={() => choose("payer")} data-testid="role-payer">
+          <Wallet size={30} weight="duotone" />
+          <span><b>I'm paying</b><span>DemoPay with Pehchaan. Checks payments made during or just after a call.</span></span>
+        </button>
+        <button className="role" onClick={() => choose("relative")} data-testid="role-relative">
+          <Users size={30} weight="duotone" />
+          <span><b>I'm family</b><span>Pehchaan Family. You're asked when someone uses your name to ask for money.</span></span>
+        </button>
+        <p style={{ marginTop: "auto", fontSize: 13 }}>Demo app: fictional bank, people and UPI IDs. Pehchaan never records or listens to calls.</p>
+      </div>
+    );
+  }
+
+  const rows: { ok: boolean | undefined; label: string; fix: () => void }[] = pick === "payer" ? [
+    { ok: st?.phone, label: "Call state (on a call or not)", fix: () => choose("payer") },
+    { ok: st?.call_log, label: "Caller's number (call log)", fix: () => choose("payer") },
+    { ok: st?.contacts, label: "Contacts, matched on this phone", fix: () => choose("payer") },
+    { ok: st?.battery_unrestricted, label: "Battery: no restrictions", fix: () => { Pehchaan.openSettings({ which: "battery" }); } },
+  ] : [
+    { ok: st?.notifications, label: "Notifications", fix: () => choose("relative") },
+    { ok: st?.full_screen, label: "Full-screen alerts on the lock screen", fix: () => { Pehchaan.openSettings({ which: "fullscreen" }); } },
+    { ok: st?.battery_unrestricted, label: "Battery: no restrictions", fix: () => { Pehchaan.openSettings({ which: "battery" }); } },
+  ];
+  return (
+    <div className="native-setup">
+      <h1>{pick === "payer" ? "DemoPay setup" : "Pehchaan Family setup"}</h1>
+      <p>{pick === "payer"
+        ? "Pehchaan reads only whether you're on a call, the caller's number and whether it's saved. Contacts and calls never leave this phone."
+        : "Keep this phone signed in. When a relative is about to pay someone who said they are you, this phone asks you first."}</p>
+      <div>
+        {rows.map((r) => (
+          <div className="check" key={r.label}>
+            {r.ok ? <CheckCircle size={22} weight="fill" className="ok" /> : <XCircle size={22} weight="fill" className="no" />}
+            <span>{r.label}</span>
+            {!r.ok && <button className="chipbtn" onClick={r.fix}>Allow</button>}
+          </div>
+        ))}
+      </div>
+      <p style={{ fontSize: 13 }}>On Xiaomi phones also turn on Settings → Apps → DemoPay → Autostart.
+        {st && !st.screen_share_detect && " Screen-share detection needs Android 15 or later."}</p>
+      <div style={{ marginTop: "auto", display: "grid", gap: 10 }}>
+        <button className="btn solid full" onClick={() => onDone(pick)} data-testid="setup-done">Continue</button>
+        <button className="btn ghost full" onClick={() => setPick(null)}>Change role</button>
+      </div>
     </div>
   );
 }

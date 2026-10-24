@@ -447,3 +447,30 @@ h1.q[lang="hi"], .hi h1.q { font-size: calc(28px * var(--s)); line-height: 1.3; 
 .shadow-badge { display: inline-block; margin: 2px 8px 2px 0; padding: 1px 8px; border-radius: 999px; font-size: 11.5px;
   font-weight: 600; letter-spacing: 0.01em; color: var(--ink); background: #e9e4f2; border: 1px dashed #8b83a3; white-space: nowrap; }
 
+
+/* Android app (Capacitor): the real phone is the device frame (SPEC §7) */
+html.native, html.native body { background: var(--paper); }
+html.native .device { display: block; padding: 0; background: none; border-radius: 0; }
+html.native .screen { width: 100vw; height: 100vh; height: 100dvh; border-radius: 0;
+  padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box; }
+html.native .statusbar { display: none; }
+.leftphone { margin-top: 14px; }
+.leftphone .lp-body { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: var(--white); border: 1px solid var(--line, #e3ddd2);
+  font-size: 13px; line-height: 1.45; color: var(--ink-2); }
+.leftphone .lp-body p { margin: 0 0 6px; }
+.leftphone pre { margin: 0; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+.native-setup { min-height: 100dvh; box-sizing: border-box; padding: calc(24px + env(safe-area-inset-top)) 20px 28px; display: flex; flex-direction: column; gap: 14px; }
+.native-setup h1 { font-family: var(--f-head); font-size: 26px; margin: 4px 0 0; letter-spacing: -0.02em; }
+.native-setup p { margin: 0; color: var(--ink-2); line-height: 1.45; }
+.native-setup .role { text-align: left; display: flex; gap: 14px; align-items: center; padding: 16px; border-radius: 18px;
+  border: 1.5px solid var(--line, #e3ddd2); background: var(--white); font: inherit; color: inherit; }
+.native-setup .role b { display: block; font-size: 17px; }
+.native-setup .role span { color: var(--slate); font-size: 14px; }
+.native-setup .check { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line, #e3ddd2); font-size: 15px; }
+.native-setup .check .ok { color: var(--teal); } .native-setup .check .no { color: var(--red); }
+.native-setup .check button { margin-left: auto; }
+.native-gear { position: fixed; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 50; width: 34px; height: 34px;
+  border-radius: 50%; border: none; background: rgba(27,31,36,0.12); color: var(--ink); display: grid; place-items: center; opacity: 0.55; }
+.native-idle { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; padding: 24px; }
+.native-idle h1 { font-family: var(--f-head); font-size: 24px; margin: 0; }
+.native-idle p { margin: 0; color: var(--ink-2); line-height: 1.45; max-width: 300px; }

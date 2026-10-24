@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import nacl from "tweetnacl";
 import { Check, Fingerprint, Phone, SealCheck, ShieldCheck, Timer, X } from "@phosphor-icons/react";
-import { api, serverNow, subscribe, type Lang, type Relative } from "./api";
+import { API, api, serverNow, subscribe, type Lang, type Relative } from "./api";
 import { Device, Seal, StatusBar, useCountdown } from "./components";
 import { UIContext, useT } from "./i18n";
+import { isNative, Pehchaan } from "./native";
 
 const b64 = (u: Uint8Array) => btoa(String.fromCharCode(...u));
 const unb64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
@@ -50,6 +51,8 @@ function RelativeFlow({ relative, payerName, payerNameHi, lang, setLang }: {
   useEffect(() => {
     const pub = b64(kp.publicKey);
     api.registerDevice(relative.device_id, relative.id, pub).catch(() => {});
+    // Android app: the native service keeps listening (and alerts) while this screen is closed
+    if (isNative) Pehchaan.startProtection({ role: "relative", deviceId: relative.device_id, api: API }).catch(() => {});
     crypto.subtle?.digest("SHA-256", new TextEncoder().encode(pub)).then((h) => {
       const hex = [...new Uint8Array(h)].map((x) => x.toString(16).padStart(2, "0")).join("");
       setKeyId(hex.slice(-4).toUpperCase());
@@ -60,6 +63,9 @@ function RelativeFlow({ relative, payerName, payerNameHi, lang, setLang }: {
       if (m.type === "fv_expired" || m.type === "reset") { setPush(null); setOpen(false); if (m.type === "reset") setDone(null); }
     });
   }, [relative.device_id]);
+
+  // On the real phone the system notification was the alert, so open the question directly
+  useEffect(() => { if (isNative && push && !done) setOpen(true); }, [push, done]);
 
   async function answer(ans: "yes" | "no") {
     if (!push) return;
@@ -97,6 +103,19 @@ function RelativeFlow({ relative, payerName, payerNameHi, lang, setLang }: {
 
   if (push && open) {
     return <Prompt push={push} calls={calls} keyId={keyId} busy={busy} onAnswer={answer} langBtn={langBtn} />;
+  }
+
+  if (isNative) {
+    return (
+      <>
+        <div className="pp-head"><Seal size={20} /><span className="word">Pehchaan Family</span><span className="grow" />{langBtn}</div>
+        <div className="native-idle" data-testid="rel-idle">
+          <ShieldCheck size={44} weight="duotone" style={{ color: "var(--teal)" }} />
+          <h1>{t("rel_circle", { payer: calls })}</h1>
+          <p>{t("rel_idle_s", { payer: calls })}</p>
+        </div>
+      </>
+    );
   }
 
   const now = new Date(serverNow());

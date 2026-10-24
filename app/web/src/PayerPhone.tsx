@@ -8,6 +8,7 @@ import { API, api, subscribe, type Action, type Assessment, type FvSent, type La
 import { Device, ReasonIcon, Ring, Seal, StatusBar, useCountdown } from "./components";
 import { formatINR, UIContext, useT } from "./i18n";
 import { recordWav } from "./wav";
+import { isNative, Pehchaan, usePhoneCall, type CallInfo, type PhoneCall } from "./native";
 
 type Screen = "pay" | "who" | "family" | "bank" | "options" | "fv_wait" | "voice" | "hold" | "green" | "pin" | "sent" | "cancelled" | "report";
 type ClaimCode = "family" | "bank" | "upi_or_shop" | "authority" | "other" | "none";
@@ -43,6 +44,10 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
   const [utr, setUtr] = useState<string | null>(null);
   const screenRef = useRef(screen);
   screenRef.current = screen;
+  // Android app: the call comes from the phone itself, not the scenario (SPEC §7)
+  const phone = usePhoneCall();
+  const [sentCall, setSentCall] = useState<PhoneCall | null>(null);
+  useEffect(() => { if (isNative) Pehchaan.setSecure({ on: screen === "pin" }).catch(() => {}); }, [screen]);
 
   const amount = Number(amountStr || 0);
   const amountTxt = formatINR(amount);
@@ -76,9 +81,11 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
   };
 
   async function onPay() {
+    const live = isNative ? (await Pehchaan.getCallContext().catch(() => phone))?.call ?? null : null;
+    if (live) setSentCall(live);
     const r = await run(() => api.assess({
-      payer_id: scenario.payer.id, scenario: scenario.scenario,
-      payment: { ...scenario.payment, amount_inr: amount }, call: scenario.call,
+      payer_id: scenario.payer.id, scenario: live ? "live" : scenario.scenario,
+      payment: { ...scenario.payment, amount_inr: amount }, call: live ?? scenario.call,
     }));
     if (!r) return;
     setA(r);
@@ -169,7 +176,8 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
       {screen === "pay" || screen === "pin" || screen === "sent" ? (
         <>
           <StatusBar />
-          {call.state === "active" && screen !== "sent" && <CallPill scenario={scenario} />}
+          {isNative ? phone && phone.call.state !== "none" && screen !== "sent" && <PhoneCallPill info={phone} />
+            : call.state === "active" && screen !== "sent" && <CallPill scenario={scenario} />}
           <div className="body">
             {screen === "pay" && (
               <PayScreen scenario={scenario} amountStr={amountStr} setAmountStr={setAmountStr} busy={busy}
@@ -203,6 +211,7 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
               <Opt icon={<HandPalm size={24} weight="duotone" />} t={t("opt_none")} st={t("opt_none_s")} onClick={() => sendClaim("none")} testid="claim-none" />
             </div>
             <div className="warn-line"><PhoneDisconnect size={18} weight="bold" /><span>{t("coached")}</span></div>
+            {sentCall && <LeftPhone call={sentCall} />}
           </div>
         </div>
       )}
@@ -334,6 +343,50 @@ function CallPill({ scenario }: { scenario: Scenario }) {
       </span>
       <span className="timer">{Math.floor(sec / 60)}:{String(sec % 60).padStart(2, "0")}</span>
       <span style={{ display: "none" }}>{lang}</span>
+    </div>
+  );
+}
+
+/** The real call, as the phone sees it (Android app only). */
+function PhoneCallPill({ info }: { info: CallInfo }) {
+  const { t } = useT();
+  const c = info.call;
+  const voip = c.channel === "voip";
+  const n = c.number;
+  const pretty = n ? (n.startsWith("+91") ? `+91 ${n.slice(3, 8)} ${n.slice(8)}` : n) : voip ? t("voip_call") : t("number_hidden");
+  const ended = c.state === "ended";
+  const sec = c.duration_sec;
+  return (
+    <div className="callpill" data-testid="callpill" style={ended ? { background: "#3b4148" } : undefined}>
+      <span className="dot">{voip ? <WhatsappLogo size={17} weight="fill" /> : <Phone size={16} weight="fill" />}</span>
+      <span>
+        <div className="num">{pretty}</div>
+        <div className="meta">
+          {ended ? t("call_ended_ago", { min: Math.max(0, Math.round((c.ended_sec_ago ?? 0) / 60)) }) : voip ? t("voip_call") : t("phone_call")}
+          {c.in_contacts === true && <> · {t("in_contacts")}</>}
+          {c.in_contacts === false && <span className="flag">{t("unknown_number")}</span>}
+        </div>
+      </span>
+      {sec != null && <span className="timer">{Math.floor(sec / 60)}:{String(sec % 60).padStart(2, "0")}</span>}
+    </div>
+  );
+}
+
+/** Privacy receipt: exactly the call details this phone sent with the payment check. */
+function LeftPhone({ call }: { call: PhoneCall }) {
+  const { t } = useT();
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="leftphone" data-testid="left-phone">
+      <button className="chipbtn" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <ShieldCheck size={15} weight="bold" /> {t("left_phone")}
+      </button>
+      {open && (
+        <div className="lp-body">
+          <p>{t("left_phone_s")}</p>
+          <pre className="mono">{JSON.stringify(call, null, 1)}</pre>
+        </div>
+      )}
     </div>
   );
 }
