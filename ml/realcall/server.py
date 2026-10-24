@@ -395,6 +395,8 @@ async def agent_ws(ws: WebSocket, call_id: str):
         text = await loop.run_in_executor(None, conv.transcribe, utt, agent.SR_UP)
         stt_ms = agent._ms(t0, time.perf_counter())
         if len(text.strip()) < 2:                 # nothing was said -> don't answer, don't burn a turn
+            log_event("agent_skip", call_id=call_id, stt_ms=stt_ms, utt_s=round(len(utt) / agent.SR_UP, 2),
+                      chars=len(text.strip()))    # metadata only, so a test call shows what was skipped
             return None
         t1 = time.perf_counter()
         fut = loop.run_in_executor(None, conv.plan, text)
