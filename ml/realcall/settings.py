@@ -44,6 +44,9 @@ def config() -> dict:
     p = HERE / "config.yaml"
     if p.exists():
         cfg.update(yaml.safe_load(p.read_text(encoding="utf-8")) or {})
+    # A second laptop can run its own quick tunnel (trycloudflare) while another one holds the named tunnel
+    if os.environ.get("REALCALL_PUBLIC_BASE_URL"):
+        cfg["public_base_url"] = os.environ["REALCALL_PUBLIC_BASE_URL"]
     return cfg
 
 

@@ -8,18 +8,29 @@ import { API, api, subscribe, type Action, type Assessment, type FvSent, type La
 import { Device, ReasonIcon, Ring, Seal, StatusBar, useCountdown } from "./components";
 import { formatINR, UIContext, useT } from "./i18n";
 import { recordWav } from "./wav";
+import { forRehearsal, isNative, maskNumber, Pehchaan, usePhoneCall, type CallInfo, type PhoneCall } from "./native";
 
 type Screen = "pay" | "who" | "family" | "bank" | "options" | "fv_wait" | "voice" | "hold" | "green" | "pin" | "sent" | "cancelled" | "report";
 type ClaimCode = "family" | "bank" | "upi_or_shop" | "authority" | "other" | "none";
 
-export function PayerPhone({ scenario, initialLang, initialLarge = false }: { scenario: Scenario; initialLang?: Lang; initialLarge?: boolean }) {
+/** How a payment ended, for a host app's history and receipt (Android DemoPay). */
+export interface PayOutcome {
+  status: "paid" | "cancelled" | "held" | "reported"; caseId: string | null; utr: string | null;
+  first: Assessment | null; last: Assessment | null; amount: number;
+  /** The call object that was sent with the payment (null on the web demo). */
+  call: PhoneCall | null;
+}
+
+export function PayerPhone({ scenario, initialLang, initialLarge = false, onBack, onOutcome }: {
+  scenario: Scenario; initialLang?: Lang; initialLarge?: boolean; onBack?: () => void; onOutcome?: (o: PayOutcome) => void;
+}) {
   const [lang, setLang] = useState<Lang>(initialLang ?? "en");
   const [large, setLarge] = useState(initialLarge);
   return (
     <UIContext.Provider value={{ lang, large }}>
       <Device testid="payer-device" large={large} lang={lang}>
         <PayerFlow key={scenario.scenario + scenario.payment.payee_vpa} scenario={scenario}
-          toggles={{ lang, setLang, large, setLarge }} />
+          toggles={{ lang, setLang, large, setLarge }} onBack={onBack} onOutcome={onOutcome} />
       </Device>
     </UIContext.Provider>
   );
@@ -27,7 +38,9 @@ export function PayerPhone({ scenario, initialLang, initialLarge = false }: { sc
 
 interface Toggles { lang: Lang; setLang: (l: Lang) => void; large: boolean; setLarge: (b: boolean) => void }
 
-function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles }) {
+function PayerFlow({ scenario, toggles, onBack, onOutcome }: {
+  scenario: Scenario; toggles: Toggles; onBack?: () => void; onOutcome?: (o: PayOutcome) => void;
+}) {
   const { t, bi, lang } = useT();
   const [screen, setScreen] = useState<Screen>("pay");
   const [amountStr, setAmountStr] = useState(String(scenario.payment.amount_inr));
@@ -41,12 +54,21 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
   const [toast, setToast] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [utr, setUtr] = useState<string | null>(null);
+  const firstRef = useRef<Assessment | null>(null);
   const screenRef = useRef(screen);
   const payAt = useRef<number | null>(null);
   const [sentSecs, setSentSecs] = useState<number | null>(null);
   const [paymentRef, setPaymentRef] = useState<string | null>(null);   // a payment that opened no case
   const mountedAt = useRef(Date.now());
   screenRef.current = screen;
+  // Android app: the call comes from the phone itself, not the scenario (SPEC §7)
+  const phone = usePhoneCall();
+  const [sentCall, setSentCall] = useState<PhoneCall | null>(null);
+  useEffect(() => {
+    if (!isNative) return;
+    Pehchaan.setSecure({ on: screen === "pin" }).catch(() => {});
+    return () => { Pehchaan.setSecure({ on: false }).catch(() => {}); };
+  }, [screen]);
 
   const amount = Number(amountStr || 0);
   const amountTxt = formatINR(amount);
@@ -81,14 +103,19 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
 
   async function onPay() {
     payAt.current ??= Date.now();   // FINALE_PLAN C2: the seconds a genuine payer spends, shown on the sent screen
+    // Android app: the call comes from the phone itself (SPEC §7); on the web, the scenario's call, kept live
+    const raw = isNative ? (await Pehchaan.getCallContext().catch(() => phone))?.call ?? null : null;
+    const live = raw ? forRehearsal(raw) : null;
+    if (live) setSentCall(live);
     const r = await run(() => api.assess({
-      payer_id: scenario.payer.id, scenario: scenario.scenario,
-      payment: { ...scenario.payment, amount_inr: amount }, call: scenario.call.state === "active"
+      payer_id: scenario.payer.id, scenario: live ? "live" : scenario.scenario,
+      payment: { ...scenario.payment, amount_inr: amount }, call: live ?? (scenario.call.state === "active"
         ? { ...scenario.call, duration_sec: scenario.call.duration_sec + Math.round((Date.now() - mountedAt.current) / 1000) }
-        : scenario.call,
+        : scenario.call),
     }));
     if (!r) return;
     setA(r);
+    firstRef.current = r;
     if (r.case_id) setCaseId(r.case_id);
     setPaymentRef(r.payment_ref ?? null);
     if (!r.case_id || (!r.ask_claim && r.tier === "green")) { setScreen("pin"); return; }
@@ -163,6 +190,12 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
     if (p) { setPack(p); setScreen("report"); }
   }
 
+  useEffect(() => {
+    if (!onOutcome) return;
+    const status = ({ sent: "paid", cancelled: "cancelled", hold: "held", report: "reported" } as const)[screen as "sent"];
+    if (status) onOutcome({ status, caseId, utr, first: firstRef.current, last: a, amount, call: sentCall });
+  }, [screen, utr]);
+
   useEffect(() => { if (!toast) return; const x = setTimeout(() => setToast(null), 3500); return () => clearTimeout(x); }, [toast]);
 
   const head = (variant: "plain" | "amber" | "red" | "teal" = "plain") => (
@@ -182,12 +215,13 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
       {screen === "pay" || screen === "pin" || screen === "sent" ? (
         <>
           <StatusBar />
-          {call.state === "active" && screen !== "sent" && <CallPill scenario={scenario} />}
-          {call.state === "ended" && screen !== "sent" && <CallPill scenario={scenario} ended />}
+          {isNative ? phone && phone.call.state !== "none" && screen !== "sent" && <PhoneCallPill info={phone} />
+            : (call.state === "active" || call.state === "ended") && screen !== "sent"
+              && <CallPill scenario={scenario} ended={call.state === "ended"} />}
           <div className="body">
             {screen === "pay" && (
               <PayScreen scenario={scenario} amountStr={amountStr} setAmountStr={setAmountStr} busy={busy}
-                onPay={onPay} toggles={toggles} />
+                onPay={onPay} toggles={toggles} onBack={onBack} />
             )}
             {screen === "pin" && <PinScreen amountTxt={amountTxt} payee={payee} onDone={async () => {
               if (caseId && a?.status !== "sent") {
@@ -210,7 +244,7 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
           {head("plain")}
           <div className="sbody">
             <h1 className="q" lang={lang}>{t("who_asked")}</h1>
-            <p className="lede">{t(call.state === "ended" ? "who_sub_after" : "who_sub", { amount: amountTxt, payee })}</p>
+            <p className="lede">{t((sentCall ?? call).state === "ended" ? "who_sub_after" : "who_sub", { amount: amountTxt, payee })}</p>
             <div className="options">
               <Opt icon={<Users size={24} weight="duotone" />} t={t("opt_family")} st={t("opt_family_s")} onClick={() => setScreen("family")} testid="claim-family" />
               <Opt icon={<Bank size={24} weight="duotone" />} t={t("opt_bank")} st={t("opt_bank_s")} onClick={() => setScreen("bank")} testid="claim-bank" />
@@ -220,6 +254,7 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
               <Opt icon={<HandPalm size={24} weight="duotone" />} t={t("opt_none")} st={t("opt_none_s")} onClick={() => sendClaim("none")} testid="claim-none" />
             </div>
             <div className="warn-line"><PhoneDisconnect size={18} weight="bold" /><span>{t("coached")}</span></div>
+            {sentCall && <LeftPhone call={sentCall} />}
           </div>
         </div>
       )}
@@ -300,7 +335,7 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
           </div>
           <div className="foot">
             <button className="btn saffron full" onClick={openReport}>{t("report_this")}</button>
-            <button className="btn ghost full" onClick={() => setScreen("pay")}>{t("done")}</button>
+            <button className="btn ghost full" onClick={() => (onBack ? onBack() : setScreen("pay"))}>{t("done")}</button>
           </div>
         </div>
       )}
@@ -356,8 +391,54 @@ function CallPill({ scenario, ended = false }: { scenario: Scenario; ended?: boo
   );
 }
 
-function PayScreen({ scenario, amountStr, setAmountStr, busy, onPay, toggles }: {
+/** The real call, as the phone sees it (Android app only). */
+function PhoneCallPill({ info }: { info: CallInfo }) {
+  const { t } = useT();
+  const c = forRehearsal(info.call);
+  const voip = c.channel === "voip";
+  const n = c.number;
+  // The saved name (as the dialer shows it) if the caller is a contact; it stays on this phone
+  const pretty = info.meta.contact_name ?? (n ? maskNumber(n) : voip ? t("voip_call") : t("number_hidden"));
+  const ended = c.state === "ended";
+  const sec = c.duration_sec;
+  return (
+    <div className="callpill" data-testid="callpill" style={ended ? { background: "#3b4148" } : undefined}>
+      <span className="dot">{voip ? <WhatsappLogo size={17} weight="fill" /> : <Phone size={16} weight="fill" />}</span>
+      <span>
+        <div className="num">{pretty}</div>
+        <div className="meta">
+          {ended ? t("call_ended_ago", { min: Math.max(0, Math.round((c.ended_sec_ago ?? 0) / 60)) }) : voip ? t("voip_call") : t("phone_call")}
+          {c.in_contacts === true && <> · {t("in_contacts")}</>}
+          {c.in_contacts === false && <span className="flag">{t("unknown_number")}</span>}
+        </div>
+      </span>
+      {sec != null && <span className="timer">{Math.floor(sec / 60)}:{String(sec % 60).padStart(2, "0")}</span>}
+    </div>
+  );
+}
+
+/** Privacy receipt: exactly the call details this phone sent with the payment check. */
+function LeftPhone({ call }: { call: PhoneCall }) {
+  const { t } = useT();
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="leftphone" data-testid="left-phone">
+      <button className="chipbtn" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <ShieldCheck size={15} weight="bold" /> {t("left_phone")}
+      </button>
+      {open && (
+        <div className="lp-body">
+          <p>{t("left_phone_s")}</p>
+          <pre className="mono">{JSON.stringify(call, null, 1)}</pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PayScreen({ scenario, amountStr, setAmountStr, busy, onPay, toggles, onBack }: {
   scenario: Scenario; amountStr: string; setAmountStr: (s: string) => void; busy: boolean; onPay: () => void; toggles: Toggles;
+  onBack?: () => void;
 }) {
   const { t } = useT();
   const p = scenario.payment;
@@ -371,7 +452,7 @@ function PayScreen({ scenario, amountStr, setAmountStr, busy, onPay, toggles }: 
   return (
     <div data-testid="screen-pay">
       <div className="appbar">
-        <ArrowLeft size={22} />
+        <button className="iconbtn" onClick={onBack} aria-label="Back"><ArrowLeft size={22} /></button>
         <span className="brand"><span className="sq">₹</span>DemoPay</span>
         <span className="spacer" />
         <LangToggle toggles={toggles} />

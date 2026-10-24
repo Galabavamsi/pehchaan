@@ -87,7 +87,18 @@ async function req<T>(path: string, init?: RequestInit & { json?: unknown }): Pr
   const headers: Record<string, string> = { ...(init?.headers as any) };
   let body = init?.body;
   if (init?.json !== undefined) { headers["Content-Type"] = "application/json"; body = JSON.stringify(init.json); }
-  const r = await fetch(API + path, { ...init, headers, body });
+  // Network blips (a phone switching between Wi-Fi and mobile data): one quiet retry for reads only, since a
+  // repeated write could create a second case or answer twice; then a clear message instead of "Failed to fetch"
+  const offline = "Couldn't reach Pehchaan. Check the internet and try again. · इंटरनेट देखें और फिर से कोशिश करें।";
+  const safe = ["GET", "HEAD"].includes((init?.method ?? "GET").toUpperCase());
+  let r: Response;
+  try { r = await fetch(API + path, { ...init, headers, body }); }
+  catch {
+    if (!safe) throw new Error(offline);
+    await new Promise((ok) => setTimeout(ok, 1500));
+    try { r = await fetch(API + path, { ...init, headers, body }); }
+    catch { throw new Error(offline); }
+  }
   const sn = r.headers.get("X-Server-Now");
   if (sn) clock.skewMs = new Date(sn).getTime() - Date.now();
   if (!r.ok) {
@@ -139,14 +150,15 @@ export const api = {
 };
 
 /** Subscribe to a WebSocket topic with auto-reconnect. Returns an unsubscribe function. */
-export function subscribe(path: string, onMsg: (m: any) => void): () => void {
+export function subscribe(path: string, onMsg: (m: any) => void, onLink?: (up: boolean) => void): () => void {
   let ws: WebSocket | null = null;
   let closed = false;
   let timer: number | undefined;
   const open = () => {
     ws = new WebSocket(WS + path);
+    ws.onopen = () => onLink?.(true);
     ws.onmessage = (e) => { try { onMsg(JSON.parse(e.data)); } catch { /* ignore */ } };
-    ws.onclose = () => { if (!closed) timer = window.setTimeout(open, 800); };
+    ws.onclose = () => { onLink?.(false); if (!closed) timer = window.setTimeout(open, 800); };
   };
   open();
   return () => { closed = true; window.clearTimeout(timer); ws?.close(); };

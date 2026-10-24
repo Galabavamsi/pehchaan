@@ -33,6 +33,20 @@ PAYERS = {
         "payees": [("rahul.s@bdb", 6, 40000), ("priya.sharma@okdemo", 5, 5000), ("jvvnl.bill@okdemo", 12, 2400),
                    ("meena.gupta@okdemo", 4, 1500)],
     },
+    # Sunita's son, so both demo phones can pay: his circle is his mother, who verifies when a caller uses her name.
+    "u_rahul": {
+        "id": "u_rahul", "name": "Rahul Sharma", "name_hi": "राहुल शर्मा", "gender": "m", "age_band": "25-34",
+        "city": "London", "phone": "+919829011223", "vpa": "rahul.s@bdb", "vpa_masked": "rahul.s•••@bdb",
+        "bank_name": BANK, "bank_name_hi": BANK_HI, "lang": "en",
+        "amount_p95": 45000, "amount_p99": 80000, "recent_new_payees_30m": 0,
+        "circle": [
+            {"id": "rel_sunita", "name": "Mummy", "name_hi": "मम्मी", "full_name": "Sunita Sharma", "relation": "mother",
+             "relation_hi": "माँ", "pronoun": "she", "device_id": "dev_sunita", "saved_number": "+919812345210", "lives_in": "Jaipur",
+             "calls_payer": "Rahul", "calls_payer_hi": "राहुल"},
+        ],
+        "contacts": [("+919812345210", "Mummy"), ("+919772033445", "Priya")],
+        "payees": [("sunita.sharma@bdb", 3, 15000), ("thames.lettings@okdemo", 10, 60000), ("priya.sharma@okdemo", 2, 3000)],
+    },
     "u_ramesh": {
         "id": "u_ramesh", "name": "Ramesh Iyer", "name_hi": "रमेश अय्यर", "gender": "m", "age_band": "65+",
         "city": "Chennai", "phone": "+919444012345", "vpa": "ramesh.iyer@bdb", "vpa_masked": "ramesh.i•••@bdb",

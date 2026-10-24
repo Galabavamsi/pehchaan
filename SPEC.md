@@ -151,6 +151,29 @@ Every decision returns `reasons[]`: code, plain-language text (EN + HI), contrib
 
 **Customer phone (Pehchaan SDK inside the bank/UPI app):** call-state sensor; on-device contact-hash matcher; payment hook; Pause & Verify UI; voice-check capture with VAD and quality gate.
 
+**Android SDK and demo shell (added 24 Oct 2026, on site; plan in `app/MOBILE_PLAN.md`):**
+- `pehchaan-sdk`: a native Kotlin Android library. It is the part a bank or TPAP integrates.
+  - Call context: call state, start and end, duration, `ended_sec_ago`. It uses `TelephonyCallback` (Android 12+) with a `PhoneStateListener` fallback.
+  - VoIP: `AudioManager` mode `MODE_IN_COMMUNICATION` → `channel: "voip"`. It can't tell which app; it doesn't need to.
+  - On-device contact check (`ContactsContract.PhoneLookup`). Only `in_contacts: true/false` leaves the phone, never the contact list.
+  - Screen sharing during the call: Android 15+ only (`addScreenRecordingCallback`). It is reported to the app; it is not yet an engine signal.
+  - Payment screens set `FLAG_SECURE`, so a screen-share can't capture them.
+  - Family Verify listener: a foreground service holds `/ws/device/{device_id}` and posts a high-priority, full-screen notification on `fv_request`. There is no FCM, and nothing is polled while idle.
+- Two build modes. The **Play-compliant** mode uses only `READ_PHONE_STATE` (call active and duration) and audio mode (VoIP, no permission). The caller's number is then unknown to the app, and number signals come from the bank or telco side (DoT FRI, CNAP). The **demo** build also uses `READ_CALL_LOG` to get the number for the contact check and the caller signals. Google Play allows call-log access only for default phone, SMS or assistant apps, so the demo build is sideloaded.
+- Demo host app "DemoPay": a Capacitor shell around `app/web` (the payer and relative screens), with a role picker on first launch. It sends the phone's real `call` object to `POST /v1/risk/assess`; the API contract is unchanged.
+- **Live payments, no scenario (added 24 Oct, on site).**
+  - The payer app is signed in as the seeded payer `u_sunita` and ignores the demo page's scenario.
+  - Payees come from the user, by three routes: a typed UPI ID, a scanned UPI QR (in-app scanner, or any `upi://pay` link or QR opened with DemoPay), or people already paid.
+  - A fictional UPI directory in the app stands in for the PSP's "verify UPI ID" lookup and gives the registered name. An unknown handle gets a name derived from the handle.
+  - Every payment ends with a "Pehchaan check" line saying why it did or didn't ask. The sources are the API's trigger (call condition, payment condition) and its reasons. Not checking is explained too.
+  - The family app keeps a history of the requests it received and the answers given, on the phone only.
+- **Two people, two phones, both directions (added 24 Oct, on site).**
+  - Every phone runs the same DemoPay. Setup asks who is using the phone: Sunita (`u_sunita`) or Rahul.
+  - Rahul is a seeded payer too (`u_rahul`, fictional, `rahul.s@bdb`). His circle is his mother, on device `dev_sunita`.
+  - Each phone pays as its own person and answers Family Verify for the other: Sunita's phone (`dev_sunita`) for Rahul's payments, Rahul's phone (`dev_rahul`) for Sunita's.
+  - Family Verify is part of DemoPay, not a separate role. The service holds the phone's device WebSocket, and the prompt opens over whatever screen is up.
+- Not in this build: iOS (CallKit's `CXCallObserver` says whether a call is active but gives no number), keys in Android Keystore, and call audio.
+
 **Bank/PSP cloud (AWS; production in ap-south-1 for RBI payment-data localisation):**
 - Risk API: FastAPI on ECS Fargate behind API Gateway.
 - Fusion Engine: the `pehchaan` Python package.

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowClockwise, Bank, ChartScatter, Compass, Handshake, HeartStraight, Phone, ShieldWarning, Siren,
-  SlidersHorizontal, UserSound, Waveform, type Icon } from "@phosphor-icons/react";
+import { ArrowClockwise, Bank, ChartScatter, CheckCircle, Compass, Handshake, HeartStraight, Phone, ShieldWarning, Siren,
+  SlidersHorizontal, UserSound, Waveform, XCircle, type Icon } from "@phosphor-icons/react";
 import { API, api, subscribe, urlParam, type Lang, type Scenario } from "./api";
 import { Bench } from "./Bench";
 import { BenchmarkPage } from "./Benchmark";
@@ -9,7 +9,11 @@ import { RedTeamPage, Tour } from "./Tour";
 import { Console } from "./Console";
 import { PayerPhone } from "./PayerPhone";
 import { RelativePhone } from "./RelativePhone";
-import { Seal } from "./components";
+import { Device, Seal } from "./components";
+import { DemoPayApp } from "./DemoPayApp";
+import { isNative, Pehchaan, rehearsal, type NativeStatus } from "./native";
+import { PEOPLE, savedPerson, savePerson, type PersonKey } from "./people";
+import { QrCards } from "./QrCards";
 
 const SCEN: { id: string; label: string; icon: Icon }[] = [
   { id: "T1", label: "Cloned son, +44", icon: UserSound },
@@ -43,6 +47,11 @@ function useScenario(loadName: string | null) {
 }
 
 export function App() {
+  if (isNative) return <NativeApp />;
+  return <WebApp />;
+}
+
+function WebApp() {
   const route = useRoute();
   const lang = (urlParam("lang") as Lang) || undefined;
   if (route === "console") return <Console follow={urlParam("follow") === "1"} />;
@@ -52,17 +61,25 @@ export function App() {
   if (route === "benchmark") return <BenchmarkPage />;
   if (route === "payer") return <Standalone kind="payer" lang={lang} />;
   if (route === "relative") return <Standalone kind="relative" lang={lang} />;
+  // Laptop helpers for the Android demo: the payer app in a phone frame, and payee QR cards to scan
+  if (route === "app") {
+    const me = PEOPLE[(urlParam("me") as PersonKey) || "sunita"] ?? PEOPLE.sunita;
+    return <div className="theme-app" style={{ padding: 24, display: "flex", justifyContent: "center" }}><Device><DemoPayApp me={me} /></Device></div>;
+  }
+  if (route === "qr") return <QrCards />;
   return <DemoControl />;
 }
 
 function Standalone({ kind, lang }: { kind: "payer" | "relative"; lang?: Lang }) {
   const { sc, n } = useScenario(kind === "payer" ? urlParam("scenario") : null);
   if (!sc) return <div className="empty">Load a scenario from the demo page first.</div>;
+  // The Android app stays enrolled as the payer's relative whichever scenario the demo page has loaded.
+  const relative = sc.relative ?? (isNative ? sc.payer.circle[0] : null);
   return (
-    <div style={{ padding: 24, display: "flex", justifyContent: "center" }}>
+    <div style={{ padding: isNative ? 0 : 24, display: "flex", justifyContent: "center" }}>
       {kind === "payer"
         ? <PayerPhone key={n} scenario={sc} initialLang={lang ?? "en"} initialLarge={urlParam("large") === "1"} />
-        : sc.relative ? <RelativePhone key={n} relative={sc.relative} payerName={sc.payer.name} payerNameHi={sc.payer.name_hi} initialLang={lang ?? "en"} />
+        : relative ? <RelativePhone key={n} relative={relative} payerName={sc.payer.name} payerNameHi={sc.payer.name_hi} initialLang={lang ?? "en"} />
           : <div className="empty">This scenario has no relative.</div>}
     </div>
   );
@@ -148,6 +165,101 @@ function DemoControl() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ Android app (SPEC §7)
+
+/** One app on both phones: DemoPay for this phone's person, with Family Verify for the other person built in. */
+function NativeApp() {
+  const [who, setWho] = useState<PersonKey | null>(savedPerson);
+  const [setup, setSetup] = useState(() => !savedPerson());
+  // Routes from outside the web layer (the launch route is read once, so one handler takes all of them):
+  // "setup" from the status notification's Setup action, "upi:…" from a UPI QR or link opened with DemoPay
+  const [upi, setUpi] = useState<string | null>(null);
+  useEffect(() => {
+    const take = (r: string | null) => {
+      if (r === "setup") setSetup(true);
+      else if (r?.startsWith("upi:")) setUpi(r.slice(4));
+    };
+    Pehchaan.getLaunchRoute().then((x) => take(x.route)).catch(() => {});
+    const h = Pehchaan.addListener("route", (x) => take(x.route));
+    return () => { h.then((x) => x.remove()); };
+  }, []);
+  if (!who || setup) {
+    return <NativeSetup who={who} onDone={(k) => { savePerson(k); setWho(k); setSetup(false); }} />;
+  }
+  return <DemoPayApp key={who} me={PEOPLE[who]} incomingUpi={upi} onUpiHandled={() => setUpi(null)} />;
+}
+
+function NativeSetup({ who, onDone }: { who: PersonKey | null; onDone: (k: PersonKey) => void }) {
+  const [pick, setPick] = useState<PersonKey | null>(who);
+  const [st, setSt] = useState<NativeStatus | null>(null);
+  const [reh, setReh] = useState(rehearsal.get);
+  const refresh = () => Pehchaan.status().then(setSt).catch(() => {});
+  useEffect(() => {
+    refresh();
+    const f = () => { if (document.visibilityState === "visible") refresh(); };
+    document.addEventListener("visibilitychange", f);
+    return () => document.removeEventListener("visibilitychange", f);
+  }, []);
+
+  async function choose(k: PersonKey) {
+    setPick(k);
+    setSt(await Pehchaan.requestForRole({ role: "payer" }).catch(() => null) ?? await Pehchaan.status().catch(() => null));
+  }
+
+  if (!pick) {
+    return (
+      <div className="native-setup">
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Seal size={26} /><b>DemoPay</b><span>with Pehchaan</span></span>
+        <h1>Who is using this phone?</h1>
+        <p>Both phones can pay. Each one also answers when someone uses its person's name to ask the other for money.</p>
+        {(["sunita", "rahul"] as PersonKey[]).map((k) => (
+          <button key={k} className="role" onClick={() => choose(k)} data-testid={`me-${k}`}>
+            <span className="dp-av">{PEOPLE[k].payer.name.split(" ").map((w) => w[0]).join("")}</span>
+            <span><b>{PEOPLE[k].payer.name}</b><span>{PEOPLE[k].blurb} · {PEOPLE[k].payer.vpa}</span></span>
+          </button>
+        ))}
+        <p style={{ marginTop: "auto", fontSize: 13 }}>Demo app: fictional bank, people and UPI IDs. Pehchaan never records or listens to calls.</p>
+      </div>
+    );
+  }
+
+  const rows: { ok: boolean | undefined; label: string; fix: () => void }[] = [
+    { ok: st?.phone, label: "Call state (on a call or not)", fix: () => choose(pick) },
+    { ok: st?.call_log, label: "Caller's number (call log)", fix: () => choose(pick) },
+    { ok: st?.contacts, label: "Contacts, matched on this phone", fix: () => choose(pick) },
+    { ok: st?.notifications, label: "Notifications (Family Verify)", fix: () => choose(pick) },
+    { ok: st?.full_screen, label: "Alerts over the lock screen", fix: () => { Pehchaan.openSettings({ which: "fullscreen" }); } },
+    { ok: st?.battery_unrestricted, label: "Battery: no restrictions", fix: () => { Pehchaan.openSettings({ which: "battery" }); } },
+  ];
+  const p = PEOPLE[pick];
+  return (
+    <div className="native-setup">
+      <h1>{p.payer.name}</h1>
+      <p>Pehchaan reads only whether you're on a call, the caller's number and whether it's saved. Contacts and calls never leave this phone.</p>
+      <div>
+        {rows.map((r) => (
+          <div className="check" key={r.label}>
+            {r.ok ? <CheckCircle size={22} weight="fill" className="ok" /> : <XCircle size={22} weight="fill" className="no" />}
+            <span>{r.label}</span>
+            {!r.ok && <button className="chipbtn" onClick={r.fix}>Allow</button>}
+          </div>
+        ))}
+      </div>
+      <label className="check rehearsal">
+        <input type="checkbox" checked={reh} onChange={(e) => { rehearsal.set(e.target.checked); setReh(e.target.checked); }} />
+        <span>Rehearsal mode: treat every caller as unknown
+          <small>For practice when all your numbers are saved on this phone. Turn it off for the real demo.</small></span>
+      </label>
+      <p style={{ fontSize: 13 }}>On Xiaomi phones also turn on Settings → Apps → DemoPay → Autostart.
+        {st && !st.screen_share_detect && " Screen-share detection needs Android 15 or later."}</p>
+      <div style={{ marginTop: "auto", display: "grid", gap: 10 }}>
+        <button className="btn solid full" onClick={() => onDone(pick)} data-testid="setup-done">Continue as {p.payer.name.split(" ")[0]}</button>
+        <button className="btn ghost full" onClick={() => setPick(null)}>Someone else uses this phone</button>
+      </div>
     </div>
   );
 }

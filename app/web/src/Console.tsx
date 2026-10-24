@@ -104,6 +104,14 @@ export function Console({ compact = false, follow = false }: { compact?: boolean
   );
 }
 
+/** Live cases (Android app) carry real people's numbers: the projector shows only the first and last digits. */
+const maskNumber = (s: string | null | undefined) => {
+  if (!s) return s ?? "";
+  const total = (s.match(/\d/g) || []).length;
+  let seen = 0;
+  return s.replace(/\d/g, (x) => (++seen <= 4 || seen > total - 3 ? x : "•"));
+};
+
 const tierWord = (t: Tier, status: string) =>
   ({ red: status === "held" ? "Red · on hold" : "Red", amber: "Amber", green: "Green" }[t]);
 const tierColor = (t: Tier) => ({ red: "#d63a31", amber: "#f0a20f", green: "#0b7f63" }[t] ?? "#62718f");
@@ -171,7 +179,7 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
       )}
       <div className="dh-sub">
         <b className="mono">{d.amount_display}</b> to <b>{d.payee_name}</b> <span className="mono">({d.payee_vpa})</span>{" "}
-        from <b>{d.payer_name}</b> ({d.payer_age_band}) · caller <span className="mono">{d.caller_display}</span>{" "}
+        from <b>{d.payer_name}</b> ({d.payer_age_band}) · caller <span className="mono">{d.scenario === "live" ? maskNumber(d.caller_display) : d.caller_display}</span>{" "}
         ({d.call_channel === "whatsapp" ? "WhatsApp" : d.call_channel}, {d.caller_in_contacts ? "saved contact" : "not in contacts"}
         {d.call_duration_sec ? `, ${Math.round(d.call_duration_sec / 60)} min` : ""}) · claim <b>{d.claim ?? "–"}</b>
         {d.relative_name ? ` (${d.relative_name})` : ""}
