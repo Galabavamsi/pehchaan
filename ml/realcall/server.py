@@ -388,17 +388,16 @@ async def agent_ws(ws: WebSocket, call_id: str):
         return " ".join(spoken), t_first
 
     async def do_turn(utt):
-        """One of her turns: STT+LLM off-thread, a filler if that runs long, then the reply streamed by sentence."""
+        """One of her turns. Transcribe first and only reply if she actually said something: line noise and the echo
+        tail of the agent's own voice transcribe to nothing, and replying to those is what made the call babble. A
+        skipped turn returns None (no LLM, no TTS, not counted)."""
         t0 = time.perf_counter()
-
-        def _blocking():
-            ta = time.perf_counter()
-            text = conv.transcribe(utt, agent.SR_UP)
-            tb = time.perf_counter()
-            plan = conv.plan(text)
-            return text, plan, agent._ms(ta, tb), agent._ms(tb, time.perf_counter())
-
-        fut = loop.run_in_executor(None, _blocking)
+        text = await loop.run_in_executor(None, conv.transcribe, utt, agent.SR_UP)
+        stt_ms = agent._ms(t0, time.perf_counter())
+        if len(text.strip()) < 2:                 # nothing was said -> don't answer, don't burn a turn
+            return None
+        t1 = time.perf_counter()
+        fut = loop.run_in_executor(None, conv.plan, text)
         filler, t_first = False, None
         done, _ = await asyncio.wait({fut}, timeout=agent.FILLER_AFTER_S)
         if not done and fillers is not None and not st["stop"]:
@@ -406,7 +405,8 @@ async def agent_ws(ws: WebSocket, call_id: str):
             if fa is not None:
                 filler, t_first = True, time.perf_counter()
                 await speak(fa)
-        text, plan, stt_ms, llm_ms = await fut
+        plan = await fut
+        llm_ms = agent._ms(t1, time.perf_counter())
         reply_ms = agent._ms(t0, time.perf_counter())
         spoken, t_reply = await speak_reply(plan)
         conv.record(text, spoken)
@@ -453,8 +453,11 @@ async def agent_ws(ws: WebSocket, call_id: str):
                 break
             if len(utt) / agent.SR_UP < 0.3:                                  # too short to be a real turn
                 continue
+            result = await do_turn(utt)
+            if result is None:                                                # noise / echo, nothing said: wait
+                continue
             st["turns"] += 1
-            plan, t = await do_turn(utt)
+            plan, t = result
             log_event("agent_turn", call_id=call_id, step=st["turns"], emotion=plan.emotion, done=plan.done, **t)
             print(f"[agent {call_id[:8]}] mother: {conv.last_mother!r} -> son ({plan.emotion}): {plan.text}", flush=True)
             if plan.done:

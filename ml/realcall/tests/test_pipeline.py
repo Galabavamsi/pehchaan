@@ -521,3 +521,35 @@ def test_speakable_numbers_and_handles():
     assert agent.speakable("Rs. 2000 abhi") == "2000 rupaye abhi"
     assert agent.speakable("rahul.friend@okfinbank par") == "rahul dot friend at okfinbank par"
     assert agent.speakable("pachaas hazaar rupaye") == "pachaas hazaar rupaye"           # words pass through
+
+
+def test_agent_skips_empty_transcript(monkeypatch):
+    """Noise and echo transcribe to nothing; the agent must not reply to them. With an STT that always returns
+    whitespace, only the opener is spoken and no reply turn is logged."""
+    from fastapi.testclient import TestClient
+    from realcall import agent, server
+    server.config = lambda: {**settings.DEFAULTS, "public_base_url": "https://example.trycloudflare.com"}
+    card = agent.ScriptCard(max_turns=4)
+
+    class EmptySTT:
+        def transcribe(self, pcm, sr):
+            return "   "                                          # whitespace only, like a noise/echo transcript
+
+    providers = agent.Providers(EmptySTT(), agent.FakeLLM(), agent.FakeTTS())
+    monkeypatch.setattr(server, "_make_agent", lambda c: (providers, agent.make_vad("energy", sr=agent.SR_UP), card))
+    cl = TestClient(server.app)
+    cid = "d" * 32
+    settings.log_event("call_registered", call_id=cid, kind="agent", device="D2", speaker="S02", card=card.as_dict())
+    speech = fake_speech(1.1, 150, 11)
+    with cl.websocket_connect(f"/ws/agent/{cid}") as ws:
+        ws.send_text(json.dumps({"event": "start", "start": {"streamId": "s1"}}))
+        inbound = np.concatenate([np.zeros(int(0.6 * SR), np.float32), speech, np.zeros(int(0.9 * SR), np.float32)])
+        for i in range(0, len(inbound) // 320 * 320, 320):
+            pcm = (inbound[i:i + 320] * 32767).astype("<i2").tobytes()
+            ws.send_text(json.dumps({"event": "media", "media": {"track": "inbound", "payload": base64.b64encode(pcm).decode()}}))
+        ws.send_text(json.dumps({"event": "stop"}))               # end the call (the agent would otherwise just wait)
+        for _ in range(400):
+            if ws.receive_json()["event"] == "stop":
+                break
+    turns = [e for e in settings.read_ledger() if e.get("ev") == "agent_turn" and e.get("call_id") == cid]
+    assert [e["step"] for e in turns] == [0]                      # only the opener; the empty turns were skipped
