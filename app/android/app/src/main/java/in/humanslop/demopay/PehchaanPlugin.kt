@@ -145,6 +145,7 @@ class PehchaanPlugin : Plugin() {
         put("meta", JSObject().apply {
             put("source", c.source)
             put("audio_mode", c.audioMode)
+            put("contact_name", c.contactName ?: JSONObject.NULL)
             put("screen_recording", Pehchaan.screenRecording ?: JSONObject.NULL)
         })
     }

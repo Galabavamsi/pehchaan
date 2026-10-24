@@ -261,7 +261,8 @@ function FamilySection({ L, lang, me, inbox }: { L: (en: string, hi: string) => 
 function CallStrip({ L, info }: { L: (en: string, hi: string) => string; info: CallInfo }) {
   const c = info.call;
   const voip = c.channel === "voip";
-  const who = c.number ? maskNumber(c.number) : voip ? L("Internet call", "इंटरनेट कॉल") : L("Number hidden", "नंबर छिपा है");
+  const saved = info.meta.contact_name;
+  const who = saved ?? (c.number ? maskNumber(c.number) : voip ? L("Internet call", "इंटरनेट कॉल") : L("Number hidden", "नंबर छिपा है"));
   const tag = rehearsal.get() && c.number ? L("Rehearsal: treated as unknown", "रिहर्सल: अनजान माना गया")
     : c.in_contacts === true ? L("Saved contact", "सेव नंबर") : c.in_contacts === false ? L("Not in your contacts", "आपके कॉन्टैक्ट में नहीं") : voip ? L("Caller not visible to apps", "कॉल करने वाला ऐप को नहीं दिखता") : "";
   const live = c.state === "active";
@@ -270,8 +271,9 @@ function CallStrip({ L, info }: { L: (en: string, hi: string) => string; info: C
     <div className={`dp-callstrip ${live ? "live" : ""}`} data-testid="dp-callstrip">
       <span className="dp-cs-ic">{voip ? <WhatsappLogo size={18} weight="fill" /> : <Phone size={18} weight="fill" />}</span>
       <span className="dp-cs-t">
-        <b>{live ? L("On a call", "कॉल चालू है") : L(`Call ended ${Math.max(1, Math.round((c.ended_sec_ago ?? 0) / 60))} min ago`, `कॉल ${Math.max(1, Math.round((c.ended_sec_ago ?? 0) / 60))} मिनट पहले खत्म हुई`)}</b>
-        <span>{who}{tag && ` · ${tag}`}</span>
+        <b>{live ? (saved ? L(`On a call with ${saved}`, `${saved} से कॉल चालू है`) : L("On a call", "कॉल चालू है"))
+          : L(`Call ended ${Math.max(1, Math.round((c.ended_sec_ago ?? 0) / 60))} min ago`, `कॉल ${Math.max(1, Math.round((c.ended_sec_ago ?? 0) / 60))} मिनट पहले खत्म हुई`)}</b>
+        <span>{live && saved ? (c.number ? maskNumber(c.number) : "") : who}{tag && ` · ${tag}`}</span>
       </span>
       {live && <span className="dp-cs-time">{Math.floor(sec / 60)}:{String(sec % 60).padStart(2, "0")}</span>}
     </div>

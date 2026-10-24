@@ -174,16 +174,17 @@ object CallMonitor {
             "ended" -> if (start != null) ((end!! - start!!) / 1000).toInt() else null
             else -> null
         }
-        val inContacts = if (apiState != "none" && number != null) ContactCheck.inContacts(c, number) else null
+        val match = if (apiState != "none" && number != null) ContactCheck.lookup(c, number) else null
         return CallContext(
             state = apiState,
             number = if (apiState == "none") null else number,
             channel = if (apiState == "none") "pstn" else channel,
             durationSec = duration,
             endedSecAgo = if (apiState == "ended") ((now - end!!) / 1000).toInt() else null,
-            inContacts = inContacts,
+            inContacts = match?.inContacts,
             source = if (apiState == "none") "none" else source,
             audioMode = audioMode,
+            contactName = match?.name,
         )
     }
 

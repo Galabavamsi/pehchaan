@@ -11,7 +11,10 @@ export interface PhoneCall {
   state: "active" | "ended" | "none"; number: string | null; channel: "pstn" | "voip";
   duration_sec: number | null; ended_sec_ago: number | null; in_contacts?: boolean;
 }
-export interface CallInfo { call: PhoneCall; meta: { source: string; audio_mode: number; screen_recording: boolean | null } }
+/** meta is for this phone's own screen; contact_name is the saved name and is never sent anywhere. */
+export interface CallInfo {
+  call: PhoneCall; meta: { source: string; audio_mode: number; screen_recording: boolean | null; contact_name?: string | null };
+}
 export interface NativeStatus {
   phone: boolean; contacts: boolean; notifications: boolean; call_log: boolean; full_screen: boolean;
   battery_unrestricted: boolean; sdk_int: number; screen_share_detect: boolean;

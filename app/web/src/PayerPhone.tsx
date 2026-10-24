@@ -372,7 +372,8 @@ function PhoneCallPill({ info }: { info: CallInfo }) {
   const c = forRehearsal(info.call);
   const voip = c.channel === "voip";
   const n = c.number;
-  const pretty = n ? (n.startsWith("+91") ? `+91 ${n.slice(3, 8)} ${n.slice(8)}` : n) : voip ? t("voip_call") : t("number_hidden");
+  // The saved name (as the dialer shows it) if the caller is a contact; it stays on this phone
+  const pretty = info.meta.contact_name ?? (n ? (n.startsWith("+91") ? `+91 ${n.slice(3, 8)} ${n.slice(8)}` : n) : voip ? t("voip_call") : t("number_hidden"));
   const ended = c.state === "ended";
   const sec = c.duration_sec;
   return (
