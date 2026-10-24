@@ -236,12 +236,16 @@ def run(a):
     K = keys()
     jobs = [json.loads(l) for l in open(a.jobs, encoding="utf-8") if l.strip()]
     jobs = [j for j in jobs if not (os.path.exists(j["out"]) and os.path.getsize(j["out"]) > 2000)]
+    if a.reverse:   # a second process can work the same list from the other end
+        jobs = jobs[::-1]
     if a.limit:
         jobs = jobs[: a.limit]
     print(f"{len(jobs)} jobs")
     fails = []
 
     def one(j):
+        if os.path.exists(j["out"]) and os.path.getsize(j["out"]) > 2000:   # done meanwhile by another process
+            return None
         for attempt in range(4):
             try:
                 b = call(j, K)
@@ -280,6 +284,7 @@ if __name__ == "__main__":
     ap.add_argument("--jobs")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--reverse", action="store_true")
     a = ap.parse_args()
     a.out_dir = a.out_dir or str(ROOT / ("data/generated/api2" if a.mode == "build2" else "data/generated/api"))
     {"build": build, "build2": build2, "run": run}[a.mode](a)
