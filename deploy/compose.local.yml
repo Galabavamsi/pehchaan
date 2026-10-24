@@ -1,0 +1,10 @@
+# Local smoke test without Caddy/TLS: API on 127.0.0.1:8400, weights from ml/serve/weights.
+services:
+  api:
+    ports: ["127.0.0.1:8400:8400"]
+  voice:
+    ports: ["127.0.0.1:8500:8500"]
+    volumes: !override
+      - ../ml/serve/weights:/srv/ml/serve/weights:ro
+  caddy:
+    profiles: [tls]

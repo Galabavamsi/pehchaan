@@ -2,6 +2,7 @@
 
   aws s3 sync s3://pehchaan-ml-301745146083-use1/work/scores_rc realcall/work/retrain_v3/scores
   python -m realcall.compare_models [--dir realcall/work/retrain_v3/scores]
+  python -m realcall.compare_models --dir realcall/work/d2/scores --device D2   # one handset's test calls only
 
 Scores are spoof logit differences from eval/score.py (higher = more synthetic). Real-call metrics use the
 pre-registered test split only (S02 = held-out speaker; S01 calls hashed to test). "Deployed" numbers use each
@@ -42,6 +43,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", default="realcall/work/retrain_v3/scores",
                     help="folder synced from s3://.../work/scores_rc (scores + labelled manifests, flat)")
+    ap.add_argument("--device", help="only real-call test clips captured on this handset (e.g. D2, held out)")
     a = ap.parse_args()
     d = Path(a.dir)
     if not (d / "realcall_eval.csv").exists() and (d / "scores").is_dir():
@@ -49,10 +51,12 @@ def main():
     lab_cols = ("utt_id", "label", "generator", "speaker", "split", "call_id")
     rce = d / "realcall_eval.csv"
     if rce.exists() and set(lab_cols) <= set(pd.read_csv(rce, nrows=1).columns):
-        rc = pd.read_csv(rce, usecols=lambda c: c in lab_cols)
+        rc = pd.read_csv(rce, usecols=lambda c: c in lab_cols + ("device",))
     else:                                     # older uploads carried no labels: fall back to the local manifest
         rc = pd.read_csv(MANIFESTS / "realcall.csv")
-        rc = rc[(rc.qc == "ok") & rc.path.notna()][list(lab_cols)]
+        rc = rc[(rc.qc == "ok") & rc.path.notna()][[c for c in lab_cols + ("device",) if c in rc]]
+    if a.device and "device" not in rc:
+        raise SystemExit("--device needs a device column in the real-call labels")
     sim_cols = ("utt_id", "label", "generator", "channel", "heldout")
     st = d / "sim_test.csv"
     if st.exists() and "label" in pd.read_csv(st, nrows=1).columns:
@@ -73,25 +77,32 @@ def main():
         sim_ho = eer_thr((ho.label == "spoof").astype(int).values, ho.score.values)[0] if ho.label.nunique() == 2 else np.nan
         real = pd.read_csv(d / f"real__{m}.csv").merge(rc, on="utt_id")
         t = real[real.split == "test"]
+        if a.device:
+            t = t[t.device == a.device]
+        if t.label.nunique() < 2:
+            continue
         yt, st = (t.label == "spoof").astype(int).values, t.score.values
         r_eer, _ = eer_thr(yt, st)
         s02 = t[t.speaker == "S02"]
-        s02_eer = eer_thr((s02.label == "spoof").astype(int).values, s02.score.values)[0]
+        s02_eer = eer_thr((s02.label == "spoof").astype(int).values, s02.score.values)[0] if s02.label.nunique() == 2 else np.nan
         caught = float((t[t.label == "spoof"].score >= thr).mean())
         flagged = float((t[t.label == "bonafide"].score >= thr).mean())
         gens = {g: round(float((x.score >= thr).mean()), 2) for g, x in t[t.label == "spoof"].groupby("generator")}
         rows.append(dict(model=name, sim_EER=f"{sim_eer:.1%}", sim_heldout_gen_EER=f"{sim_ho:.1%}",
                          real_test_EER=f"{r_eer:.1%}", real_AUC=f"{auc(yt, st):.3f}", real_S02_EER=f"{s02_eer:.1%}",
-                         clones_caught=f"{caught:.0%}", genuine_flagged=f"{flagged:.0%}"))
+                         clones_caught=f"{caught:.0%}", genuine_flagged=f"{flagged:.0%}", n_clips=int(len(t))))
         out[m] = {**rows[-1], "per_generator_caught": gens, "n_test": int(len(t)), "n_test_calls": int(t.call_id.nunique())}
+    if not out:
+        raise SystemExit("no model has scores with both genuine and clone clips in this slice")
     df = pd.DataFrame(rows)
+    scope = f"handset {a.device} only" if a.device else "S02 held-out speaker + S01 calls hashed to test"
     print(f"real-call test split: {out[next(iter(out))]['n_test']} clips from {out[next(iter(out))]['n_test_calls']} calls "
-          f"(S02 held-out speaker + S01 calls hashed to test)\n")
+          f"({scope})\n")
     print(df.to_string(index=False))
     print("\nclones caught per generator (deployed threshold):")
     for m in out:
         print(f"  {MODELS[m]:42s} {out[m]['per_generator_caught']}")
-    (REPORTS / "retrain_v3_comparison.json").write_text(json.dumps(out, indent=1))
+    (REPORTS / f"retrain_v3_comparison{'_' + a.device if a.device else ''}.json").write_text(json.dumps(out, indent=1))
 
 
 if __name__ == "__main__":

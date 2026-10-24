@@ -1,0 +1,15 @@
+# Automatic HTTPS (Let's Encrypt). DNS records must point at this box, DNS-only (not Cloudflare-proxied).
+{$API_HOST} {
+	encode gzip
+	reverse_proxy api:8400   # HTTP and WebSockets (/ws/*)
+}
+
+{$DEMO_HOST} {
+	encode gzip
+	root * /srv/web
+	file_server
+	# the demo routes by #hash, so every path serves index.html
+	try_files {path} /index.html
+	header /assets/* Cache-Control "public, max-age=31536000, immutable"
+	header /index.html Cache-Control "no-cache"
+}

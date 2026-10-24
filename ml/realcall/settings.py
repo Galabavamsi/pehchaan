@@ -21,6 +21,7 @@ TAPES = WORK / "tapes"            # <tape_id>.wav (8 kHz, what Vobiz plays), <ta
 CAPTURE = WORK / "capture"        # laptop-mic sessions and live calls
 UPLINK = WORK / "uplink"          # network-side streams
 UPLOADS = WORK / "device_uploads"  # dialer recordings copied off phones, per device
+ATTACK = WORK / "attack"          # <call_id>.wav: the 8 kHz clone clip for one live-demo attack call (never ingested)
 SEGMENTS = WORK / "segments"
 MANIFESTS = WORK / "manifests"
 REPORTS = WORK / "reports"
@@ -61,7 +62,7 @@ def env(name: str, required: bool = True) -> str:
 
 
 def ensure_dirs():
-    for d in (SRC, TAPES, CAPTURE, UPLINK, UPLOADS, SEGMENTS, MANIFESTS, REPORTS):
+    for d in (SRC, TAPES, CAPTURE, UPLINK, UPLOADS, ATTACK, SEGMENTS, MANIFESTS, REPORTS):
         d.mkdir(parents=True, exist_ok=True)
 
 
