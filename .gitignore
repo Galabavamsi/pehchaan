@@ -52,3 +52,6 @@ ml/runs/
 *.swo
 .*.swp
 .*.swo
+
+# Internal planning notes — never commit
+internal planning/
