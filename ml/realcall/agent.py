@@ -45,6 +45,18 @@ FILLERS = {
 }
 
 
+def speakable(text: str) -> str:
+    """Make a line safe for the TTS to read aloud: the rupee sign / Rs / INR become 'rupaye' after the amount, and
+    symbols in a UPI-style handle are spoken ('@' -> 'at', '.' -> 'dot'). Digits left over are read by Sarvam's own
+    text normalisation (enable_text_normalization); the LLM is also asked to write amounts as words."""
+    t = text or ""
+    t = re.sub(r"(?:₹|\bRs\.?|\bINR)\s*([\d,]+(?:\.\d+)?)", r"\1 rupaye", t)   # ₹50,000 -> 50,000 rupaye
+    t = re.sub(r"(\d),(?=\d)", r"\1", t)                                      # 50,000 -> 50000 (one number)
+    t = re.sub(r"\b([\w.+-]+)@([\w-]+)\b",
+               lambda m: m.group(1).replace(".", " dot ") + " at " + m.group(2), t)   # a.b@bank -> a dot b at bank
+    return re.sub(r"\s+", " ", t).strip()
+
+
 def split_sentences(text: str) -> list:
     """Break a reply into speakable pieces on sentence enders (Latin and Devanagari danda), keeping the ender.
     Very short fragments are merged forward so a piece is always worth synthesising on its own."""
@@ -95,6 +107,8 @@ class ScriptCard:
             "- Hinglish, ONE short spoken sentence, about 8-12 words (keep it brief so it can be spoken back fast). "
             "No stage directions, no emojis, no English "
             "translation in brackets.\n"
+            "- Write every amount and number in words, the way it is spoken in Hinglish (e.g. 'pachaas hazaar "
+            "rupaye', 'do hazaar'), never as digits or with the rupee symbol, so the voice reads it naturally.\n"
             "- Choose the emotion that fits this turn: stressed, scared, pleading or neutral.\n"
             "- Set done=true once she clearly agrees to send, or firmly refuses, or says she will call back or verify.\n"
             'Reply with ONLY a JSON object: {"text": "<your spoken line>", "emotion": "<one of the four>", '
@@ -384,11 +398,13 @@ class SarvamCloneTTS:
         import base64
         import soundfile as sf
         vid = self.ensure_voice()
+        line = speakable(text)[:300]                      # rupee sign and handles spoken; amounts read as numbers
         for attempt in range(2):                          # one retry: a stalled convert (seen ~21 s) is cut at 10 s,
             try:                                          # and a fresh call is usually fast
-                r = self._client().voice_cloning.convert(text=text[:300], language_code=LANG[lang], voice_id=vid,
+                r = self._client().voice_cloning.convert(text=line, language_code=LANG[lang], voice_id=vid,
                                                          output_audio_codec="wav", speech_sample_rate=SR_UP,
-                                                         pace=self.PACE.get(emotion, 1.0), enable_qc=False)
+                                                         pace=self.PACE.get(emotion, 1.0), enable_qc=False,
+                                                         enable_text_normalization=True)
                 b = getattr(r, "audio_b64", None) or getattr(r, "audio", None)
                 x, sr = sf.read(io.BytesIO(base64.b64decode(b)), dtype="float32", always_2d=True)
                 return resample(x.mean(1), sr, SR_UP)

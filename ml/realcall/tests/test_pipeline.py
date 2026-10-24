@@ -513,3 +513,11 @@ def test_agent_live_feel_opener_and_filler(monkeypatch):
     assert turns[0]["prerendered"] is True and turns[0]["filler"] is False
     assert turns[1]["filler"] is True                                       # the filler covered the slow reply
     assert all("text" not in e and "transcript" not in e for e in turns.values())
+
+
+def test_speakable_numbers_and_handles():
+    from realcall import agent
+    assert agent.speakable("Maa, ₹50,000 bhej do") == "Maa, 50000 rupaye bhej do"
+    assert agent.speakable("Rs. 2000 abhi") == "2000 rupaye abhi"
+    assert agent.speakable("rahul.friend@okfinbank par") == "rahul dot friend at okfinbank par"
+    assert agent.speakable("pachaas hazaar rupaye") == "pachaas hazaar rupaye"           # words pass through
