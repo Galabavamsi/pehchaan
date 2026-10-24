@@ -46,3 +46,9 @@ deploy/weights/
 
 # checkpoints pulled from S3 for local scoring
 ml/runs/
+
+# editor swap files (vim keeps a copy of .env in ..env.swp while it is open)
+*.swp
+*.swo
+.*.swp
+.*.swo
