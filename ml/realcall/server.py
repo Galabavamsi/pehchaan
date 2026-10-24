@@ -315,7 +315,10 @@ async def agent_ws(ws: WebSocket, call_id: str):
     loop = asyncio.get_event_loop()
     utt_q: asyncio.Queue = asyncio.Queue()
     started, barge = asyncio.Event(), asyncio.Event()
-    st = {"stream_id": None, "be": None, "speaking": False, "stop": False, "turns": 0}
+    # Vobiz streams little-endian L16 both ways. Forcing it (rather than guessing from the first frames) fixes the
+    # calls where the guess flipped to big-endian on an opening of near-silence: that garbled every turn's audio, so
+    # STT returned empty and the opener went out as static. Little-endian calls always transcribed and sounded right.
+    st = {"stream_id": None, "be": False, "speaking": False, "stop": False, "turns": 0}
 
     async def send(obj):
         await ws.send_text(json.dumps(obj))
