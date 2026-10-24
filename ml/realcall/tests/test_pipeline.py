@@ -293,3 +293,30 @@ def test_relocate_paths():
     assert relocate_path("/home/v/pehchaan/ml/realcall/work/segments/x/00.wav") == str(settings.WORK / "segments/x/00.wav")
     assert relocate_path("segments/x/00.wav") == "segments/x/00.wav"       # relative paths are left alone
     assert relocate_path(None) is None
+
+
+def test_live_clone_consent_and_purge(tmp_path):
+    """Closing demo: consent needs the signed form; purge deletes every recording and clip and withdraws consent."""
+    from realcall import live_clone
+    form = tmp_path / "J01.jpg"
+    form.write_bytes(b"signed form")
+    args = lambda **kw: type("A", (), kw)  # noqa: E731
+    with pytest.raises(SystemExit):
+        live_clone.cmd_consent(args(id="J01", form=str(tmp_path / "missing.jpg"), name=None))
+    with pytest.raises(SystemExit):   # a team participant's id can't be taken over
+        live_clone.cmd_consent(args(id="S01", form=str(form), name=None))
+    with pytest.raises(PermissionError):
+        Registry().require_clone("J01")
+    live_clone.cmd_consent(args(id="J01", form=str(form), name="Judge"))
+    Registry().require_clone("J01")
+    d = live_clone.LIVE / "J01"
+    d.mkdir(parents=True, exist_ok=True)
+    for f in ("ref.wav", "clone_1.wav"):
+        (d / f).write_bytes(b"RIFF")
+    live_clone.ATTACK_SRC.mkdir(parents=True, exist_ok=True)
+    (live_clone.ATTACK_SRC / "J01_1.wav").write_bytes(b"RIFF")
+    live_clone.cmd_purge(args(id="J01"))
+    assert not d.exists() and not list(live_clone.ATTACK_SRC.glob("J01_*"))
+    with pytest.raises(PermissionError):
+        Registry().require_clone("J01")
+    assert (live_clone.FORMS / "J01.jpg").exists()   # the record that consent was given stays

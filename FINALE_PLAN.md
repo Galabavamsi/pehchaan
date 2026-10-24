@@ -152,8 +152,19 @@ flow records ~10 s. Both require the speaker's consent.
 - The call goes **only to a team phone** (or the judge's own phone if they ask). **Never call the judge's real family**
   or anyone who hasn't agreed; "show how your family could be cheated" is shown on our phones, not on theirs.
 - The script is role-play; nothing is kept: delete the voice at Sarvam and the recording right after, on screen.
-- Needs on-site code: `sarvam_clone --ref <file>` (clone from a fresh recording) and a one-page "live clone" screen.
-  Rehearse it twice with a teammate first; fallback = the pre-made consented clone.
+- Rehearse it twice with a teammate first; fallback = the pre-made consented clone.
+
+**Commands** (laptop, from `ml/`; the Sarvam key never leaves the laptop; calls need `pehchaan-calls` and
+`pehchaan-tunnel` running):
+```bash
+python -m realcall.live_clone consent J01 --form ~/Pictures/J01_form.jpg   # refuses without the form photo
+python -m realcall.live_clone record J01 --seconds 40                      # prints a neutral passage to read
+python -m realcall.live_clone clone J01 --lang hi --say "Mummy, main hoon. Accident ho gaya, phone police ke paas hai. Papa ko mat batana, abhi ₹50,000 is account mein bhejo."
+python -m realcall.dial attack --device A --speaker J01 --clip <clip printed by clone>
+python -m realcall.live_clone purge J01                                    # on screen: voice at Sarvam + every file
+```
+`clone` prints the time taken and the ClonEval similarity to their real voice; drop the clip and `ref.wav` into
+`#/bench` for every detector's verdict. `purge` also withdraws the consent; only the signed form is kept.
 
 ## 3. Timeline
 

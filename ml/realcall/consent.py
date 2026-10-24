@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from realcall.settings import HERE, REPO, config
+from realcall.settings import HERE, REPO, WORK, config
 
 
 def _norm(num: str) -> str:
@@ -27,6 +27,11 @@ class Registry:
         d = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
         self.participants = d.get("participants", {})
         self.devices = d.get("devices", {})
+        # same-day consents for the live closing demo (python -m realcall.live_clone consent); same checks apply
+        live = WORK / "live" / "participants.yaml"
+        if live.exists():
+            for pid, lp in ((yaml.safe_load(live.read_text(encoding="utf-8")) or {}).get("participants") or {}).items():
+                self.participants.setdefault(pid, lp)
 
     def _consent(self, pid: str) -> dict:
         p = self.participants.get(pid)
