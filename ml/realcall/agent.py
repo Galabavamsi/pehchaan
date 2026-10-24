@@ -245,16 +245,23 @@ class SarvamSTT:
     def _client(self):
         if self._cli is None:
             from sarvamai import SarvamAI
-            self._cli = SarvamAI(api_subscription_key=env("SARVAM_API_KEY"))
+            self._cli = SarvamAI(api_subscription_key=env("SARVAM_API_KEY"), timeout=10.0)  # bound a stalled call
         return self._cli
 
     def transcribe(self, pcm: np.ndarray, sr: int) -> str:
         import soundfile as sf
         buf = io.BytesIO()
         sf.write(buf, np.clip(pcm, -1, 1), sr, format="WAV", subtype="PCM_16")
-        r = self._client().speech_to_text.transcribe(file=("turn.wav", buf.getvalue(), "audio/wav"),
-                                                      model=self.model, mode=self.mode, language_code=self.language_code)
-        return (getattr(r, "transcript", None) or "").strip()
+        wav = buf.getvalue()
+        for attempt in range(2):                          # one retry: Sarvam occasionally stalls, a fresh call is fast
+            try:
+                r = self._client().speech_to_text.transcribe(file=("turn.wav", wav, "audio/wav"), model=self.model,
+                                                             mode=self.mode, language_code=self.language_code)
+                return (getattr(r, "transcript", None) or "").strip()
+            except Exception:
+                if attempt:
+                    return ""                             # give up quietly; the turn just has no transcript
+                self._cli = None
 
     def warm(self):
         """Open the TLS connection and load the model before the first real turn (saves the cold-start on turn 1)."""
@@ -337,7 +344,7 @@ class SarvamCloneTTS:
     def _client(self):
         if self._cli is None:
             from sarvamai import SarvamAI
-            self._cli = SarvamAI(api_subscription_key=env("SARVAM_API_KEY"))
+            self._cli = SarvamAI(api_subscription_key=env("SARVAM_API_KEY"), timeout=10.0)  # bound a stalled synth
         return self._cli
 
     def ensure_voice(self) -> str:
@@ -376,12 +383,19 @@ class SarvamCloneTTS:
     def synth(self, text: str, emotion: str, lang: str) -> np.ndarray:
         import base64
         import soundfile as sf
-        r = self._client().voice_cloning.convert(text=text[:300], language_code=LANG[lang], voice_id=self.ensure_voice(),
-                                                 output_audio_codec="wav", speech_sample_rate=SR_UP,
-                                                 pace=self.PACE.get(emotion, 1.0), enable_qc=False)   # QC adds a pass
-        b = getattr(r, "audio_b64", None) or getattr(r, "audio", None)
-        x, sr = sf.read(io.BytesIO(base64.b64decode(b)), dtype="float32", always_2d=True)
-        return resample(x.mean(1), sr, SR_UP)
+        vid = self.ensure_voice()
+        for attempt in range(2):                          # one retry: a stalled convert (seen ~21 s) is cut at 10 s,
+            try:                                          # and a fresh call is usually fast
+                r = self._client().voice_cloning.convert(text=text[:300], language_code=LANG[lang], voice_id=vid,
+                                                         output_audio_codec="wav", speech_sample_rate=SR_UP,
+                                                         pace=self.PACE.get(emotion, 1.0), enable_qc=False)
+                b = getattr(r, "audio_b64", None) or getattr(r, "audio", None)
+                x, sr = sf.read(io.BytesIO(base64.b64decode(b)), dtype="float32", always_2d=True)
+                return resample(x.mean(1), sr, SR_UP)
+            except Exception:
+                if attempt:
+                    raise
+                self._cli = None
 
     def warm(self):
         """Resolve the voice and run a tiny synth so the first real turn doesn't pay the model/TLS cold-start."""
