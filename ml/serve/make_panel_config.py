@@ -8,6 +8,7 @@ The fused score is an equal-weight mean of z = (score - threshold) / std over th
 weight is fitted on any data. Inputs (scores are spoof-minus-bona-fide logits, higher = more synthetic):
   realcall/work/d2/scores/sim__ours_v1.csv, sim__ours_v3_rc.csv (the sample itself), corpus_eval.csv (labels)
   realcall/work/panel/{nii_mms300m,ssl_la}__eval.csv (full eval set; filtered to the same sample)
+  realcall/work/retrain_v5/scores/sim__ours_n3.csv (the reference detector since 25 Oct; S3 work/scores_v5)
 """
 import json
 from itertools import combinations
@@ -29,6 +30,9 @@ MODELS = {
             "trained_on": "NII's 56k h genuine + 18k h artefact speech; never saw our data", "licence": "CC BY-NC-SA 4.0"},
     "la": {"name": "XLS-R + AASIST LA (off the shelf)", "scores": W / "panel/ssl_la__eval.csv",
            "trained_on": "ASVspoof 2019 LA (English); never saw our data"},
+    "n3": {"name": "Pehchaan n3 (reference: NII init + IndicVoices)", "scores": W / "retrain_v5/scores/sim__ours_n3.csv",
+           "trained_on": "NII MMS-300M fine-tuned on A's data + paid-API voices + 438 IndicVoices Hindi speakers",
+           "licence": "CC BY-NC-SA 4.0 (inherits NII's)"},
 }
 
 

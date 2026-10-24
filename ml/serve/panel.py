@@ -1,7 +1,9 @@
 """Side-by-side detector panel: every detector scores the same clip, plus an equal-weight fused verdict.
 
-Enabled with PEHCHAAN_PANEL (comma list of ids from serve/panel_config.json, e.g. "v1,A,nii,la") and
-PEHCHAAN_FUSE (the ids fused into Pehchaan's verdict, default "A,nii,v1": the lowest simulated EER, 4.1%).
+Enabled with PEHCHAAN_PANEL (comma list of ids from serve/panel_config.json, e.g. "v1,A,nii,la,n3") and
+PEHCHAAN_FUSE (the ids fused into Pehchaan's verdict, default "A,nii,v1": the lowest simulated EER on 24 Oct, 4.1%).
+Since 25 Oct the laptop runs PEHCHAAN_FUSE=n3: the headline verdict is the reference detector ours_n3 alone
+(common/protocol.py, note of 2026-10-25).
 Each detector keeps its own threshold (its EER point on the shared simulated test sample) and is scored by the
 shared rules in common/scoring.py (also used by eval/clone_vs_detect.py): XLS-R+AASIST models as the mean over the
 planned ~4 s windows, NII on whole chunks of up to 16 s of the same clip.
@@ -20,7 +22,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ML = os.path.dirname(HERE)
 CONFIG = os.path.join(HERE, "panel_config.json")
 CKPTS = {"A": os.path.join(ML, "runs", "ours_v3_rc", "best.pt"),
-         "la": os.path.join(ML, "runs", "ssl_la", "LA_model.pth")}
+         "la": os.path.join(ML, "runs", "ssl_la", "LA_model.pth"),
+         "n3": os.path.join(ML, "runs", "ours_n3", "best.pt")}
+NII_FINETUNED = {"n3"}   # train/finetune.py --init nii checkpoints: the NII network, scored by NII's protocol
 
 
 def _int8(model):
@@ -45,10 +49,14 @@ class Panel:
             raise KeyError(f"{m} is not in panel_config.json")
         if m == "v1":
             return ("svc", None)                       # the served model, already loaded
-        if m == "nii":
+        if m == "nii" or m in NII_FINETUNED:
             from models.nii_antideepfake import NIIAntiDeepfake
-            d = NIIAntiDeepfake(device=str(self.svc.device))
-            if self.svc.device.type == "cpu":
+            if m != "nii" and not os.path.exists(CKPTS[m]):
+                raise FileNotFoundError(CKPTS[m])
+            d = NIIAntiDeepfake(device=str(self.svc.device), ckpt=CKPTS.get(m) if m != "nii" else None)
+            # n3 stays fp32 on CPU: int8 moved its scores off its fp32 threshold (25 Oct, 40 real-call test clips: verdicts
+            # agreed with the GPU box 36/40 in int8, 40/40 in fp32, correlation 0.972 vs 0.999). Costs ~1 GB more memory.
+            if self.svc.device.type == "cpu" and m not in NII_FINETUNED:
                 d.net = _int8(d.net)
             return ("nii", d)
         from models.detectors import SSLAASIST
