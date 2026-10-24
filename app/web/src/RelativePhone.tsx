@@ -22,7 +22,9 @@ function deviceKey(deviceId: string) {
 }
 
 /** A Family Verify request this phone received, kept on the phone only (SPEC §7). */
-export interface FamilyReq { id: string; at: string; amount: string; payee: string; answer: "yes" | "no" | "expired" | null }
+export interface FamilyReq {
+  id: string; at: string; amount: string; payee: string; answer: "yes" | "no" | "expired" | "cancelled" | null;
+}
 
 /**
  * The phone's Family Verify inbox for one circle entry: registers the device key, listens on /ws/device/{id},
@@ -67,8 +69,16 @@ export function useFamilyInbox(relative: Relative) {
     const sig = b64(nacl.sign.detached(msg, kp.secretKey));
     try { await api.respond(push.challenge_id, ans, relative.device_id, sig); setDone(ans); note(push.challenge_id, { answer: ans }); }
     catch (e: any) {
-      if (!String(e?.message ?? "").startsWith("409")) throw e;
-      setDone(ans); note(push.challenge_id, { answer: ans });  // already answered from this phone
+      // A repeat is refused with 409 "challenge already <status>". Only confirmed/denied mean the server holds an
+      // answer (show that one, not the tap); a cancelled or timed-out request accepted nothing, so just close it.
+      const st = String(e?.message ?? "").match(/^409: challenge already (\w+)/)?.[1];
+      if (st === "confirmed" || st === "denied") {
+        const held = st === "confirmed" ? "yes" : "no";
+        setDone(held); note(push.challenge_id, { answer: held });
+      } else if (st === "cancelled" || st === "timeout") {
+        note(push.challenge_id, { answer: st === "cancelled" ? "cancelled" : "expired" });
+        setPush(null);
+      } else throw e;
     }
     finally { setBusy(false); }
   }

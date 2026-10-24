@@ -216,7 +216,8 @@ function FamilySection({ L, lang, me, inbox }: { L: (en: string, hi: string) => 
   const calls = callsPayer(me.inbox.relative, lang, me.inbox.payerName, me.inbox.payerNameHi);
   const circle = me.payer.circle.map((r) => (lang === "hi" ? r.name_hi || r.name : r.name)).join(L(" or ", " या "));
   const said = { yes: L("You said: yes, it's me", "आपने कहा: हाँ, मैं हूँ"), no: L("You said: not me. Payment held", "आपने कहा: मैं नहीं। पेमेंट रोका गया"),
-    expired: L("No answer in time", "समय पर जवाब नहीं"), pending: L("Waiting for your answer", "आपके जवाब का इंतज़ार") };
+    expired: L("No answer in time", "समय पर जवाब नहीं"), cancelled: L("Request cancelled", "अनुरोध रद्द हुआ"),
+    pending: L("Waiting for your answer", "आपके जवाब का इंतज़ार") };
   return (
     <section className="dp-sec">
       <h2>{L("Family Verify", "फ़ैमिली वेरिफ़ाई")}</h2>
