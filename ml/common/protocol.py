@@ -126,6 +126,10 @@ def is_heldout(generator: str, speaker: str = "") -> bool:
 # clean/AMR bench (S01/S02 genuine vs every cloner, Sarvam IVC included), iv test speakers, the paid-API unseen
 # voices and the simulated test sample. NII-initialised models are scored by NII's own protocol (whole clip up to
 # 16 s, layer-normed), as the served NII is.
+# Same evening, before launch, after access to the gated sets came through: a larger MLAAD test set, 200 clips per
+# (language, system) of data_prep/fetch_mlaad.SYSTEMS (seeded), clean and through the AMR channel, scored by every
+# model. Every one of those generators is registered held-out above, so they stay never-trained. Downloads use signed
+# links made on the laptop (infra/sign_urls.py): the HF token never reaches the box.
 IV_SHARDS = list(range(0, 82, 8))
 IV_SALT = "pehchaan-iv-v5"
 IV_MAX_SPEAKERS = 600

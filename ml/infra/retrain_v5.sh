@@ -5,9 +5,11 @@
 # Sarvam IVC is never trained (--exclude_sources api2_ivc), so S01's and S02's Sarvam clones are both unseen cloners.
 # Scores model A (ours_v3_rc), NII zero-shot (nii0) and the candidates on the fixed dev set, the real-call test, the
 # clean/AMR bench (S01/S02 genuine vs every cloner, Sarvam IVC included), unseen IndicVoices speakers, the paid-API
-# unseen voices and the simulated test sample; uploads as results land; stops the box.
+# unseen voices, MLAAD's unseen engines (clean and AMR) and the simulated test sample; uploads as results land; stops
+# the box.
 #   nohup bash ~/pehchaan/ml/infra/retrain_v5.sh > ~/logs/retrain_v5.log 2>&1 &
-# Needs on the box: an HF token with IndicVoices access in ~/hf (huggingface-cli login), never the laptop's .env.
+# Needs ~/work/urls_v5.txt from infra/sign_urls.py (signed links made on the laptop, valid about an hour): the HF token
+# never reaches the box.
 #
 # Same safety as retrain_v4.sh: a run counts as finished only with "best dev EER" in its log and a best.pt, which
 # writes ~/runs/<name>/DONE; the last line says SUCCESS or FAILED; the box stops either way.
@@ -31,16 +33,11 @@ for f in dev_sim.csv dev_rc.csv api2_test.csv sim_test.csv devsim__ours_v3_rc.cs
   aws s3 cp $BUCKET/work/scores_v4/$f $OUT/$f --only-show-errors || FAILED+=("sync:$f")
 done
 cp $W/realcall_test/realcall_test.csv $OUT/ 2>/dev/null || FAILED+=("realcall_test.csv")
-if ! $PY - <<'EOF'
-import os
-from huggingface_hub import hf_hub_download
-from common.protocol import IV_SHARDS
-for k in IV_SHARDS:
-    hf_hub_download("ai4bharat/IndicVoices", f"hindi/train-{k:05d}-of-00082.parquet", repo_type="dataset",
-                    local_dir=os.path.expanduser("~/data/iv"))
-print("IndicVoices shards", IV_SHARDS)
-EOF
-then FAILED+=("iv_download"); fi
+if [ -s $W/urls_v5.txt ]; then
+  aria2c -q -x 4 -j 16 -c -d ~/data -i $W/urls_v5.txt || FAILED+=("download")
+  rm -f $W/urls_v5.txt   # signed links: expired soon anyway, never kept
+fi
+echo "IndicVoices shards: $(ls ~/data/iv/hindi/*.parquet 2>/dev/null | wc -l); MLAAD clips: $(find ~/data/mlaad_v5 -name '*.wav' 2>/dev/null | wc -l)"
 
 # bench manifests: the consented clean files, and the same files through the AMR-NB channel seeded per file name
 # (as eval/clone_vs_detect.py does)
@@ -65,6 +62,22 @@ for src, dst in zip(clean.path, amr.path):
 out = W / "scores_v5"
 clean.to_csv(out / "bench_clean.csv", index=False); amr.to_csv(out / "bench_amr.csv", index=False)
 print("bench", len(clean), clean.groupby(["generator", "speaker"]).size().to_dict())
+# MLAAD (test only: every generator here is registered held-out), clean and through the same AMR channel
+M = Path(os.path.expanduser("~/data/mlaad_v5")); MA = W / "mlaad_amr"; MA.mkdir(exist_ok=True)
+rows = [dict(utt_id=f"mlaadv5__{p.parent.name}__{p.parent.parent.name}__{p.stem}", path=str(p), label="spoof",
+             generator=p.parent.name, lang=p.parent.parent.name) for p in sorted(M.glob("*/*/*.wav"))]
+if rows:
+    mc = pd.DataFrame(rows); ma = mc.copy()
+    ma["path"] = [str(MA / f"{u}.wav") for u in mc.utt_id]
+    for src, dst in zip(mc.path, ma.path):
+        if not os.path.exists(dst):
+            try:
+                save(dst, CH.amr(load(src), np.random.default_rng(zlib.crc32(Path(src).name.encode()))))
+            except Exception as e:
+                print("mlaad amr fail", src, repr(e)[:80])
+    ma = ma[ma.path.map(os.path.exists)]
+    mc.to_csv(out / "mlaad_clean.csv", index=False); ma.to_csv(out / "mlaad_amr.csv", index=False)
+    print("mlaad", len(mc), mc.groupby(["lang", "generator"]).size().to_dict())
 EOF
 then FAILED+=("bench_manifests"); fi
 
@@ -132,6 +145,8 @@ score_all() {  # model: every set (model A's dev, real-call, paid-API and simula
   score $m $OUT/bench_clean.csv $OUT/benchclean__$m.csv
   score $m $OUT/bench_amr.csv $OUT/benchamr__$m.csv
   [ -f $W/manifests/iv_test.csv ] && score $m $W/manifests/iv_test.csv $OUT/ivtest__$m.csv
+  [ -f $OUT/mlaad_clean.csv ] && score $m $OUT/mlaad_clean.csv $OUT/mlaadclean__$m.csv
+  [ -f $OUT/mlaad_amr.csv ] && score $m $OUT/mlaad_amr.csv $OUT/mlaadamr__$m.csv
   score $m $OUT/api2_test.csv $OUT/api2__$m.csv
   [ "$m" != ours_v3_rc ] && score $m $OUT/sim_test.csv $OUT/sim__$m.csv limit=6000
   aws s3 sync $OUT $BUCKET/work/scores_v5 --only-show-errors || FAILED+=("upload:scores")   # results land as they come
