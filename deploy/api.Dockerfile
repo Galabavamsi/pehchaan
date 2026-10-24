@@ -12,8 +12,9 @@ RUN pip install -r app/server/requirements.txt \
 
 COPY engine engine
 RUN pip install ./engine
-# engine config.yaml reads measured voice LRs (and their provenance for the console) from here
-COPY ml/results/metrics.json ml/results/metrics.json
+# engine config.yaml reads measured voice LRs (and their provenance for the console) from here;
+# clone_vs_detect.json feeds the #/benchmark page
+COPY ml/results/*.json ml/results/
 COPY app/server app/server
 
 WORKDIR /srv/app/server

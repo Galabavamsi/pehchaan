@@ -98,15 +98,28 @@ def mock_score(data: bytes, demo_hint: str | None = None) -> dict:
     }
 
 
+MAX_UPLOAD_BYTES = 25 * 1024 * 1024  # any format; the voice service decodes and caps the duration itself
+
+
+def _timeout() -> float:
+    # whole-clip scoring: ~3 s per 10 s of speech on a 2-vCPU box, so allow long clips
+    return float(os.environ.get("VOICE_TIMEOUT_S", "60"))
+
+
+def _base(url: str) -> str:
+    u = url.rstrip("/")
+    return u[: -len("/v1/voice/score")] if u.endswith("/v1/voice/score") else u
+
+
 async def score(data: bytes, filename: str = "clip.wav", demo_hint: str | None = None) -> dict:
     url = os.environ.get("VOICE_SERVICE_URL", "").strip()
     if not url:
         return mock_score(data, demo_hint)
-    target = url if url.rstrip("/").endswith("score") else url.rstrip("/") + "/v1/voice/score"
+    target = _base(url) + "/v1/voice/score"
     t0 = time.perf_counter()
     try:
-        async with httpx.AsyncClient(timeout=8.0) as client:
-            r = await client.post(target, files={"file": (filename, data, "audio/wav")})
+        async with httpx.AsyncClient(timeout=_timeout()) as client:
+            r = await client.post(target, files={"file": (filename, data, "application/octet-stream")})
             r.raise_for_status()
             out = r.json()
         out.setdefault("latency_ms", round((time.perf_counter() - t0) * 1000, 1))
@@ -119,6 +132,32 @@ async def score(data: bytes, filename: str = "clip.wav", demo_hint: str | None =
         res = mock_score(data, demo_hint)
         res["fallback_reason"] = f"voice service at {target} failed: {exc}"
         return res
+
+
+class PanelUnavailable(Exception):
+    pass
+
+
+async def panel(data: bytes, filename: str = "clip") -> dict:
+    """Every detector side by side (voice service /v1/voice/panel). No mock: the panel is real or unavailable."""
+    url = os.environ.get("VOICE_SERVICE_URL", "").strip()
+    if not url:
+        raise PanelUnavailable("no voice service configured (VOICE_SERVICE_URL)")
+    target = _base(url) + "/v1/voice/panel"
+    try:
+        async with httpx.AsyncClient(timeout=_timeout()) as client:
+            r = await client.post(target, files={"file": (filename, data, "application/octet-stream")})
+    except Exception as exc:
+        raise PanelUnavailable(f"voice service at {target} failed: {exc}") from exc
+    if r.status_code >= 400:
+        try:
+            detail = r.json().get("detail")
+        except Exception:
+            detail = r.text[:200]
+        raise PanelUnavailable(f"{r.status_code}: {detail}")
+    out = r.json()
+    out["proxied_to"] = target
+    return out
 
 
 # ---------------------------------------------------------------------------

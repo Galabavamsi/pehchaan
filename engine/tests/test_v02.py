@@ -164,13 +164,16 @@ def test_claim_split_upi_or_shop_is_reassuring_and_gets_no_bank_checks():
     assert bank[0] == "bank_registry"
 
 
-def test_cue_checklist_offered_for_coached_none_and_other_only():
-    for claim in ("none", "other"):
+def test_cue_checklist_offered_for_coached_none_other_and_shop():
+    for claim in ("none", "other", "upi_or_shop"):
         acts = actions_for("amber", claim)
         assert acts[0].id == "cue_checklist" and acts[0].primary
         assert "cue_checklist" not in IDS(actions_for("amber", claim, signals=["cue_secrecy"]))
-    for claim in ("family", "bank", "upi_or_shop", "authority"):
+    for claim in ("family", "bank", "authority"):
         assert "cue_checklist" not in IDS(actions_for("amber", claim))
+    # v0.3: the shop / UPI-app claim gets the questions of the fake customer-care and refund script
+    assert actions_for("amber", "upi_or_shop")[0].produces == ["cue_otp_pin", "cue_remote_app", "cue_refund_verification"]
+    assert actions_for("amber", "none")[0].produces == ["cue_secrecy", "cue_otp_pin", "cue_arrest_threat"]
     assert "cue_checklist" not in IDS(actions_for("green", "none"))
 
 
@@ -205,11 +208,14 @@ def test_a19_auto_family_verify_rule():
     from pehchaan.config import load_config
     assert should_auto_family_verify("amber", "family", True)
     assert should_auto_family_verify("red", "family", True)
-    assert not should_auto_family_verify("green", "family", True)       # Green proceeds silently
+    assert should_auto_family_verify("green", "family", True)           # v0.3: the son is asked even at Green
     assert not should_auto_family_verify("amber", "family", False)      # relative not in the circle
     assert not should_auto_family_verify("amber", "bank", True)
     off = load_config(overrides={"actions": {"family_verify_auto": False}})
     assert not should_auto_family_verify("amber", "family", True, cfg=off)
+    v02 = load_config(overrides={"actions": {"family_verify_auto_green": False}})
+    assert not should_auto_family_verify("green", "family", True, cfg=v02)   # the v0.2 rule
+    assert should_auto_family_verify("amber", "family", True, cfg=v02)
 
 
 # ---------------------------------------------------------------- voice shadow mode (ML real-call result)
@@ -260,3 +266,10 @@ def test_voice_result_copy_is_g6_safe():
         assert "fake" not in c["en"].lower()
     assert "can't yet confirm who is calling" in copy_text("voice_shadow_result")["en"]
     assert copy_text("voice_watermark_result")["en"].startswith("This audio carries a marker used by AI voice tools.")
+
+
+def test_v03_caller_in_circle_is_always_asked():
+    from pehchaan import should_ask_claim
+    calm = assess(["payee_new"])
+    assert calm.tier == "green" and not should_ask_claim(calm)
+    assert should_ask_claim(calm, caller_in_circle=True)

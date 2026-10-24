@@ -1,4 +1,8 @@
+from datetime import timedelta
+
+import pytest
 from conftest import ANALYST
+from pehchaan.evidence import ist_iso
 
 
 def start(client, name):
@@ -133,6 +137,12 @@ def test_fv_signature_and_device_binding_enforced(client, device_factory):
     wrong_dev = client.post(f"/v1/verify/family/{ch['challenge_id']}/respond",
                             json={"answer": "yes", "device_id": "dev_priya", "signature_b64": other.sign(ch["challenge_id"], nonce, "yes")})
     assert wrong_dev.status_code == 403
+    # SPEC v0.3: an attacker can't re-bind Rahul's phone to their own key while the question is waiting
+    with pytest.raises(AssertionError):
+        device_factory(client, "dev_rahul", "rel_rahul")
+    ok = client.post(f"/v1/verify/family/{ch['challenge_id']}/respond",
+                     json={"answer": "yes", "device_id": "dev_rahul", "signature_b64": dev.sign(ch["challenge_id"], nonce, "yes")})
+    assert ok.status_code == 200, ok.text
 
 
 def test_fv_timeout_falls_back(client, device_factory):
@@ -213,6 +223,251 @@ def test_evidence_pack_signed_and_prefilled(client, device_factory):
     assert pack["hash_chain"]["verified"] and pack["hash_chain"]["length"] >= 6
 
 
+def test_voice_panel_needs_the_real_service_and_long_uploads_are_not_cut(client, monkeypatch):
+    monkeypatch.delenv("VOICE_SERVICE_URL", raising=False)
+    wav = client.get("/v1/demo/audio/bonafide.wav").content
+    r = client.post("/v1/voice/panel", files={"file": ("k.wav", wav, "audio/wav")})
+    assert r.status_code == 503 and "unavailable" in r.json()["detail"]   # never a mock panel
+    long = wav * 4                                                          # > 12 s: used to be cut mid-stream
+    v = client.post("/v1/voice/score", files={"file": ("l.wav", long, "audio/wav")}).json()
+    assert v["audio_retained"] is False and "band" in v
+
+
+def test_split_payments_during_one_call_are_still_assessed(client):
+    """SPEC v0.3: Rs 9,500 again and again to one payee during one call. Every payment after the first is still
+    assessed (the running total reaches Rs 10,000, and a payee first paid during this call stays new), and the
+    payments made during the call never earn the trusted bypass (G5)."""
+    client.post("/v1/demo/scenario/T1")
+    call = {"state": "active", "number": "+919000012345", "channel": "pstn"}
+    pay = {"payee_vpa": "split.test@okdemo", "payee_name": "Split Test", "amount_inr": 9500}
+
+    def assess(c=call):
+        return client.post("/v1/risk/assess", json={"payer_id": "u_sunita", "call": c, "payment": pay}).json()
+
+    for i in range(4):
+        a = assess()
+        assert a["triggered"] and a["ask_claim"] and a["case_id"], (i, a)
+        assert "new payee" in a["trigger"]["why"]
+        assert ("split payments" in " ".join(a["trigger"]["why"])) == (i > 0)
+        assert not any(g["id"] == "G5" for g in a.get("guardrails", []))
+        assert client.post(f"/v1/cases/{a['case_id']}/user-action", json={"action": "continue"}).json()["status"] == "sent"
+    # a later, different call: the payee was paid before it, and Rs 9,500 alone is below every rule
+    assert assess(dict(call, number="+919000054321"))["triggered"] is False
+
+
+def test_family_verify_rate_limit(client):
+    """SPEC v0.3 section 6: at most 3 Family Verify pushes per payer per hour. After that the payer is told to call
+    the relative, and the auto-sent push is skipped instead of failing the assessment."""
+    sc, a1 = start(client, "L2")
+    cid = a1["case_id"]
+    ch = client.post("/v1/risk/assess", json={"case_id": cid, "claim": "family", "claim_target": "rel_rahul"}).json()[
+        "auto_family_verify"]
+    for _ in range(2):
+        assert client.post(f"/v1/verify/family/{ch['challenge_id']}/cancel").status_code == 200
+        r = client.post("/v1/verify/family", json={"case_id": cid, "relative_id": "rel_rahul"})
+        assert r.status_code == 200, r.text
+        ch = r.json()
+    assert client.post(f"/v1/verify/family/{ch['challenge_id']}/cancel").status_code == 200
+    r = client.post("/v1/verify/family", json={"case_id": cid, "relative_id": "rel_rahul"})
+    assert r.status_code == 429 and "saved number" in r.json()["detail"]
+    a2 = client.post("/v1/risk/assess", json={"payer_id": sc["payer"]["id"], "payment": sc["payment"], "call": sc["call"]}).json()
+    a3 = client.post("/v1/risk/assess", json={"case_id": a2["case_id"], "claim": "family", "claim_target": "rel_rahul"})
+    assert a3.status_code == 200 and "saved number" in a3.json()["auto_family_verify"]["skipped"]
+
+
+def test_jury_builds_their_own_case(client):
+    """FINALE_PLAN B1: the jury sets the inputs; the case runs through the same pipeline as the fixed scenarios."""
+    def custom(**kw):
+        r = client.post("/v1/demo/custom", params={"background": False}, json=kw)
+        assert r.status_code == 200, r.text
+        sc = r.json()
+        a = client.post("/v1/risk/assess", json={"payer_id": sc["payer"]["id"], "payment": sc["payment"],
+                                                 "call": sc["call"], "scenario": sc["scenario"]}).json()
+        return sc, a
+
+    sc, a = custom(caller="international", channel="whatsapp", amount_inr=50000, payee="new", payee_name="Arif Traders")
+    assert sc["scenario"] == "CUSTOM" and sc["payee_new"] and sc["relative"]["id"] == "rel_rahul"
+    assert a["triggered"] and a["ask_claim"]
+    a2 = client.post("/v1/risk/assess", json={"case_id": a["case_id"], "claim": "family", "claim_target": "rel_rahul"}).json()
+    assert "payee_name_mismatch" in a2["signals"] and a2["auto_family_verify"]["auto"] is True
+    # Restart rebuilds the same case
+    assert client.post("/v1/demo/scenario/CUSTOM", params={"background": False}).json()["payment"] == sc["payment"]
+
+    # 1600 number: the registry tells a real bank call from a spoofed one
+    for calling, want in ((True, "active_call_1600"), (False, "no_active_call")):
+        sc, a = custom(caller="bank_1600", amount_inr=35000, payee="new", payee_name="Safe Account Desk", bank_calling=calling)
+        client.post("/v1/risk/assess", json={"case_id": a["case_id"], "claim": "bank", "claim_target": "bdb"})
+        r = client.post(f"/v1/cases/{a['case_id']}/checks/bank_registry").json()
+        assert r["checks"]["bank_registry"]["result"] == want, (calling, r["checks"])
+        assert (r["tier"] == "red") == (not calling)
+
+    # SPEC v0.3: half an hour after the call, a large amount is still assessed and a smaller one isn't
+    _, a = custom(caller="unknown", call_state="ended", ended_min=30, amount_inr=60000, payee="new")
+    assert a["triggered"] and a["trigger"]["call_condition"]
+    _, a = custom(caller="unknown", call_state="ended", ended_min=30, amount_inr=40000, payee="new")
+    assert not a["triggered"] and not a["trigger"]["call_condition"]
+    _, a = custom(caller="saved", payee="usual", amount_inr=45000)
+    assert a["tier"] == "green" and a["case_id"] is None
+
+
+def test_call_from_a_circle_members_saved_number_is_still_asked(client, device_factory):
+    """SPEC v0.3 (red-team run): the caller ID shows the son's saved number (spoofed, or his WhatsApp taken over).
+    The context alone is Green, yet the payer is asked, and "Family member" gets the son's own phone to confirm."""
+    sc = client.post("/v1/demo/custom", params={"background": False},
+                     json={"caller": "saved", "amount_inr": 40000, "payee": "new", "payee_name": "Arif Traders"}).json()
+    son = device_factory(client, "dev_rahul", "rel_rahul")  # bound long before the call
+    a = client.post("/v1/risk/assess", json={"payer_id": "u_sunita", "payment": sc["payment"], "call": sc["call"]}).json()
+    assert a["tier"] == "green" and a["ask_claim"] and a["case_id"]
+    b = client.post("/v1/risk/assess", json={"case_id": a["case_id"], "claim": "family", "claim_target": "rel_rahul"}).json()
+    ch = b["auto_family_verify"]
+    assert b["tier"] == "green" and ch["auto"] is True   # v0.3: the push goes out at Green too
+    nonce = client.get("/v1/devices/dev_rahul/challenges").json()[0]["nonce"]
+    r = client.post(f"/v1/verify/family/{ch['challenge_id']}/respond",
+                    json={"answer": "no", "device_id": "dev_rahul", "signature_b64": son.sign(ch["challenge_id"], nonce, "no")})
+    assert r.json()["tier"] == "red"
+    # "No one asked me" on the same call: no push to the son, so his honest "no" can't hold her own payment
+    a2 = client.post("/v1/risk/assess", json={"payer_id": "u_sunita", "payment": dict(sc["payment"], payee_vpa="shop@okdemo"),
+                                              "call": sc["call"]}).json()
+    b2 = client.post("/v1/risk/assess", json={"case_id": a2["case_id"], "claim": "none"}).json()
+    assert b2["tier"] == "green" and "auto_family_verify" not in b2
+
+
+def test_redteam_results_are_served(client):
+    r = client.get("/v1/redteam")
+    assert r.status_code == 200
+    rows = r.json()["rows"]
+    assert len(rows) >= 16 and all({"id", "evasion", "outcome", "observed", "why"} <= set(x) for x in rows)
+
+
+def test_voice_hit_goes_to_analyst_review_only(client):
+    """SPEC v0.3: a likely-synthetic voice result flags the case for analyst review; the payer's side is untouched."""
+    sc, a1 = start(client, "T1")
+    cid = a1["case_id"]
+    before = client.post("/v1/risk/assess", json={"case_id": cid, "claim": "family", "claim_target": "rel_rahul"}).json()
+    wav = client.get("/v1/demo/audio/synthetic.wav").content
+    v = client.post("/v1/voice/score", files={"file": ("c.wav", wav, "audio/wav")},
+                    data={"demo_hint": "synthetic", "case_id": cid}).json()
+    assert v["band"] == "likely_synthetic" and v["used_in_decision"] is False
+    assert v["assessment"]["tier"] == before["tier"] and "review" not in v["assessment"]   # G2, G6
+    case = client.get(f"/v1/cases/{cid}", headers=ANALYST).json()
+    assert case["review"]["reason"] == "voice_likely_synthetic" and case["review"]["voice_mode"] == "shadow"
+    assert any(c["case_id"] == cid and c["review"] for c in client.get("/v1/cases", headers=ANALYST).json())
+    assert "review_flagged" in [e["type"] for e in case["events"]]
+
+
+def test_voice_audio_is_never_written_to_disk(client, tmp_path):
+    """SPEC section 6 / FINALE_PLAN C1: a voice check leaves no audio behind on the server."""
+    sc, a1 = start(client, "T1")
+    before = {p for p in tmp_path.rglob("*") if p.is_file()}
+    wav = client.get("/v1/demo/audio/synthetic.wav").content
+    v = client.post("/v1/voice/score", files={"file": ("c.wav", wav, "audio/wav")}, data={"case_id": a1["case_id"]}).json()
+    assert v["audio_retained"] is False
+    new = {p for p in tmp_path.rglob("*") if p.is_file()} - before
+    audio = [p for p in tmp_path.rglob("*") if p.is_file() and (p.suffix.lower() in {".wav", ".mp3", ".m4a", ".ogg", ".webm", ".flac"}
+                                                                or p.read_bytes()[:4] == b"RIFF")]
+    assert not audio, audio
+    assert all(p.suffix in {".db", ".db-wal", ".db-shm", ".json", ".pem"} for p in new), new
+
+
+def no_call_payment(client, vpa, amount=5000):
+    return client.post("/v1/risk/assess", json={"payer_id": "u_sunita", "call": {"state": "none"},
+                                                "payment": {"payee_vpa": vpa, "payee_name": "Shop", "amount_inr": amount}}).json()
+
+
+def test_abandoned_assessments_leave_no_history(client):
+    """SPEC v0.3: assessing a payment records nothing. A payment that opens no case gets a payment_ref and counts only
+    when the app reports it sent; abandoned or retried attempts leave the payee new."""
+    sc, a = start(client, "L1")   # silent Green on a call
+    assert a["case_id"] is None and a["status"] == "cleared_silently" and a["payment_ref"]
+    for _ in range(3):            # tapped Pay with no call, then backed out at the PIN, three times
+        r = no_call_payment(client, "never.paid@okdemo")
+        assert r["triggered"] is False and r["payment_ref"]
+    svc = client.app.state.svc
+    for vpa in (sc["payment"]["payee_vpa"], "never.paid@okdemo"):
+        assert svc.history.payee("u_sunita", vpa) is None
+        assert svc.s.one("SELECT COUNT(*) AS n FROM sent_payments WHERE payee_vpa=?", (vpa,))["n"] == 0
+
+
+def test_unpaid_attempts_never_earn_the_trusted_bypass(client):
+    """The review's attack: three no-call attempts to a payee who was never paid used to make it 'paid three times',
+    so a later scam call paying it got the trusted bypass (G5). Only confirmed payments count now."""
+    client.post("/v1/demo/scenario/T1", params={"background": False})
+    for _ in range(3):
+        no_call_payment(client, "unpaid.desk@okdemo", 12000)
+    call = {"state": "active", "number": "+447700900123", "channel": "whatsapp", "duration_sec": 300}
+    pay = {"payee_vpa": "unpaid.desk@okdemo", "payee_name": "Unpaid Desk", "amount_inr": 12000}
+    a = client.post("/v1/risk/assess", json={"payer_id": "u_sunita", "call": call, "payment": pay}).json()
+    assert a["triggered"] and "new payee" in a["trigger"]["why"] and a["case_id"]
+    assert not any(g["id"] == "G5" for g in a["guardrails"])
+    # three payments that really went through, before the call, do make the payee familiar
+    for _ in range(3):
+        ref = no_call_payment(client, "paid.desk@okdemo", 12000)["payment_ref"]
+        assert client.post(f"/v1/payments/{ref}/sent").json() == {"recorded": True}
+    b = client.post("/v1/risk/assess", json={"payer_id": "u_sunita", "call": call,
+                                             "payment": dict(pay, payee_vpa="paid.desk@okdemo")}).json()
+    assert b["tier"] == "green" and b["case_id"] is None and any(g["id"] == "G5" for g in b["guardrails"])
+
+
+def test_payment_confirmation_counts_once(client):
+    """POST /v1/payments/{ref}/sent records a payment once; a case's payment counts on the move to 'sent', once."""
+    client.post("/v1/demo/scenario/T1", params={"background": False})
+    svc = client.app.state.svc
+    ref = no_call_payment(client, "once@okdemo", 3000)["payment_ref"]
+    first = client.post(f"/v1/payments/{ref}/sent")
+    assert first.status_code == 200 and first.json() == {"recorded": True}
+    again = client.post(f"/v1/payments/{ref}/sent")
+    assert again.status_code == 200 and again.json() == {"recorded": False, "already": True}
+    assert svc.history.payee("u_sunita", "once@okdemo") == {"count": 1, "usual_amount": 3000}
+    assert client.post("/v1/payments/pay_0000000000000000/sent").status_code == 404
+    sc, a = start(client, "T1")
+    r1 = client.post(f"/v1/cases/{a['case_id']}/user-action", json={"action": "continue"}).json()
+    r2 = client.post(f"/v1/cases/{a['case_id']}/user-action", json={"action": "continue"}).json()
+    assert r1["status"] == r2["status"] == "sent" and r1["utr"] == r2["utr"]
+    assert svc.history.payee("u_sunita", sc["payment"]["payee_vpa"])["count"] == 1
+
+
+def test_a_long_call_keeps_its_earlier_payments(client):
+    """SPEC v0.3: 'this call' runs from the call's start. 75 minutes into one call (digital arrest runs long), the
+    ₹9,500 sent at its start still counts: the running total reaches ₹10,000 and the payee is still new."""
+    client.post("/v1/demo/scenario/T1", params={"background": False})
+    svc = client.app.state.svc
+    call = {"state": "active", "number": "+447700900123", "channel": "whatsapp", "duration_sec": 300}
+    pay = {"payee_vpa": "settlement.desk@okdemo", "payee_name": "Settlement Desk", "amount_inr": 9500}
+
+    def assess(c):
+        return client.post("/v1/risk/assess", json={"payer_id": "u_sunita", "call": c, "payment": pay}).json()
+
+    a = assess(call)
+    assert client.post(f"/v1/cases/{a['case_id']}/user-action", json={"action": "continue"}).json()["status"] == "sent"
+    svc._clock_offset = timedelta(minutes=75)
+    started = ist_iso(svc.now() - timedelta(seconds=300 + 75 * 60))
+    for c in (dict(call, duration_sec=300 + 75 * 60),                          # the live duration
+              {**call, "duration_sec": None, "started_at": started},           # or the start time
+              {**call, "duration_sec": 300 + 75 * 60,                          # a start in the future is ignored
+               "started_at": ist_iso(svc.now() + timedelta(hours=3))}):
+        b = assess(c)
+        assert b["triggered"] and "new payee" in b["trigger"]["why"], (c, b["trigger"])
+        assert any("split payments" in w for w in b["trigger"]["why"])
+    # with neither start nor duration the server can only look back an hour, which misses the first payment
+    assert assess({**call, "duration_sec": None})["triggered"] is False
+
+
+def test_analyst_decision_resolves_the_voice_review(client):
+    """A decision on a case in the Needs review queue resolves the review and keeps the voice evidence."""
+    sc, a1 = start(client, "T1")
+    cid = a1["case_id"]
+    wav = client.get("/v1/demo/audio/synthetic.wav").content
+    client.post("/v1/voice/score", files={"file": ("c.wav", wav, "audio/wav")}, data={"demo_hint": "synthetic", "case_id": cid})
+    assert "resolved" not in client.get(f"/v1/cases/{cid}", headers=ANALYST).json()["review"]
+    r = client.post(f"/v1/cases/{cid}/decision", json={"decision": "false_positive", "note": "real son"}, headers=ANALYST)
+    rv = r.json()["review"]
+    assert rv["resolved"]["decision"] == "false_positive" and rv["resolved"]["by"] == "a.verma" and rv["resolved"]["at"]
+    assert rv["reason"] == "voice_likely_synthetic" and rv["p_synthetic"] is not None and rv["model_version"]
+    listed = next(c for c in client.get("/v1/cases", headers=ANALYST).json() if c["case_id"] == cid)
+    assert listed["review"]["resolved"]["decision"] == "false_positive"
+    case = client.get(f"/v1/cases/{cid}", headers=ANALYST).json()
+    assert case["checks"]["voice"]["p_synthetic"] == rv["p_synthetic"]
+    assert next(e for e in case["events"] if e["type"] == "analyst_decision")["data"]["review_resolved"] is True
 def test_rahul_pays_and_mummy_verifies_on_her_phone(client, device_factory):
     """Both demo phones can pay (SPEC §7): Rahul is a payer whose circle is his mother on dev_sunita."""
     client.post("/v1/demo/scenario/T1")

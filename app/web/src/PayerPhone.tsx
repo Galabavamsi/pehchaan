@@ -56,6 +56,10 @@ function PayerFlow({ scenario, toggles, onBack, onOutcome }: {
   const [utr, setUtr] = useState<string | null>(null);
   const firstRef = useRef<Assessment | null>(null);
   const screenRef = useRef(screen);
+  const payAt = useRef<number | null>(null);
+  const [sentSecs, setSentSecs] = useState<number | null>(null);
+  const [paymentRef, setPaymentRef] = useState<string | null>(null);   // a payment that opened no case
+  const mountedAt = useRef(Date.now());
   screenRef.current = screen;
   // Android app: the call comes from the phone itself, not the scenario (SPEC §7)
   const phone = usePhoneCall();
@@ -98,17 +102,22 @@ function PayerFlow({ scenario, toggles, onBack, onOutcome }: {
   };
 
   async function onPay() {
+    payAt.current ??= Date.now();   // FINALE_PLAN C2: the seconds a genuine payer spends, shown on the sent screen
+    // Android app: the call comes from the phone itself (SPEC §7); on the web, the scenario's call, kept live
     const raw = isNative ? (await Pehchaan.getCallContext().catch(() => phone))?.call ?? null : null;
     const live = raw ? forRehearsal(raw) : null;
     if (live) setSentCall(live);
     const r = await run(() => api.assess({
       payer_id: scenario.payer.id, scenario: live ? "live" : scenario.scenario,
-      payment: { ...scenario.payment, amount_inr: amount }, call: live ?? scenario.call,
+      payment: { ...scenario.payment, amount_inr: amount }, call: live ?? (scenario.call.state === "active"
+        ? { ...scenario.call, duration_sec: scenario.call.duration_sec + Math.round((Date.now() - mountedAt.current) / 1000) }
+        : scenario.call),
     }));
     if (!r) return;
     setA(r);
     firstRef.current = r;
     if (r.case_id) setCaseId(r.case_id);
+    setPaymentRef(r.payment_ref ?? null);
     if (!r.case_id || (!r.ask_claim && r.tier === "green")) { setScreen("pin"); return; }
     if (r.ask_claim || r.tier !== "red") setScreen("who"); else route(r);
   }
@@ -118,9 +127,13 @@ function PayerFlow({ scenario, toggles, onBack, onOutcome }: {
     if (rel) setRelative(rel);
     const r = await run(() => api.assess({ case_id: caseId, claim: c, claim_target: rel?.id ?? target }));
     if (!r) return;
-    if (r.auto_family_verify) {  // SPEC v0.2 A19: the push is already on the relative's phone
-      setA(r); setFv(r.auto_family_verify); setScreen("fv_wait");
-    } else route(r);
+    const auto = r.auto_family_verify;
+    if (auto && "challenge_id" in auto) {  // SPEC v0.2 A19: the push is already on the relative's phone
+      setA(r); setFv(auto); setScreen("fv_wait");
+    } else {
+      if (auto) setToast(auto.skipped);  // SPEC v0.3 rate limit: no push, call them instead
+      route(r);
+    }
   }
 
   async function cancelFvRequest() {
@@ -187,7 +200,8 @@ function PayerFlow({ scenario, toggles, onBack, onOutcome }: {
 
   const head = (variant: "plain" | "amber" | "red" | "teal" = "plain") => (
     <div className={variant === "plain" ? "pp-head" : "band-head"}>
-      <Seal size={20} dot={variant === "red" || variant === "teal" ? "#fffdf8" : "#1b1f24"} ring={variant === "amber" ? "#1b1f24" : variant === "plain" ? "#e8742a" : "#ffd2b0"} />
+      <Seal size={20} dot={variant === "red" || variant === "teal" ? "#ffd2c4" : variant === "amber" ? "#111d3c" : "#ff7b5c"}
+        ring={variant === "amber" ? "#111d3c" : variant === "plain" ? undefined : "#ffffff"} />
       <span className="word">Pehchaan</span><span className="word-hi" style={{ opacity: 0.8 }}>पहचान</span>
       <span className="grow" />
       <LangToggle toggles={toggles} dark={variant === "red" || variant === "teal"} />
@@ -202,7 +216,8 @@ function PayerFlow({ scenario, toggles, onBack, onOutcome }: {
         <>
           <StatusBar />
           {isNative ? phone && phone.call.state !== "none" && screen !== "sent" && <PhoneCallPill info={phone} />
-            : call.state === "active" && screen !== "sent" && <CallPill scenario={scenario} />}
+            : (call.state === "active" || call.state === "ended") && screen !== "sent"
+              && <CallPill scenario={scenario} ended={call.state === "ended"} />}
           <div className="body">
             {screen === "pay" && (
               <PayScreen scenario={scenario} amountStr={amountStr} setAmountStr={setAmountStr} busy={busy}
@@ -212,10 +227,13 @@ function PayerFlow({ scenario, toggles, onBack, onOutcome }: {
               if (caseId && a?.status !== "sent") {
                 const r: any = await run(() => api.userAction(caseId, a?.tier === "green" ? "pay" : "continue"));
                 if (r?.utr) setUtr(r.utr);
+              } else if (!caseId && paymentRef) {
+                await api.paymentSent(paymentRef).catch(() => null);
               }
+              setSentSecs(payAt.current ? Math.max(1, Math.round((Date.now() - payAt.current) / 1000)) : null);
               setScreen("sent");
             }} />}
-            {screen === "sent" && <SentScreen amountTxt={amountTxt} payee={payee} utr={utr} />}
+            {screen === "sent" && <SentScreen amountTxt={amountTxt} payee={payee} utr={utr} seconds={sentSecs} />}
           </div>
         </>
       ) : null}
@@ -226,7 +244,7 @@ function PayerFlow({ scenario, toggles, onBack, onOutcome }: {
           {head("plain")}
           <div className="sbody">
             <h1 className="q" lang={lang}>{t("who_asked")}</h1>
-            <p className="lede">{t("who_sub", { amount: amountTxt, payee })}</p>
+            <p className="lede">{t((sentCall ?? call).state === "ended" ? "who_sub_after" : "who_sub", { amount: amountTxt, payee })}</p>
             <div className="options">
               <Opt icon={<Users size={24} weight="duotone" />} t={t("opt_family")} st={t("opt_family_s")} onClick={() => setScreen("family")} testid="claim-family" />
               <Opt icon={<Bank size={24} weight="duotone" />} t={t("opt_bank")} st={t("opt_bank_s")} onClick={() => setScreen("bank")} testid="claim-bank" />
@@ -351,22 +369,23 @@ function LangToggle({ toggles, dark = false }: { toggles: Toggles; dark?: boolea
   );
 }
 
-function CallPill({ scenario }: { scenario: Scenario }) {
+function CallPill({ scenario, ended = false }: { scenario: Scenario; ended?: boolean }) {
   const { t, lang } = useT();
-  const [sec, setSec] = useState(scenario.call.duration_sec);
+  const [sec, setSec] = useState(ended ? scenario.call.ended_sec_ago ?? 0 : scenario.call.duration_sec);
   useEffect(() => { const x = setInterval(() => setSec((s) => s + 1), 1000); return () => clearInterval(x); }, []);
-  const n = scenario.call.number;
-  const pretty = n.startsWith("+44") ? `+44 ${n.slice(3, 7)} ${n.slice(7)}` : n.startsWith("+91") ? `+91 ${n.slice(3, 8)} ${n.slice(8)}` : n;
+  const n = scenario.call.number ?? "";
+  const pretty = n.startsWith("+911600") ? `1600 ${n.slice(7, 10)} ${n.slice(10)}`
+    : n.startsWith("+44") ? `+44 ${n.slice(3, 7)} ${n.slice(7)}` : n.startsWith("+91") ? `+91 ${n.slice(3, 8)} ${n.slice(8)}` : n;
   const saved = (scenario as any).caller_saved_as as string | null;
   const wa = scenario.call.channel === "whatsapp";
   return (
-    <div className="callpill" data-testid="callpill">
+    <div className={`callpill${ended ? " ended" : ""}`} data-testid="callpill">
       <span className="dot">{wa ? <WhatsappLogo size={17} weight="fill" /> : <Phone size={16} weight="fill" />}</span>
       <span>
         <div className="num">{saved ?? pretty}</div>
-        <div className="meta">{wa ? t("whatsapp_call") : t("phone_call")}{!saved && <span className="flag">{t("unknown_number")}</span>}</div>
+        <div className="meta">{ended ? t("call_ended_ago", { min: String(Math.floor(sec / 60)) }) : wa ? t("whatsapp_call") : t("phone_call")}{!saved && <span className="flag">{t("unknown_number")}</span>}</div>
       </span>
-      <span className="timer">{Math.floor(sec / 60)}:{String(sec % 60).padStart(2, "0")}</span>
+      {!ended && <span className="timer">{Math.floor(sec / 60)}:{String(sec % 60).padStart(2, "0")}</span>}
       <span style={{ display: "none" }}>{lang}</span>
     </div>
   );
@@ -507,7 +526,7 @@ function OptionsScreen({ a, head, claim, relName, amountTxt, payee, busy, onActi
         <div className="sub">{lang === "hi" ? `${payee} को ${amountTxt} · ${t("amber_sub")}` : `${amountTxt} to ${payee} · ${t("amber_sub")}`}</div>
       </div>
       <div className="sbody">
-        {checklist && <CueChecklist busy={busy} onDone={onCues} />}
+        {checklist && <CueChecklist cues={checklist.produces} busy={busy} onDone={onCues} />}
         {(unknownReg || userNeg) && (
           <div className="warn-line" style={{ marginTop: 14 }}><ShieldCheck size={18} weight="bold" style={{ color: "var(--ink)" }} />
             <span>{bi((userNeg ?? unknownReg)!.text)}</span></div>
@@ -553,10 +572,17 @@ function OptionsScreen({ a, head, claim, relName, amountTxt, payee, busy, onActi
   );
 }
 
-function CueChecklist({ busy, onDone }: { busy: boolean; onDone: (cues: string[]) => void }) {
+const CUE_LABEL: Record<string, string> = {
+  cue_secrecy: "cl_secrecy", cue_otp_pin: "cl_otp", cue_arrest_threat: "cl_arrest",
+  cue_remote_app: "cl_remote", cue_refund_verification: "cl_refund",
+};
+
+function CueChecklist({ cues, busy, onDone }: { cues: string[]; busy: boolean; onDone: (cues: string[]) => void }) {
   const { t } = useT();
   const [on, setOn] = useState<Set<string>>(new Set());
-  const items: [string, string][] = [["cue_secrecy", t("cl_secrecy")], ["cue_otp_pin", t("cl_otp")], ["cue_arrest_threat", t("cl_arrest")]];
+  // the server picks the questions that fit the claim (SPEC v0.3: shop / UPI app gets the refund-script ones)
+  const items: [string, string][] = (cues.length ? cues : ["cue_secrecy", "cue_otp_pin", "cue_arrest_threat"])
+    .filter((c) => CUE_LABEL[c]).map((c) => [c, t(CUE_LABEL[c] as any)]);
   const flip = (c: string) => setOn((s) => { const n = new Set(s); n.has(c) ? n.delete(c) : n.add(c); return n; });
   return (
     <div className="checklist" data-testid="cue-checklist" style={{ marginTop: 16 }}>
@@ -604,7 +630,7 @@ function FvWait({ fv, relName, pronoun, head, onCallInstead, onCancel, onCancelR
         <h1 className="q">{fv.auto ? t("fv_auto_title", { name: relName, their }) : t("waiting_for", { name: relName })}</h1>
         <p className="lede">{fv.auto ? t("fv_auto_sub", { name: relName }) : t("waiting_sub", { name: relName })}</p>
         <div className="ring-wrap">
-          <Ring size={190} frac={cd.frac} stroke={12} track="#ede5d5" color="#e8742a">
+          <Ring size={190} frac={cd.frac} stroke={14} track="#e1e9f8" color="#3461e8">
             <div><div className="big">{cd.mmss}</div><div className="small">{t("fv_left")}</div></div>
           </Ring>
         </div>
@@ -695,7 +721,7 @@ function HoldScreen({ a, head, relName, relative, bankName, amountTxt, claim, bu
         {head}
         <div className="hold-grid">
           <div className="hold-ring">
-            <Ring size={116} frac={cd.frac} stroke={9} track="rgba(255,255,255,0.22)" color="#fffdf8">
+            <Ring size={116} frac={cd.frac} stroke={10} track="rgba(255,255,255,0.22)" color="#ffffff">
               <div><div className="big">{cd.mmss}</div><div className="small">{lang === "hi" ? "रोक बाकी" : "on hold"}</div></div>
             </Ring>
           </div>
@@ -806,7 +832,7 @@ function PinScreen({ amountTxt, payee, onDone }: { amountTxt: string; payee: str
   );
 }
 
-function SentScreen({ amountTxt, payee, utr }: { amountTxt: string; payee: string; utr: string | null }) {
+function SentScreen({ amountTxt, payee, utr, seconds }: { amountTxt: string; payee: string; utr: string | null; seconds: number | null }) {
   const { t } = useT();
   return (
     <div className="sent" data-testid="screen-sent">
@@ -814,6 +840,7 @@ function SentScreen({ amountTxt, payee, utr }: { amountTxt: string; payee: strin
       <h1 className="mono">{t("sent_title", { amount: amountTxt })}</h1>
       <div className="to">{t("sent_to", { payee })}</div>
       <div className="utr">UTR {utr ?? "DEMO" + Date.now().toString().slice(-10)}</div>
+      {seconds != null && <div className="sent-after" data-testid="sent-after">{t("sent_after", { s: String(seconds) })}</div>}
     </div>
   );
 }
@@ -882,7 +909,7 @@ function VoiceScreen({ caseId, head, onBack }: { caseId: string | null; head: Re
             <button className="chipbtn" onClick={() => demo("bonafide", "bonafide")} data-testid="clip-real">{lang === "hi" ? "असली आवाज़" : "Real voice"}</button>
             <button className="chipbtn" onClick={() => demo("noisy", "synthetic")}>{lang === "hi" ? "शोर वाली लाइन" : "Noisy line"}</button>
             <button className="chipbtn" onClick={() => fileRef.current?.click()}><UploadSimple size={14} /> {t("voice_upload")}</button>
-            <input ref={fileRef} type="file" accept="audio/wav,.wav" hidden onChange={(e) => e.target.files?.[0] && score(e.target.files[0])} />
+            <input ref={fileRef} type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.opus,.webm,.flac" hidden onChange={(e) => e.target.files?.[0] && score(e.target.files[0])} />
           </div>
         </>)}
         {state === "listening" && <p className="lede" style={{ textAlign: "center", marginTop: 12 }}>{t("voice_listening", { s: left })}</p>}
@@ -925,7 +952,7 @@ function ReportScreen({ pack, head, bankName }: { pack: any; head: React.ReactNo
         <h1 className="q" lang={lang}>{t("report_ready")}</h1>
         <p className="lede" style={{ marginBottom: 0 }}>{t("report_sub")}</p>
         <div className="pack-id">
-          <div style={{ fontSize: 12.5, color: "#c9cdd3" }}>{lang === "hi" ? "केस नंबर" : "Case number"}</div>
+          <div style={{ fontSize: 12.5, color: "#cbd5f2" }}>{lang === "hi" ? "केस नंबर" : "Case number"}</div>
           <div className="pid">{pack.case_id}</div>
           <div className="seal"><SealCheck size={16} weight="fill" />{t("signed_pack")} · Ed25519 · {pack.hash_chain.length} {lang === "hi" ? "घटनाएँ जुड़ी" : "events chained"}</div>
           <div className="hash">SHA-256 {pack.hash_chain.head.slice(0, 32)}…</div>

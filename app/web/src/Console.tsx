@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Bank, CheckCircle, Eye, LockKey, SealCheck, ShieldCheck, UserCircle, WarningCircle, XCircle } from "@phosphor-icons/react";
 import { api, subscribe, type Reason, type Tier } from "./api";
 import { famName, Seal, TierChip, Waterfall } from "./components";
@@ -47,10 +47,11 @@ export function Console({ compact = false, follow = false }: { compact?: boolean
     } catch (e: any) { setMsg(String(e.message)); } finally { setBusy(false); }
   };
 
-  const shown = list.filter((c) => filter === "all" ? true : filter === "held" ? c.status === "held" :
-    (c.status === "held" && (c.amount_inr ?? 0) >= 50000));
+  // Needs review: large holds (analyst release) and, since SPEC v0.3, voice hits from the shadow detector
+  const needsReview = (c: any) => (c.status === "held" && (c.amount_inr ?? 0) >= 50000) || (!!c.review && !c.review.resolved);
+  const shown = list.filter((c) => filter === "all" ? true : filter === "held" ? c.status === "held" : needsReview(c));
   const counts = { all: list.length, held: list.filter((c) => c.status === "held").length,
-    review: list.filter((c) => c.status === "held" && (c.amount_inr ?? 0) >= 50000).length };
+    review: list.filter(needsReview).length };
 
   return (
     <div className={`console ${compact ? "compact" : ""}`} data-testid="console">
@@ -58,10 +59,10 @@ export function Console({ compact = false, follow = false }: { compact?: boolean
         <span className="bankmark"><span className="bm"><Bank size={17} weight="fill" /></span>Bharat Demo Bank</span>
         <span className="sep" />
         <span className="title">Fraud risk console</span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#c9cdd3" }}><Seal size={16} dot="#fffdf8" />Pehchaan</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#cbd5f2" }}><Seal size={16} ring="#9db4ff" dot="#ffffff" />Pehchaan</span>
         <span className="grow" />
         <span className="logged"><Eye size={15} weight="bold" />{compact ? "Access logged" : "Every case you open is logged with your reason"}</span>
-        <span className="role"><UserCircle size={16} weight="fill" /><b>Fraud analyst · L2</b><span className="mono" style={{ fontSize: 12, color: "#c9cdd3" }}>a.verma</span></span>
+        <span className="role"><UserCircle size={16} weight="fill" /><b>Fraud analyst · L2</b><span className="mono" style={{ fontSize: 12, color: "#cbd5f2" }}>a.verma</span></span>
       </div>
       <div className="con-main">
         <aside className="queue">
@@ -82,7 +83,8 @@ export function Console({ compact = false, follow = false }: { compact?: boolean
                 <span style={{ minWidth: 0 }}>
                   <div className="qt">{c.payee_name}</div>
                   <div className="qs">{claimLabel(c.claim)} · {statusLabel(c.status)}</div>
-                  <div style={{ marginTop: 6 }}><TierChip tier={c.tier} label={tierWord(c.tier, c.status)} /></div>
+                  <div style={{ marginTop: 6 }}><TierChip tier={c.tier} label={tierWord(c.tier, c.status)} />
+                    {c.review && !c.review.resolved && <span className="review-chip" title="Voice check flagged it; not used in the payment decision">Voice flagged</span>}</div>
                 </span>
                 <span>
                   <div className="qa">{formatINR(c.amount_inr)}</div>
@@ -112,13 +114,22 @@ const maskNumber = (s: string | null | undefined) => {
 
 const tierWord = (t: Tier, status: string) =>
   ({ red: status === "held" ? "Red · on hold" : "Red", amber: "Amber", green: "Green" }[t]);
-const tierColor = (t: Tier) => ({ red: "#c8372d", amber: "#e0a526", green: "#13796f" }[t] ?? "#6b7280");
+const tierColor = (t: Tier) => ({ red: "#d63a31", amber: "#f0a20f", green: "#0b7f63" }[t] ?? "#62718f");
 const claimLabel = (c: string | null) => ({ family: "Claimed family", bank: "Claimed bank", upi_or_shop: "UPI app / shop",
   authority: "Claimed police / govt",
   other: "Someone else", none: "No one asked" } as any)[c ?? ""] ?? "No claim yet";
 const statusLabel = (s: string) => ({ held: "On hold", paused: "Paused", awaiting_verification: "Waiting for relative",
   cleared: "Cleared", sent: "Sent", cancelled: "Cancelled by customer", reported: "Reported by customer",
   confirmed_fraud: "Confirmed scam", false_positive: "Marked genuine", released: "Released", open: "Open" } as any)[s] ?? s;
+
+/** FINALE_PLAN C2: seconds from "Pay tapped" to the case's outcome (sent, held, released or closed). */
+const OUTCOME_EVENTS = new Set(["user_action", "hold_started", "analyst_decision"]);
+function outcomeSeconds(d: any): number | null {
+  const ev = d.events || [];
+  const end = [...ev].reverse().find((e: any) => OUTCOME_EVENTS.has(e.type));
+  if (!ev.length || !end || ["open", "verifying"].includes(d.status)) return null;
+  return Math.max(0, Math.round((Date.parse(end.ts) - Date.parse(ev[0].ts)) / 1000));
+}
 
 const EVT: Record<string, (d: any) => string> = {
   payment_attempt: (d) => `Pay tapped · trigger: ${(d.trigger || []).join(", ")}`,
@@ -152,9 +163,20 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
         <span className="cid">{d.case_id}</span>
         <TierChip tier={d.tier} big label={tierWord(d.tier, d.status)} />
         <span className="st">{statusLabel(d.status)}{d.hold && !d.hold.released ? ` · until ${d.hold.until.slice(11, 16)} IST` : ""}</span>
+        {outcomeSeconds(d) != null && <span className="outcome-s" data-testid="outcome-seconds">outcome after <b className="mono">{outcomeSeconds(d)} s</b></span>}
         <span className="grow" />
         <span className="mono" style={{ fontSize: 13, color: "var(--slate)" }}>config v{d.config_version} · {d.created_at_ist?.slice(11, 19)} IST</span>
       </div>
+      {d.review && (
+        <div className="review-banner" data-testid="review-banner">
+          <WarningCircle size={18} weight="fill" />
+          <span><b>{d.review.resolved ? "Reviewed" : "For review"}:</b> the voice check scored this call {d.review.reason === "voice_watermark" ? "as carrying an AI watermark" : "likely synthetic"}
+            {d.review.p_synthetic != null && <> (p <span className="mono">{Number(d.review.p_synthetic).toFixed(2)}</span>)</>}.
+            {d.review.voice_mode === "shadow" ? " Shadow mode: it did not change the tier, the hold or anything the customer saw. Your label feeds the real-call gate." : ""}
+            {d.review.resolved && <> Decided: <b>{String(d.review.resolved.decision).replaceAll("_", " ")}</b> by {d.review.resolved.by}.</>}
+            <span className="mono" style={{ fontSize: 11.5, color: "var(--slate)" }}> {d.review.model_version}</span></span>
+        </div>
+      )}
       <div className="dh-sub">
         <b className="mono">{d.amount_display}</b> to <b>{d.payee_name}</b> <span className="mono">({d.payee_vpa})</span>{" "}
         from <b>{d.payer_name}</b> ({d.payer_age_band}) · caller <span className="mono">{d.scenario === "live" ? maskNumber(d.caller_display) : d.caller_display}</span>{" "}
@@ -182,7 +204,7 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
                       <td><div style={{ fontWeight: 600 }}>{SHORT[r.code]?.[0] ?? r.code}</div><div className="mono" style={{ fontSize: 11.5, color: "var(--slate)" }}>{r.code} · {r.basis}</div>{r.basis === "shadow" && <span className="shadow-badge">shadow: not used in decision</span>}</td>
                       <td>{r.text.en}<div className="hi" lang="hi">{r.text.hi}</div></td>
                       <td className="num">{r.lr < 1 ? r.lr.toFixed(2) : r.lr.toFixed(r.lr < 10 ? 1 : 0)}</td>
-                      <td className="num" style={{ color: r.contribution > 0 ? "#b4531a" : "var(--teal)", fontWeight: 600 }}>{r.contribution > 0 ? "+" : "−"}{Math.abs(r.contribution).toFixed(2)}</td>
+                      <td className="num" style={{ color: r.contribution > 0 ? "#c4452a" : "var(--teal)", fontWeight: 600 }}>{r.contribution > 0 ? "+" : "−"}{Math.abs(r.contribution).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -232,6 +254,7 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
               ))}
             </div>
           </section>
+          <PrivacyPanel d={d} />
           {!compact && (
             <section className="panel">
               <h3>Timeline</h3>
@@ -249,5 +272,26 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
         </div>
       </div>
     </div>
+  );
+}
+
+/** FINALE_PLAN C1: the privacy rules (SPEC section 6), each shown from this case's own records. */
+function PrivacyPanel({ d }: { d: any }) {
+  const voiceEv = (d.events || []).find((e: any) => e.type === "voice_scored");
+  const fv = d.checks?.family_verify;
+  const rel = d.hold?.release_requires;
+  const rows: [string, React.ReactNode][] = [
+    ["Voice audio", voiceEv ? <>scored in memory and discarded: <span className="mono">audio_retained: {String(voiceEv.data.audio_retained)}</span> in event {voiceEv.seq}</> : "no voice check on this case"],
+    ["Contacts", <>the phone sent only “{d.caller_in_contacts ? "saved contact" : "not in contacts"}”, never the contact list</>],
+    ["Family Verify", fv ? <>{d.relative_name ?? "The relative"} saw an amount band and the payee name only; the answer is signed on their phone</> : "not used on this case"],
+    ["Analyst access", <>{d.access_log?.length ?? 0} views, each logged with who, when and why</>],
+    ["Hold release", !d.hold ? "no hold" : rel === "analyst_review" ? "only an analyst (₹50,000 or more)" : rel === "none" ? "released by a positive check" : "only after a positive check (Family Verify, bank registry or callback)"],
+    ["Never collected", "call recordings, contact lists, SMS or WhatsApp content, location, voiceprints"],
+  ];
+  return (
+    <section className="panel" data-testid="privacy-panel">
+      <h3>Privacy, shown from this case</h3>
+      <dl className="kv">{rows.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>
+    </section>
   );
 }

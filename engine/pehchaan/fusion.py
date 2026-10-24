@@ -321,9 +321,12 @@ def assess(
     )
 
 
-def should_ask_claim(a: Assessment, cfg: Config | None = None) -> bool:
-    """Ask 'who asked you to pay?' unless context alone is clearly benign."""
+def should_ask_claim(a: Assessment, cfg: Config | None = None, caller_in_circle: bool = False) -> bool:
+    """Ask 'who asked you to pay?' unless context alone is clearly benign.
+
+    SPEC v0.3: a call from the saved number of someone in the payer's Pehchaan circle is always asked
+    (a spoofed caller ID or a taken-over WhatsApp account keeps the context Green)."""
     cfg = cfg or default_config()
     if any(n.id == "G5" for n in a.guardrails_applied):
         return False
-    return a.tier != "green" or a.p >= cfg.tiers.ask_claim_at_or_above
+    return caller_in_circle or a.tier != "green" or a.p >= cfg.tiers.ask_claim_at_or_above

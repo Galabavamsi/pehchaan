@@ -168,6 +168,13 @@ class mock_payer_history:  # noqa: N801
                        (user_id, vpa.lower()))
         return {"count": r["count"], "usual_amount": r["usual_amount"]} if r else None
 
+    def record_sent(self, user_id: str, vpa: str, amount: float) -> None:
+        """A payment went through: the payee is no longer new (as in the bank's own history)."""
+        h = self.payee(user_id, vpa)
+        n = (h["count"] if h else 0) + 1
+        usual = amount if not h else (h["usual_amount"] * h["count"] + amount) / n
+        self.add_payee(user_id, vpa, n, usual)
+
 
 def name_tokens(name: str | None) -> set[str]:
     stop = {"mr", "mrs", "ms", "shri", "smt", "kumar", "kumari", "devi", "the", "and", "&"}

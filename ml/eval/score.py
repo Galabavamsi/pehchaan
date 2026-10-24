@@ -5,6 +5,7 @@
 Manifest: CSV with at least `utt_id,path` (path relative to --root or absolute). Output CSV:
 utt_id,score   (score = spoof logit-difference; higher = more likely synthetic).
 Detectors: ssl_la | ssl_df | nii_mms300m | hf:<repo> | ckpt:<path-to-our-checkpoint>
+           | niickpt:<path-to-a-train/finetune.py --init nii checkpoint> (scored by NII's own protocol)
 """
 import argparse
 import os
@@ -32,6 +33,9 @@ def build(name, device=None):
         return D.SSLAASIST(name[5:], device, name=os.path.basename(name[5:]))
     if name.startswith("hf:"):
         return D.HFAudioClassifier(name[3:], device=device)
+    if name.startswith("niickpt:"):
+        from models.nii_antideepfake import NIIAntiDeepfake
+        return NIIAntiDeepfake(device=device, ckpt=name[len("niickpt:"):])
     if name == "nii_mms300m":
         from models.nii_antideepfake import NIIAntiDeepfake
         return NIIAntiDeepfake("nii-yamagishilab/mms-300m-anti-deepfake", device)

@@ -1,6 +1,11 @@
-import { useEffect, useLayoutEffect, useState } from "react";
-import { ArrowClockwise, CheckCircle, Phone, XCircle } from "@phosphor-icons/react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ArrowClockwise, Bank, ChartScatter, CheckCircle, Compass, Handshake, HeartStraight, Phone, ShieldWarning, Siren,
+  SlidersHorizontal, UserSound, Waveform, XCircle, type Icon } from "@phosphor-icons/react";
 import { API, api, subscribe, urlParam, type Lang, type Scenario } from "./api";
+import { Bench } from "./Bench";
+import { BenchmarkPage } from "./Benchmark";
+import { JuryPanel } from "./JuryPanel";
+import { RedTeamPage, Tour } from "./Tour";
 import { Console } from "./Console";
 import { PayerPhone } from "./PayerPhone";
 import { RelativePhone } from "./RelativePhone";
@@ -10,12 +15,12 @@ import { isNative, Pehchaan, rehearsal, type NativeStatus } from "./native";
 import { PEOPLE, savedPerson, savePerson, type PersonKey } from "./people";
 import { QrCards } from "./QrCards";
 
-const SCEN: { id: string; label: string }[] = [
-  { id: "T1", label: "Cloned son, +44" },
-  { id: "T2", label: "Fake bank call" },
-  { id: "T3", label: "Digital arrest" },
-  { id: "L1", label: "Paying a friend" },
-  { id: "L2", label: "Real son, new number" },
+const SCEN: { id: string; label: string; icon: Icon }[] = [
+  { id: "T1", label: "Cloned son, +44", icon: UserSound },
+  { id: "T2", label: "Fake bank call", icon: Bank },
+  { id: "T3", label: "Digital arrest", icon: Siren },
+  { id: "L1", label: "Paying a friend", icon: Handshake },
+  { id: "L2", label: "Real son, new number", icon: HeartStraight },
 ];
 
 function useRoute() {
@@ -50,6 +55,10 @@ function WebApp() {
   const route = useRoute();
   const lang = (urlParam("lang") as Lang) || undefined;
   if (route === "console") return <Console follow={urlParam("follow") === "1"} />;
+  if (route === "bench") return <Bench />;
+  if (route === "tour") return <Tour />;
+  if (route === "redteam") return <RedTeamPage />;
+  if (route === "benchmark") return <BenchmarkPage />;
   if (route === "payer") return <Standalone kind="payer" lang={lang} />;
   if (route === "relative") return <Standalone kind="relative" lang={lang} />;
   // Laptop helpers for the Android demo: the payer app in a phone frame, and payee QR cards to scan
@@ -79,35 +88,51 @@ function Standalone({ kind, lang }: { kind: "payer" | "relative"; lang?: Lang })
 function DemoControl() {
   const first = urlParam("scenario") || "T1";
   const { sc, n, load } = useScenario(first);
+  const [jury, setJury] = useState(() => urlParam("jury") === "1");
   const [scale, setScale] = useState(1);
+  const phoneTop = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const forced = Number(urlParam("scale"));
-    const f = () => setScale(forced || Math.min(1, Math.max(0.6, (innerHeight - 150) / 900)));
+    // fit the whole phone in the window: measure where it starts, since the header wraps on narrow screens
+    const f = () => {
+      const top = phoneTop.current ? phoneTop.current.getBoundingClientRect().top + scrollY : 230;
+      setScale(forced || Math.min(1, Math.max(0.45, (innerHeight - top - 26) / 866)));
+    };
     f();
     addEventListener("resize", f);
     return () => removeEventListener("resize", f);
-  }, []);
+  }, [sc]);
   const phoneW = 412 * scale, phoneH = 866 * scale;
   return (
     <div className="demo" data-testid="demo">
       <header className="demo-top">
-        <span className="wm"><Seal size={26} /><span className="w">Pehchaan</span><span className="whi">पहचान</span></span>
+        <a className="wm" href="#/tour"><Seal size={28} /><span className="w">Pehchaan</span><span className="whi">पहचान</span></a>
         <span className="tag">Verify the person, not the voice.</span>
         <span className="grow" />
         <div className="scen" role="group" aria-label="Scenario">
           {SCEN.map((s) => (
             <button key={s.id} aria-pressed={sc?.scenario === s.id} onClick={() => load(s.id)} data-testid={`scen-${s.id}`}>
-              <b>{s.id}</b><span>{s.label}</span>
+              <i className="sic"><s.icon size={18} weight="duotone" /></i><b>{s.id}</b><span>{s.label}</span>
             </button>
           ))}
         </div>
-        <button className="chipbtn" onClick={() => sc && load(sc.scenario)} aria-label="Restart scenario" style={{ minHeight: 40, padding: "0 12px" }}>
+        <button className="demo-cta" aria-pressed={sc?.scenario === "CUSTOM"} onClick={() => setJury(true)} data-testid="jury-open">
+          <SlidersHorizontal size={18} weight="bold" /> Your case
+        </button>
+        <button className="chipbtn" onClick={() => sc && load(sc.scenario)} aria-label="Restart scenario" style={{ minHeight: 42, padding: "0 14px" }}>
           <ArrowClockwise size={16} weight="bold" /> Restart
         </button>
+        <nav className="demo-nav" aria-label="More">
+          <a href="#/bench"><Waveform size={16} weight="duotone" /> Bench</a>
+          <a href="#/benchmark"><ChartScatter size={16} weight="duotone" /> Benchmark</a>
+          <a href="#/redteam"><ShieldWarning size={16} weight="duotone" /> Red team</a>
+          <a href="#/tour"><Compass size={16} weight="duotone" /> Tour</a>
+        </nav>
       </header>
+      {jury && <JuryPanel current={sc} onClose={() => setJury(false)} />}
       {sc && (
         <div className="demo-script">
-          <Phone size={16} weight="fill" />
+          <span className="ph"><Phone size={15} weight="fill" /></span>
           <span className="lab">{sc.pattern}</span>
           <span className="q">{sc.script}</span>
           <span style={{ marginLeft: "auto", color: "var(--slate)", fontSize: 13 }}>Fictional people and numbers · context adapters are mocks</span>
@@ -117,7 +142,7 @@ function DemoControl() {
         <div className="demo-stage">
           <div className="demo-col">
             <div className="cl">{sc.payer.name}'s phone <small>payer · {sc.payer.age_band}</small></div>
-            <div style={{ width: phoneW, height: phoneH }}>
+            <div ref={phoneTop} style={{ width: phoneW, height: phoneH }}>
               <div className="scaled" style={{ transform: `scale(${scale})` }}>
                 <PayerPhone key={`p${n}`} scenario={sc} initialLang={(urlParam("lang") as Lang) || "en"} />
               </div>

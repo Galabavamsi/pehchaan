@@ -10,6 +10,7 @@ import os
 import sys
 import time
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -29,7 +30,7 @@ from pehchaan.evidence import ist_iso, render_pack_pdf, verify_chain, verify_pac
 from . import voice as voice_svc  # noqa: E402
 from .db import Store  # noqa: E402
 from .risk import CaseError, CaseService  # noqa: E402
-from .scenarios import SCENARIOS, load_scenario, seed_background, seed_people  # noqa: E402
+from .scenarios import SCENARIOS, build_custom, load_scenario, seed_background, seed_people  # noqa: E402
 
 DATA_DIR = Path(os.environ.get("PEHCHAAN_DATA", SERVER_DIR / "data"))
 
@@ -64,7 +65,7 @@ def case_summary(c: dict) -> dict:
     return {k: c.get(k) for k in (
         "case_id", "created_at_ist", "updated_at_ist", "status", "tier", "p", "amount_inr", "amount_display",
         "payee_name", "payee_vpa", "payer_name", "caller_display", "call_channel", "claim", "scenario", "stage",
-        "relative_name", "hold")} | {"top_codes": [r["code"] for r in (c.get("top_reasons") or [])][:3]}
+        "relative_name", "hold", "review")} | {"top_codes": [r["code"] for r in (c.get("top_reasons") or [])][:3]}
 
 
 # --------------------------------------------------------------------------- models
@@ -72,7 +73,10 @@ class CallIn(BaseModel):
     state: Literal["active", "ended", "none"] = "active"
     number: str | None = None
     channel: Literal["pstn", "whatsapp", "voip"] = "pstn"
-    duration_sec: float = 0
+    started_at: datetime | None = Field(None, description="When the call started, ISO 8601 (IST if no offset). "
+                                                          "SPEC v0.3: 'this call' runs from here")
+    duration_sec: float | None = Field(None, description="Seconds since the call started (live), or its length once "
+                                                         "ended; used for the call's start when started_at is absent")
     ended_sec_ago: float | None = None
     in_contacts: bool | None = Field(None, description="On-device contact-hash match result, if the SDK sends it")
 
@@ -124,6 +128,22 @@ class ActionIn(BaseModel):
 class DecisionIn(BaseModel):
     decision: Literal["release_hold", "confirm_fraud", "false_positive"]
     note: str | None = None
+
+
+class CustomCaseIn(BaseModel):
+    """The jury's own case on the demo page (FINALE_PLAN B1)."""
+    payer_id: Literal["u_sunita", "u_ramesh", "u_kamala"] = "u_sunita"
+    caller: Literal["saved", "unknown", "international", "bank_1600"] = "unknown"
+    channel: Literal["pstn", "whatsapp"] = "pstn"
+    call_state: Literal["active", "ended", "none"] = "active"
+    duration_min: float = Field(6, ge=0, le=240)
+    ended_min: float = Field(5, ge=0, le=24 * 60)
+    amount_inr: float = Field(50000, gt=0, le=10_000_000)
+    payee: Literal["usual", "new"] = "new"
+    payee_name: str = Field("Arif Traders", max_length=60)
+    payee_flagged: bool = False
+    caller_fri: Literal["medium", "high", "very_high"] | None = None
+    bank_calling: bool = False
 
 
 # --------------------------------------------------------------------------- app
@@ -185,18 +205,30 @@ def create_app(db_path: str | None = None, key_path: str | None = None) -> FastA
             await publish(case)
             if body.claim and svc.auto_family_verify_due(res["case_id"]):
                 # SPEC v0.2 A19: "Family member" + an enrolled relative -> the push goes out without a tap
-                fv = await _send_fv(res["case_id"], (case.get("relative") or {}).get("id"), auto=True)
-                res = fv.pop("assessment")
-                res["auto_family_verify"] = fv
+                try:
+                    fv = await _send_fv(res["case_id"], (case.get("relative") or {}).get("id"), auto=True)
+                except CaseError as exc:
+                    if exc.status != 429:
+                        raise
+                    res["auto_family_verify"] = {"skipped": exc.msg}  # SPEC v0.3 rate limit: the payer calls instead
+                else:
+                    res = fv.pop("assessment")
+                    res["auto_family_verify"] = fv
         return res
+
+    @app.post("/v1/payments/{payment_ref}/sent")
+    def payment_sent(payment_ref: str):
+        """The UPI app confirmed a payment that opened no case (the `payment_ref` from assess). SPEC v0.3: only then
+        does it count toward the payee's history, the same-call total and the burst signal, and only once."""
+        return svc.payment_sent(payment_ref)
 
     # ------------------------------------------------------------- voice
     @app.post("/v1/voice/score")
     async def voice_score(file: UploadFile = File(...), case_id: str | None = Form(None),
                           demo_hint: str | None = Form(None)):
         data = await file.read()
-        if len(data) > 12 * 16000 * 2 + 4096 * 4:  # ~12 s of 16 kHz mono PCM16 (+ headroom)
-            data = data[: 12 * 16000 * 2 + 44]
+        if len(data) > voice_svc.MAX_UPLOAD_BYTES:  # never cut compressed audio mid-stream: refuse instead
+            raise HTTPException(413, "audio file larger than 25 MB")
         res = await voice_svc.score(data, file.filename or "clip.wav", demo_hint)
         res["audio_retained"] = False
         mode = default_config().voice.mode
@@ -213,6 +245,21 @@ def create_app(db_path: str | None = None, key_path: str | None = None) -> FastA
             case = svc.attach_voice(case_id, res)
             await publish(case)
             res["assessment"] = svc._response(case, time.perf_counter())
+        return res
+
+    @app.post("/v1/voice/panel")
+    async def voice_panel(file: UploadFile = File(...)):
+        """Detector bench: every detector on the same clip, side by side, plus the fused verdict. Evidence only:
+        nothing here changes a payment decision (G2), and the audio is processed in memory and dropped."""
+        data = await file.read()
+        if len(data) > voice_svc.MAX_UPLOAD_BYTES:
+            raise HTTPException(413, "audio file larger than 25 MB")
+        try:
+            res = await voice_svc.panel(data, file.filename or "clip")
+        except voice_svc.PanelUnavailable as exc:
+            raise HTTPException(503, f"detector panel unavailable: {exc}")
+        res["audio_retained"] = False
+        res["used_in_decision"] = False
         return res
 
     @app.get("/v1/demo/audio/{kind}.wav")
@@ -355,12 +402,24 @@ def create_app(db_path: str | None = None, key_path: str | None = None) -> FastA
     # ------------------------------------------------------------- demo
     @app.post("/v1/demo/scenario/{name}")
     async def demo_scenario(name: str, background: bool = True):
+        cur = getattr(app.state, "current", None) or {}
+        if name.upper() == "CUSTOM" and cur.get("custom"):  # Restart on the jury's own case
+            return await demo_custom(CustomCaseIn(**cur["custom"]), background)
         if name.upper() not in SCENARIOS:
             raise HTTPException(404, f"scenario must be one of {sorted(SCENARIOS)}")
         for t in timers.values():
             t.cancel()
         timers.clear()
-        sc = load_scenario(svc, name, with_background=background)
+        return await _announce(load_scenario(svc, name, with_background=background))
+
+    @app.post("/v1/demo/custom")
+    async def demo_custom(body: CustomCaseIn, background: bool = True):
+        for t in timers.values():
+            t.cancel()
+        timers.clear()
+        return await _announce(build_custom(svc, body.model_dump(), with_background=background))
+
+    async def _announce(sc: dict) -> dict:
         app.state.current = sc
         await hub.send("demo", {"type": "scenario", "data": sc})
         await hub.send("console", {"type": "reset", "scenario": sc["scenario"]})
@@ -378,6 +437,23 @@ def create_app(db_path: str | None = None, key_path: str | None = None) -> FastA
     @app.get("/v1/demo/scenarios")
     def demo_list():
         return {k: {"title": v["title"], "pattern": v["pattern"]} for k, v in SCENARIOS.items()}
+
+    @app.get("/v1/redteam")
+    def redteam():
+        """The red-team matrix from the last `python redteam.py` run (also written to RED_TEAM.md)."""
+        f = SERVER_DIR / "results" / "redteam.json"
+        if not f.exists():
+            raise HTTPException(404, "no red-team run yet: python app/server/redteam.py")
+        return json.loads(f.read_text())
+
+    @app.get("/v1/benchmark")
+    def benchmark():
+        """Clone-vs-detect benchmark (ml/eval/clone_vs_detect.py): how convincing each cloner is, how often each
+        detector catches it, on clean audio, a phone codec and real phone calls."""
+        f = REPO / "ml" / "results" / "clone_vs_detect.json"
+        if not f.exists():
+            raise HTTPException(404, "no benchmark run yet: cd ml && python eval/clone_vs_detect.py")
+        return json.loads(f.read_text())
 
     @app.post("/v1/demo/fv/{challenge_id}/timeout")
     async def demo_force_timeout(challenge_id: str):

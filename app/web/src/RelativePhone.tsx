@@ -133,7 +133,7 @@ function RelativeFlow({ relative, payerName, payerNameHi, lang, setLang }: {
       <div className="clock"><div className="d">{date}</div><div className="tm">{tm}</div></div>
       {push ? (
         <button className="notif" onClick={() => setOpen(true)} data-testid="rel-notif">
-          <span className="nic"><Seal size={24} dot="#fffdf8" /></span>
+          <span className="nic"><Seal size={24} ring="#ffffff" dot="#ffd2c4" /></span>
           <span style={{ flex: 1 }}>
             <span style={{ display: "flex" }}><span className="nt">{t("rel_notif", { payer: calls })}</span><span className="nm">{lang === "hi" ? "अभी" : "now"}</span></span>
             <div className="nb">{lang === "hi" ? push.message?.hi : push.message?.en}</div>
@@ -142,7 +142,7 @@ function RelativeFlow({ relative, payerName, payerNameHi, lang, setLang }: {
         </button>
       ) : (
         <div className="notif" style={{ background: "rgba(245,240,230,0.16)", color: "#fff" }}>
-          <span className="nic" style={{ background: "rgba(255,255,255,0.14)" }}><Seal size={24} dot="#fffdf8" /></span>
+          <span className="nic" style={{ background: "rgba(255,255,255,0.14)" }}><Seal size={24} ring="#ffffff" dot="#ffd2c4" /></span>
           <span><div className="nt">{t("rel_circle", { payer: calls })}</div><div className="nb" style={{ opacity: 0.85 }}>{t("rel_idle_s", { payer: calls })}</div></span>
         </div>
       )}

@@ -7,12 +7,13 @@ import json
 import os
 import secrets
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from pehchaan import assess, default_config, evaluate_trigger, should_ask_claim
 from pehchaan.actions import actions_for, should_auto_family_verify
 from pehchaan.evidence import (
+    IST,
     Signer,
     append_event,
     build_evidence_pack,
@@ -50,6 +51,7 @@ CHECK_SIGNALS = {
 }
 ALLOWED_CUES = {"cue_secrecy", "cue_urgency", "cue_otp_pin", "cue_arrest_threat", "cue_remote_app",
                 "cue_refund_verification"}
+CALL_SLACK = timedelta(minutes=2)   # SPEC v0.3: "this call" starts 2 minutes before the call's reported start
 
 
 PRONOUNS = {"he": {"their": "his", "they": "he", "them": "him"},
@@ -98,19 +100,94 @@ class CaseService:
         return f"PCH-{self.now():%y%m%d}-{n:04d}"
 
     # ------------------------------------------------------------- context
+    def _call_since(self, call: dict) -> str:
+        """Where "this call" begins (SPEC v0.3): the call's start minus 2 minutes of slack. The start is `started_at`,
+        or else now - duration_sec - ended_sec_ago; the rolling large-amount window only if the app sends neither."""
+        now = self.now()
+        start = call.get("started_at")
+        if isinstance(start, str):
+            start = datetime.fromisoformat(start.replace("Z", "+00:00"))
+        if start is not None and start.tzinfo is None:
+            start = start.replace(tzinfo=IST)
+        if start is not None and start > now:
+            start = None   # the phone's clock is ahead, or a demo clock is set: use the duration instead
+        if start is None and call.get("duration_sec") is not None:
+            start = now - timedelta(seconds=max(0.0, float(call["duration_sec"])) +
+                                    max(0.0, float(call.get("ended_sec_ago") or 0)))
+        if start is None:
+            return ist_iso(now - timedelta(minutes=CFG.trigger.call_window_large_min))
+        return ist_iso(start - CALL_SLACK)
+
+    def _sent_this_call(self, payer_id: str, number: str | None, since: str,
+                        payee_vpa: str | None = None) -> tuple[int, float]:
+        """(count, total) this payer already sent during this call with this number (from `since`, see
+        _call_since), optionally to one payee: SPEC v0.3 split payments."""
+        if not number:
+            return 0, 0.0
+        sql = "SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS s FROM sent_payments WHERE payer_id=? AND caller=? AND ts>=?"
+        args: tuple = (payer_id, number, since)
+        if payee_vpa:
+            sql, args = sql + " AND payee_vpa=?", args + (payee_vpa.lower(),)
+        r = self.s.one(sql, args)
+        return int(r["n"]), float(r["s"])
+
+    def _payee_before_call(self, payer_id: str, payee_vpa: str, number: str | None, since: str) -> dict | None:
+        """Payee history as it stood before this call. SPEC v0.3: paying someone during the call doesn't make
+        them familiar, so a payee first paid during this call stays new and isn't trusted (G5)."""
+        hist = self.history.payee(payer_id, payee_vpa)
+        n, total = self._sent_this_call(payer_id, number, since, payee_vpa)
+        if hist is None or not n:
+            return hist
+        before = hist["count"] - n
+        if before <= 0:
+            return None
+        return {"count": before, "usual_amount": (hist["usual_amount"] * hist["count"] - total) / before}
+
+    def _recent_new_payees(self, payer_id: str, exclude_vpa: str) -> int:
+        """Other payees this payer paid for the first time in the burst window (SPEC section 3, burst_new_payees)."""
+        since = ist_iso(self.now() - timedelta(minutes=CFG.trigger.burst_window_min))
+        rows = self.s.all("SELECT payee_vpa, COUNT(*) AS n FROM sent_payments WHERE payer_id=? AND ts>=? AND payee_vpa!=? "
+                          "GROUP BY payee_vpa", (payer_id, since, exclude_vpa.lower()))
+        return sum(1 for r in rows if (self.history.payee(payer_id, r["payee_vpa"]) or {"count": 0})["count"] <= r["n"])
+
+    def _record_sent(self, payer_id: str, amount: float, payee_vpa: str, caller: str | None) -> None:
+        """A payment went through: only now does it count (payee history, same-call total, burst). SPEC v0.3."""
+        self.s.x("INSERT INTO sent_payments(payer_id, ts, amount, payee_vpa, caller) VALUES(?,?,?,?,?)",
+                 (payer_id, self.ts(), amount, payee_vpa.lower(), caller or ""))
+        self.history.record_sent(payer_id, payee_vpa, amount)
+
+    def _payment_ref(self, payer_id: str, payment: dict, caller: str | None) -> str:
+        """A payment that opens no case: kept aside until the app reports it sent (POST /v1/payments/{ref}/sent)."""
+        ref = "pay_" + secrets.token_hex(8)
+        self.s.x("INSERT INTO payment_refs(ref, payer_id, created_at, amount, payee_vpa, caller) VALUES(?,?,?,?,?,?)",
+                 (ref, payer_id, self.ts(), float(payment["amount_inr"]), payment["payee_vpa"].lower(), caller or ""))
+        return ref
+
+    def payment_sent(self, ref: str) -> dict:
+        """The UPI app confirmed a payment that opened no case. It counts once, however often this is repeated."""
+        row = self.s.one("SELECT * FROM payment_refs WHERE ref=?", (ref,))
+        if not row:
+            raise CaseError(404, f"unknown payment_ref {ref}")
+        if not self.s.x("UPDATE payment_refs SET sent_at=? WHERE ref=? AND sent_at IS NULL", (self.ts(), ref)).rowcount:
+            return {"recorded": False, "already": True}
+        self._record_sent(row["payer_id"], row["amount"], row["payee_vpa"], row["caller"])
+        return {"recorded": True}
+
     def _context(self, payer: dict, payment: dict, call: dict | None) -> dict:
         call = call or {}
         uid = payer["id"]
         number = normalise_number(call.get("number"))
         state = call.get("state", "active" if number else "none")
         channel = call.get("channel", "pstn")
-        hist = self.history.payee(uid, payment["payee_vpa"])
+        since = self._call_since(call)
+        hist = self._payee_before_call(uid, payment["payee_vpa"], number, since)
         amount = float(payment["amount_inr"])
         p95, p99 = payer.get("amount_p95"), payer.get("amount_p99")
         trig = evaluate_trigger(TriggerInput(
             call_active=state == "active",
             call_ended_sec_ago=call.get("ended_sec_ago") if state == "ended" else None,
             payee_new=hist is None, amount_inr=amount, amount_p95_inr=p95,
+            sent_this_call_inr=self._sent_this_call(uid, number, since)[1],
         ), CFG)
         sig: list[str] = []
         in_contacts = call.get("in_contacts")
@@ -136,7 +213,8 @@ class CaseService:
         flag = self.i4c.lookup(payment["payee_vpa"])
         if flag:
             sig.append(f"payee_flagged_{flag}")
-        recent_new = payer.get("recent_new_payees_30m", 0) + (1 if hist is None else 0)
+        recent_new = (payer.get("recent_new_payees_30m", 0) + self._recent_new_payees(uid, payment["payee_vpa"])
+                      + (1 if hist is None else 0))
         if recent_new >= CFG.trigger.burst_min_new_payees:
             sig.append("burst_new_payees")
         cc = country_of(number) if number else None
@@ -154,7 +232,10 @@ class CaseService:
         trusted = None
         if hist is not None:
             trusted = {"prior_payments": hist["count"], "usual_amount_inr": hist["usual_amount"], "amount_inr": amount}
+        # SPEC v0.3: is the call from the saved number of someone in the payer's circle?
+        caller_rel = next((r for r in payer.get("circle", []) if number and normalise_number(r.get("saved_number")) == number), None)
         return {"signals": sig, "params": params, "trigger": trig.model_dump(), "trusted": trusted,
+                "caller_relative_id": caller_rel["id"] if caller_rel else None,
                 "number": number, "state": state, "channel": channel, "in_contacts": bool(in_contacts)}
 
     # --------------------------------------------------------------- scoring
@@ -198,7 +279,7 @@ class CaseService:
                    trusted=TrustedPayee(**case["trusted"]) if case.get("trusted") else None, params=params, cfg=CFG)
         has_check = any((case["checks"].get(k) or {}).get("result") for k in CHECK_SIGNALS)
         stage = "verified" if has_check else ("claim" if case.get("claim") else "context")
-        ask = stage == "context" and should_ask_claim(a, CFG)
+        ask = stage == "context" and should_ask_claim(a, CFG, caller_in_circle=bool(case.get("caller_relative_id")))
         prev_tier = case.get("tier")
         if stage == "context":
             case["context_tier"] = a.tier   # SPEC v0.2 A20: the K+P tier before the claim
@@ -298,9 +379,11 @@ class CaseService:
         ctx = self._context(payer, payment, call)
         if not ctx["trigger"]["fired"]:
             self.s.next_counter("not_triggered")
+            # SPEC v0.3: nothing counts until the app reports it sent (the payer may still abandon or retry)
             return {"case_id": None, "triggered": False, "trigger": ctx["trigger"], "tier": "green", "p": None,
                     "reasons": [], "top_reasons": [], "actions": [x.model_dump() for x in actions_for("green", None)],
                     "guardrails": [], "ask_claim": False, "status": "not_assessed",
+                    "payment_ref": self._payment_ref(payer["id"], payment, ctx["number"]),
                     "copy": {"title": copy_text("tier_green_title"), "body": copy_text("tier_green_body")},
                     "latency_ms": round((time.perf_counter() - t0) * 1000, 2)}
         amount = float(payment["amount_inr"])
@@ -316,18 +399,19 @@ class CaseService:
             "call_duration_sec": call.get("duration_sec"),
             "claim": None, "relative": None, "relative_name": None, "checks": {}, "cues": [],
             "context_signals": ctx["signals"], "params": ctx["params"], "trusted": ctx["trusted"],
+            "caller_relative_id": ctx["caller_relative_id"],
             "trigger": ctx["trigger"], "status": "open", "history": [],
         }
         # score before persisting: silent Green keeps only an anonymous counter (SPEC 5)
         probe = assess(ctx["signals"], trusted=TrustedPayee(**ctx["trusted"]) if ctx["trusted"] else None,
                        params=ctx["params"], cfg=CFG)
-        if probe.tier == "green" and not should_ask_claim(probe, CFG):
+        if probe.tier == "green" and not should_ask_claim(probe, CFG, caller_in_circle=bool(ctx["caller_relative_id"])):
             self.s.next_counter("green_silent")
             return {"case_id": None, "triggered": True, "trigger": ctx["trigger"], "stage": "context", "tier": "green",
                     "p": probe.p, "log_odds": probe.log_odds, "reasons": [r.model_dump() for r in probe.reasons],
                     "top_reasons": [], "guardrails": [g.model_dump() for g in probe.guardrails_applied],
                     "actions": [x.model_dump() for x in actions_for("green", None)], "ask_claim": False,
-                    "status": "cleared_silently",
+                    "status": "cleared_silently", "payment_ref": self._payment_ref(payer["id"], payment, ctx["number"]),
                     "copy": {"title": copy_text("tier_green_title"), "body": copy_text("tier_green_body")},
                     "latency_ms": round((time.perf_counter() - t0) * 1000, 2)}
         case["case_id"] = self._new_case_id()
@@ -396,6 +480,12 @@ class CaseService:
             "p_synthetic": v.get("p_synthetic"), "band": v.get("band"), "model_version": v.get("model_version"),
             "voice_mode": CFG.voice.mode,
             "quality_ok": (v.get("quality") or {}).get("ok"), "audio_retained": False})
+        if v.get("band") == "likely_synthetic" or (v.get("watermark") or {}).get("detected"):
+            # SPEC v0.3: a voice hit goes to the analyst's review queue; the payer's decision is untouched (G2)
+            case["review"] = {"reason": "voice_watermark" if (v.get("watermark") or {}).get("detected") else "voice_likely_synthetic",
+                              "p_synthetic": v.get("p_synthetic"), "model_version": v.get("model_version"),
+                              "voice_mode": CFG.voice.mode, "at": self.ts()}
+            self._event(case, "review_flagged", "voice_service", {"reason": case["review"]["reason"]})
 
     def attach_voice(self, cid: str, v: dict) -> dict:
         case = self.get(cid)
@@ -412,6 +502,15 @@ class CaseService:
             raise CaseError(409, f"{rel['name']} has not joined the Pehchaan circle on a phone")
         if (case["checks"].get("family_verify") or {}).get("status") == "pending":
             raise CaseError(409, "a Family Verify request is already pending for this case")
+        # SPEC v0.3 section 6: rate limit, so nobody can spam a relative's phone into tapping "yes"
+        since = ist_iso(self.now() - timedelta(hours=1))
+        n_payer = self.s.one("SELECT COUNT(*) AS n FROM challenges ch JOIN cases c ON c.id = ch.case_id "
+                             "WHERE c.payer_id=? AND ch.created_at>=?", (case["payer_id"], since))["n"]
+        n_rel = self.s.one("SELECT COUNT(*) AS n FROM challenges WHERE relative_id=? AND created_at>=?",
+                           (rel["id"], since))["n"]
+        if n_payer >= CFG.actions.family_verify_max_per_payer_hour or n_rel >= CFG.actions.family_verify_max_per_relative_hour:
+            raise CaseError(429, f"Too many Family Verify requests in the last hour. "
+                                 f"Call {rel['name']} on their saved number instead.")
         ch_id = "fv_" + secrets.token_hex(6)
         nonce = secrets.token_hex(16)
         created = self.now()
@@ -509,6 +608,12 @@ class CaseService:
         return [json.loads(r["message"]) for r in rows]
 
     def register_device(self, device_id: str, user_id: str, public_key_b64: str) -> dict:
+        cur = self.s.one("SELECT public_key_b64 FROM devices WHERE device_id=?", (device_id,))
+        if cur and cur["public_key_b64"] != public_key_b64 and self.s.one(
+                "SELECT 1 FROM challenges WHERE device_id=? AND status='pending' AND expires_at>=?", (device_id, self.ts())):
+            # SPEC v0.3 device binding: no swapping in another phone while a question is waiting on this one
+            raise CaseError(409, "A Family Verify question is waiting on this phone, so it can't be moved to a new key "
+                                 "until that is answered or expires.")
         self.s.x("INSERT OR REPLACE INTO devices(device_id, user_id, public_key_b64, bound_at) VALUES(?,?,?,?)",
                  (device_id, user_id, public_key_b64, self.ts()))
         return {"device_id": device_id, "user_id": user_id, "bound_at": self.ts(),
@@ -518,16 +623,20 @@ class CaseService:
     def user_action(self, cid: str, action: str) -> dict:
         case = self.get(cid)
         st = case.get("status")
+        if action in ("continue", "pay") and st == "sent":
+            return case   # a repeated tap: the payment was already made and counted once (SPEC v0.3)
         if action == "continue":
             if case["tier"] == "red" or st == "held":
                 raise CaseError(409, "payment is on a cooling-off hold; use release paths")
             case["status"] = "sent"
             case["utr"] = f"DEMO{secrets.randbelow(10**10):010d}"
+            self._record_sent(case["payer_id"], case["amount_inr"], case["payee_vpa"], case.get("caller_number"))
         elif action == "pay":
             if case["tier"] != "green" or st == "held":
                 raise CaseError(409, "payment needs a check first")
             case["status"] = "sent"
             case["utr"] = f"DEMO{secrets.randbelow(10**10):010d}"
+            self._record_sent(case["payer_id"], case["amount_inr"], case["payee_vpa"], case.get("caller_number"))
         elif action == "cancel":
             case["status"] = "cancelled"
         elif action == "report":
@@ -577,8 +686,12 @@ class CaseService:
         if decision == "confirm_fraud":
             self.s.x("INSERT INTO feedback(ts, case_id, label, analyst, note) VALUES(?,?,?,?,?)",
                      (self.ts(), cid, "scam", analyst, note))
+        if case.get("review"):
+            # SPEC v0.3: any decision resolves the voice review; its evidence fields stay for the record
+            case["review"]["resolved"] = {"decision": decision, "by": analyst, "at": self.ts()}
         case["analyst"] = {"decision": decision, "by": analyst, "role": role, "at": self.ts(), "note": note}
-        self._event(case, "analyst_decision", f"analyst:{analyst}", {"decision": decision, "role": role, "note": note})
+        self._event(case, "analyst_decision", f"analyst:{analyst}", {"decision": decision, "role": role, "note": note,
+                                                                      "review_resolved": bool(case.get("review"))})
         case["updated_at_ist"] = self.ts()
         self.s.put_case(case)
         return case

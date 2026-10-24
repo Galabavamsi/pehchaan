@@ -32,8 +32,19 @@ export interface VoiceResult {
   mock_notice?: string; assessment?: Assessment;
   voice_mode?: "shadow" | "calibrated"; used_in_decision?: boolean; user_message?: Bi | null;
 }
+export interface PanelModel {
+  id: string; name: string; trained_on: string; licence?: string | null; raw: number; threshold: number; z: number;
+  verdict: "synthetic" | "genuine"; sim_eer: number; in_fusion: boolean; latency_ms: number;
+}
+export interface PanelResult {
+  models: PanelModel[];
+  fused: { members: string[]; z: number; threshold: number; sim_eer: number; verdict: "synthetic" | "genuine" } | null;
+  skipped: Record<string, string>; quality: { speech_sec: number; snr_db: number; ok: boolean };
+  audio_seconds: number; seconds_scored: number; n_windows: number; latency_ms: number;
+  audio_retained: boolean; used_in_decision: boolean;
+}
 export interface Assessment {
-  case_id: string | null; triggered: boolean; stage?: string; tier: Tier; raw_tier?: Tier; p: number | null;
+  case_id: string | null; triggered: boolean; payment_ref?: string; stage?: string; tier: Tier; raw_tier?: Tier; p: number | null;
   log_odds?: number; prior?: number; prior_log_odds?: number;
   thresholds?: { green_below: number; red_at_or_above: number; green_below_log_odds: number; red_at_or_above_log_odds: number };
   reasons: Reason[]; top_reasons: Reason[]; actions: Action[]; guardrails: Guardrail[];
@@ -42,7 +53,7 @@ export interface Assessment {
   copy: { title: Bi; body: Bi }; claim?: string | null; relative?: Relative | null;
   checks?: Record<string, any>; amount_display?: string; payee_name?: string; payee_vpa?: string;
   caller_display?: string; latency_ms?: number; utr?: string; release_requested?: boolean;
-  context_tier?: Tier; auto_family_verify?: FvSent; voice_mode?: "shadow" | "calibrated";
+  context_tier?: Tier; auto_family_verify?: FvSent | { skipped: string }; voice_mode?: "shadow" | "calibrated";
 }
 export interface Payer {
   id: string; name: string; name_hi?: string; gender?: string; age_band?: string; city?: string; phone: string;
@@ -50,10 +61,18 @@ export interface Payer {
 }
 export interface Scenario {
   scenario: string; title: string; pattern: string; script: string; payer: Payer; relative: Relative | null;
-  call: { state: string; number: string; channel: string; duration_sec: number };
+  call: { state: string; number: string | null; channel: string; duration_sec: number; ended_sec_ago?: number };
   payment: { payee_vpa: string; payee_name: string; amount_inr: number };
   expected: Record<string, any>; bank: { name: string; name_hi: string };
   banks?: { id: string; name: string; name_hi: string; label?: string; label_hi?: string; integrated: boolean; yours: boolean }[];
+  custom?: CustomCase;
+}
+/** The jury's own case (POST /v1/demo/custom). */
+export interface CustomCase {
+  payer_id: "u_sunita" | "u_ramesh" | "u_kamala"; caller: "saved" | "unknown" | "international" | "bank_1600";
+  channel: "pstn" | "whatsapp"; call_state: "active" | "ended" | "none"; duration_min: number; ended_min: number;
+  amount_inr: number; payee: "usual" | "new"; payee_name: string; payee_flagged: boolean;
+  caller_fri: "medium" | "high" | "very_high" | null; bank_calling: boolean;
 }
 
 const qs = new URLSearchParams(location.search || location.hash.split("?")[1] || "");
@@ -92,6 +111,9 @@ async function req<T>(path: string, init?: RequestInit & { json?: unknown }): Pr
 
 export const api = {
   scenario: (name: string) => req<Scenario>(`/v1/demo/scenario/${name}`, { method: "POST" }),
+  /** A payment that opened no case counts in the payee history only once it is really sent (Greptile P1). */
+  paymentSent: (ref: string) => req<{ recorded: boolean; already?: boolean }>(`/v1/payments/${ref}/sent`, { method: "POST" }),
+  custom: (c: CustomCase) => req<Scenario>("/v1/demo/custom", { method: "POST", json: c }),
   assess: (body: unknown) => req<Assessment>("/v1/risk/assess", { method: "POST", json: body }),
   verifyFamily: (case_id: string, relative_id?: string) =>
     req<FvSent & { assessment: Assessment }>("/v1/verify/family", { method: "POST", json: { case_id, relative_id } }),
@@ -117,6 +139,11 @@ export const api = {
     if (case_id) fd.append("case_id", case_id);
     if (demo_hint) fd.append("demo_hint", demo_hint);
     return req<VoiceResult>("/v1/voice/score", { method: "POST", body: fd });
+  },
+  panel: async (blob: Blob, filename: string) => {
+    const fd = new FormData();
+    fd.append("file", blob, filename);
+    return req<PanelResult>("/v1/voice/panel", { method: "POST", body: fd });
   },
   demoAudio: async (kind: string) => (await fetch(`${API}/v1/demo/audio/${kind}.wav`)).blob(),
   forceTimeout: (challenge_id: string) => req<any>(`/v1/demo/fv/${challenge_id}/timeout`, { method: "POST" }),

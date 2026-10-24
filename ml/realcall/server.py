@@ -16,7 +16,9 @@ from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconn
 from fastapi.responses import FileResponse, Response
 
 from common.audio import load, save
+from realcall.consent import Registry
 from realcall.settings import ATTACK, TAPES, UPLINK, calls, config, ensure_dirs, log_event
+from realcall import agent
 
 app = FastAPI(title="pehchaan-realcall")
 SR_UP = 16000
@@ -76,6 +78,11 @@ async def answer(call_id: str, request: Request):
     if c["kind"] == "attack":
         # demo theatre: never recorded, whatever record_session says
         return _xml(f'<Play>{escape(b)}/attack/{call_id}.wav</Play>\n<Wait length="1"/>\n<Hangup/>')
+    if c["kind"] == "agent":
+        # conversational live-demo attacker (SPEC §8 V4): a two-way media stream, never recorded (demo theatre)
+        ws = b.replace("https://", "wss://") + f"/ws/agent/{call_id}"
+        return _xml(f'<Stream bidirectional="true" audioTrack="inbound" contentType="audio/x-l16;rate={SR_UP}" keepCallAlive="true" '
+                    f'streamTimeout="{cfg["call_time_limit_s"]}" statusCallbackUrl="{b}/stream/{call_id}">{escape(ws)}</Stream>\n<Hangup/>')
     if c["kind"] == "uplink":
         ws = b.replace("https://", "wss://") + f"/ws/uplink/{call_id}"
         return _xml(f'<Stream bidirectional="true" audioTrack="inbound" contentType="audio/x-l16;rate={SR_UP}" keepCallAlive="true" '
@@ -250,6 +257,213 @@ async def uplink_ws(ws: WebSocket, call_id: str):
             save(out, x, SR_UP)
             log_event("uplink_done", call_id=call_id, uplink_wav=str(out), windows=windows, big_endian=bool(be),
                       uplink_s=round(len(x) / SR_UP, 2))
+
+
+# ---------------------------------------------------------------- conversational agent (SPEC §8 V4)
+
+def _make_agent(c: dict):
+    """(providers, vad, card) for one agent call. Tests monkeypatch this to inject FakeSTT/FakeLLM/FakeTTS."""
+    card = agent.ScriptCard(**(c.get("card") or {}))
+    providers = agent.build_providers(card, c.get("speaker"), Registry(),
+                                      stt=c.get("stt", "sarvam"), llm=c.get("llm", "openai"))
+    return providers, agent.make_vad(c.get("vad", "energy"), sr=SR_UP), card
+
+
+async def _stream_out(send, audio, be, stream_id, barged, stopped, sr=SR_UP, chunk_s=0.1) -> bool:
+    """Send one spoken line as paced playAudio frames, flushing with clearAudio the moment she barges in. Paced so
+    Vobiz never buffers more than a chunk ahead, which is what makes barge-in feel instant. Returns True if the whole
+    line played, False if it was cut short."""
+    step = int(chunk_s * sr)
+    for i in range(0, len(audio), step):
+        if stopped():
+            return False
+        if barged():
+            await send({"event": "clearAudio", "streamId": stream_id})
+            return False
+        chunk = audio[i:i + step]
+        await send({"event": "playAudio", "streamId": stream_id,
+                    "media": {"contentType": "audio/x-l16", "sampleRate": sr, "payload": _pcm(chunk, bool(be))}})
+        await asyncio.sleep(len(chunk) / sr)
+    return True
+
+
+@app.websocket("/ws/agent/{call_id}")
+async def agent_ws(ws: WebSocket, call_id: str):
+    await ws.accept()
+    ensure_dirs()
+    c = calls().get(call_id)
+    if not c or c.get("kind") != "agent":
+        await ws.close()
+        return
+    try:
+        providers, vad, card = _make_agent(c)
+        conv = agent.AgentConversation(card, providers)
+    except Exception as exc:                                  # bad card, missing consent/voice, missing key
+        log_event("agent_error", call_id=call_id, error=repr(exc)[:200])
+        await ws.close()
+        return
+
+    fillers = None                                            # "still here" sounds while a reply is synthesised
+    if c.get("fillers", False):   # opt-in (dial --fillers); the line echo can otherwise cut the reply
+        try:
+            kind = "gpu" if c.get("tts") == "gpu" else "sarvam"
+            bank = agent.FillerBank(c.get("speaker") or "", kind, card.lang).load()
+            fillers = bank if bank.audios else None
+        except Exception:
+            fillers = None
+
+    loop = asyncio.get_event_loop()
+    utt_q: asyncio.Queue = asyncio.Queue()
+    started, barge = asyncio.Event(), asyncio.Event()
+    st = {"stream_id": None, "be": None, "speaking": False, "stop": False, "turns": 0}
+
+    async def send(obj):
+        await ws.send_text(json.dumps(obj))
+
+    async def recv():
+        buf = bytearray()
+        try:
+            while not st["stop"]:
+                msg = json.loads(await ws.receive_text())
+                ev = msg.get("event")
+                if ev == "start":
+                    st["stream_id"] = msg["start"]["streamId"]
+                    started.set()
+                    log_event("stream_start", call_id=call_id, stream_id=st["stream_id"])
+                elif ev == "media" and msg.get("media", {}).get("track", "inbound") == "inbound":
+                    raw = base64.b64decode(msg["media"]["payload"])
+                    buf.extend(raw)
+                    if st["be"] is None and len(buf) >= 3200:
+                        st["be"] = _guess_big_endian(bytes(buf))
+                    n = len(raw) // 2 * 2
+                    frame = np.frombuffer(raw[:n], dtype=">i2" if st["be"] else "<i2").astype(np.float32) / 32768
+                    for kind, utt in vad.push(frame):
+                        if kind == "start" and st["speaking"]:
+                            barge.set()                       # she started talking over the son -> cut him off
+                        elif kind == "end":
+                            utt_q.put_nowait(utt)
+                elif ev == "stop":
+                    break
+        except (WebSocketDisconnect, RuntimeError, KeyError):
+            pass
+        finally:
+            st["stop"] = True
+            started.set()
+            utt_q.put_nowait(None)
+
+    def _drain(fut):                                          # retrieve an abandoned synth future's result/exception
+        fut.add_done_callback(lambda f: f.cancelled() or f.exception())
+
+    async def speak(audio, cut=True):
+        """Stream one line. cut=False plays it through even if barge is set, so the reply's first sentence is never
+        swallowed by the line echoing back (which otherwise trips barge and cuts chunk 0)."""
+        st["speaking"] = True
+        barge.clear()
+        ok = await _stream_out(send, audio, st["be"], st["stream_id"], (lambda: False) if not cut else barge.is_set,
+                               lambda: st["stop"])
+        st["speaking"] = False
+        return ok
+
+    async def speak_reply(plan):
+        """Speak a reply sentence by sentence, synthesising the next while the current one plays; barge-in or hangup
+        drops the rest. Returns (text actually spoken, time the first frame went out)."""
+        sents = agent.split_sentences(plan.text) or [plan.text]
+        spoken, t_first = [], None
+        audio = await loop.run_in_executor(None, conv.voice, sents[0], plan.emotion)
+        for i, s in enumerate(sents):
+            if st["stop"]:
+                break
+            nxt = (loop.run_in_executor(None, conv.voice, sents[i + 1], plan.emotion)
+                   if i + 1 < len(sents) else None)
+            if t_first is None:
+                t_first = time.perf_counter()
+            ok = await speak(audio, cut=i > 0)        # first sentence always plays; echo can't swallow the reply
+            if not ok:                                # genuine barge-in on a later sentence: drop the rest
+                if nxt is not None:
+                    _drain(nxt)
+                break
+            spoken.append(s)
+            if nxt is not None:
+                audio = await nxt
+        return " ".join(spoken), t_first
+
+    async def do_turn(utt):
+        """One of her turns: STT+LLM off-thread, a filler if that runs long, then the reply streamed by sentence."""
+        t0 = time.perf_counter()
+
+        def _blocking():
+            ta = time.perf_counter()
+            text = conv.transcribe(utt, agent.SR_UP)
+            tb = time.perf_counter()
+            plan = conv.plan(text)
+            return text, plan, agent._ms(ta, tb), agent._ms(tb, time.perf_counter())
+
+        fut = loop.run_in_executor(None, _blocking)
+        filler, t_first = False, None
+        done, _ = await asyncio.wait({fut}, timeout=agent.FILLER_AFTER_S)
+        if not done and fillers is not None and not st["stop"]:
+            fa = fillers.next()
+            if fa is not None:
+                filler, t_first = True, time.perf_counter()
+                await speak(fa)
+        text, plan, stt_ms, llm_ms = await fut
+        reply_ms = agent._ms(t0, time.perf_counter())
+        spoken, t_reply = await speak_reply(plan)
+        conv.record(text, spoken)
+        if t_first is None:
+            t_first = t_reply
+        return plan, dict(stt_ms=stt_ms, llm_ms=llm_ms, reply_ms=reply_ms, filler=filler,
+                          first_sound_ms=agent._ms(t0, t_first) if t_first else reply_ms,
+                          mother_chars=len(text), son_chars=len(spoken))
+
+    async def brain():
+        await started.wait()
+        if st["stop"]:
+            return
+        t0 = time.perf_counter()
+        op = await loop.run_in_executor(None, agent.take_opener, call_id)     # rendered before the ring, if present
+        if op is not None:
+            plan, audio = op
+            conv.use_opener(plan)
+            llm_ms = 0
+        else:
+            plan, audio, ot = await loop.run_in_executor(None, conv.open)
+            llm_ms = ot["llm_ms"]
+        t_first = time.perf_counter()
+        await speak(audio, cut=False)                                                    # opener is one pre-synthesised blob
+        log_event("agent_turn", call_id=call_id, step=0, emotion=plan.emotion, done=plan.done, prerendered=op is not None,
+                  stt_ms=0, llm_ms=llm_ms, reply_ms=agent._ms(t0, t_first), first_sound_ms=agent._ms(t0, t_first), filler=False,
+                  mother_chars=0, son_chars=len(plan.text))
+        print(f"[agent {call_id[:8]}] son ({plan.emotion}): {plan.text}", flush=True)
+        while not st["stop"] and st["turns"] < card.max_turns:
+            utt = await utt_q.get()
+            if utt is None:
+                break
+            if len(utt) / agent.SR_UP < 0.3:                                  # too short to be a real turn
+                continue
+            st["turns"] += 1
+            plan, t = await do_turn(utt)
+            log_event("agent_turn", call_id=call_id, step=st["turns"], emotion=plan.emotion, done=plan.done, **t)
+            print(f"[agent {call_id[:8]}] mother: {conv.last_mother!r} -> son ({plan.emotion}): {plan.text}", flush=True)
+            if plan.done:
+                break
+        st["stop"] = True
+        try:
+            await send({"event": "stop", "streamId": st["stream_id"]})
+        except Exception:
+            pass
+
+    recv_task = asyncio.create_task(recv())
+    try:
+        await brain()
+    finally:
+        st["stop"] = True
+        recv_task.cancel()
+        try:
+            await recv_task
+        except (asyncio.CancelledError, Exception):
+            pass
+        log_event("agent_done", call_id=call_id, turns=st["turns"])
 
 
 def main():

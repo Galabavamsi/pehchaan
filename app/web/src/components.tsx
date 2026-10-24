@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import {
   ArrowsCounterClockwise, Bank, BatteryFull, CellSignalFull, CellSignalHigh, Clock, CurrencyInr, DeviceMobile, Flag,
   Gavel, Globe, Hash, Hourglass, IdentificationCard, Key, LockKey, Password, PhoneCall, PhoneOutgoing, Stack, Timer,
@@ -8,11 +8,17 @@ import { serverNow, type Reason, type Tier } from "./api";
 import { FAMILY_COLOR, SHORT } from "./i18n";
 
 /** Pehchaan seal: an open ring (the circle of people who know you) around a dot (the person). */
-export function Seal({ size = 22, ring = "#e8742a", dot = "#1b1f24" }: { size?: number; ring?: string; dot?: string }) {
+export function Seal({ size = 22, ring, dot = "#ff7b5c" }: { size?: number; ring?: string; dot?: string }) {
+  const id = useId().replace(/:/g, "");
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <path d="M16 3.5a12.5 12.5 0 1 1-11.2 6.9" fill="none" stroke={ring} strokeWidth="4" strokeLinecap="round" />
-      <circle cx="16" cy="16" r="5" fill={dot} />
+      <defs>
+        <linearGradient id={`sg${id}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#3461e8" /><stop offset="1" stopColor="#6b5cf0" />
+        </linearGradient>
+      </defs>
+      <path d="M16 3.5a12.5 12.5 0 1 1-11.2 6.9" fill="none" stroke={ring ?? `url(#sg${id})`} strokeWidth="4.5" strokeLinecap="round" />
+      <circle cx="16" cy="16" r="5.5" fill={dot} />
     </svg>
   );
 }
@@ -20,7 +26,7 @@ export function Seal({ size = 22, ring = "#e8742a", dot = "#1b1f24" }: { size?: 
 export function Wordmark({ light = false }: { light?: boolean }) {
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-      <Seal size={20} dot={light ? "#fffdf8" : "#1b1f24"} />
+      <Seal size={20} dot={light ? "#ffffff" : "#ff7b5c"} />
       <span style={{ fontFamily: "var(--f-head)", fontWeight: 700, fontSize: 15 }}>Pehchaan</span>
       <span style={{ fontFamily: "'Noto Sans Devanagari'", fontSize: 13, opacity: 0.75 }}>पहचान</span>
     </span>
@@ -77,7 +83,7 @@ export function useCountdown(untilIso: string | undefined | null, totalSec: numb
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
 export function ReasonIcon({ code, size = 18 }: { code: string; size?: number }) {
-  const p = { size, weight: "bold" as const };
+  const p = { size, weight: "duotone" as const };
   if (code === "caller_unknown") return <PhoneCall {...p} />;
   if (code === "caller_international") return <Globe {...p} />;
   if (code === "caller_voip_unknown") return <WifiHigh {...p} />;
@@ -145,39 +151,39 @@ export function Waterfall({ reasons, priorLogOdds, logOdds, p, prior, width = 76
   const yOf = (i: number) => top + i * rowH;
   const fmtP = (q: number) => (q < 0.01 ? `${(q * 100).toFixed(1)}%` : q >= 0.995 ? ">99%" : `${Math.round(q * 100)}%`);
   const finalTier: Tier = p >= redAt ? "red" : p >= greenBelow ? "amber" : "green";
-  const tierCol = { red: "#c8372d", amber: "#e0a526", green: "#13796f" }[finalTier];
+  const tierCol = { red: "#d63a31", amber: "#f0a20f", green: "#0b7f63" }[finalTier];
   return (
     <svg width="100%" viewBox={`0 0 ${width} ${h}`} role="img" aria-label="Contribution waterfall" style={{ display: "block", fontFamily: "Inter" }}>
       {/* tier zones */}
-      <rect x={x(lo)} y={top - 8} width={x(g) - x(lo)} height={n * rowH + 8} fill="#d3e7e2" opacity="0.55" />
-      <rect x={x(g)} y={top - 8} width={x(rd) - x(g)} height={n * rowH + 8} fill="#f4e2b4" opacity="0.65" />
-      <rect x={x(rd)} y={top - 8} width={x(hi) - x(rd)} height={n * rowH + 8} fill="#f3d5cf" opacity="0.65" />
-      <text x={(x(lo) + x(g)) / 2} y={top - 14} textAnchor="middle" fontSize="12" fontWeight="600" fill="#0d5c54">Green</text>
-      <text x={(x(g) + x(rd)) / 2} y={top - 14} textAnchor="middle" fontSize="12" fontWeight="600" fill="#7a5a0c">Amber</text>
-      <text x={(x(rd) + x(hi)) / 2} y={top - 14} textAnchor="middle" fontSize="12" fontWeight="600" fill="#a72c23">Red (guardrails decide)</text>
+      <rect x={x(lo)} y={top - 8} width={x(g) - x(lo)} height={n * rowH + 8} fill="#d3f2e6" opacity="0.6" />
+      <rect x={x(g)} y={top - 8} width={x(rd) - x(g)} height={n * rowH + 8} fill="#fdedc8" opacity="0.7" />
+      <rect x={x(rd)} y={top - 8} width={x(hi) - x(rd)} height={n * rowH + 8} fill="#fde0dc" opacity="0.7" />
+      <text x={(x(lo) + x(g)) / 2} y={top - 14} textAnchor="middle" fontSize="12" fontWeight="700" fill="#075a46">Green</text>
+      <text x={(x(g) + x(rd)) / 2} y={top - 14} textAnchor="middle" fontSize="12" fontWeight="700" fill="#6f4d00">Amber</text>
+      <text x={(x(rd) + x(hi)) / 2} y={top - 14} textAnchor="middle" fontSize="12" fontWeight="700" fill="#b02c25">Red (guardrails decide)</text>
       {ticks.map((q) => (
         <g key={q}>
-          <line x1={x(lg(q))} x2={x(lg(q))} y1={top - 8} y2={top + n * rowH} stroke="#1b1f24" strokeOpacity="0.12" />
-          <text x={x(lg(q))} y={top + n * rowH + 16} textAnchor="middle" fontSize="11.5" fill="#6b7280" fontFamily="JetBrains Mono">{fmtP(q)}</text>
+          <line x1={x(lg(q))} x2={x(lg(q))} y1={top - 8} y2={top + n * rowH} stroke="#111d3c" strokeOpacity="0.12" />
+          <text x={x(lg(q))} y={top + n * rowH + 16} textAnchor="middle" fontSize="11.5" fill="#62718f" fontFamily="JetBrains Mono">{fmtP(q)}</text>
         </g>
       ))}
-      <text x={width - valW} y={top + n * rowH + 30} textAnchor="end" fontSize="11" fill="#6b7280">probability of scam (log-odds scale)</text>
+      <text x={width - valW} y={top + n * rowH + 30} textAnchor="end" fontSize="11" fill="#62718f">probability of scam (log-odds scale)</text>
       {/* prior row */}
-      <text x={labelW - 10} y={yOf(0) + rowH / 2 + 4} textAnchor="end" fontSize="13" fill="#1b1f24" fontWeight="600">Starting point (1 in {Math.round(1 / prior)})</text>
-      <circle cx={x(priorLogOdds)} cy={yOf(0) + rowH / 2} r="5" fill="#1b1f24" />
-      <text x={width - 4} y={yOf(0) + rowH / 2 + 4} textAnchor="end" fontSize="12" fontFamily="JetBrains Mono" fill="#6b7280">{priorLogOdds.toFixed(2)}</text>
+      <text x={labelW - 10} y={yOf(0) + rowH / 2 + 4} textAnchor="end" fontSize="13" fill="#111d3c" fontWeight="600">Starting point (1 in {Math.round(1 / prior)})</text>
+      <circle cx={x(priorLogOdds)} cy={yOf(0) + rowH / 2} r="5" fill="#111d3c" />
+      <text x={width - 4} y={yOf(0) + rowH / 2 + 4} textAnchor="end" fontSize="12" fontFamily="JetBrains Mono" fill="#62718f">{priorLogOdds.toFixed(2)}</text>
       {pts.map(({ r, a, b }, i) => {
         const y = yOf(i + 1);
         const x0 = x(Math.min(a, b)), x1 = x(Math.max(a, b));
         const up = r.contribution > 0;
         return (
           <g key={r.code}>
-            <line x1={x(a)} x2={x(a)} y1={y - 2} y2={y + 4} stroke="#1b1f24" strokeOpacity="0.35" />
+            <line x1={x(a)} x2={x(a)} y1={y - 2} y2={y + 4} stroke="#111d3c" strokeOpacity="0.35" />
             <rect x={labelW - 30} y={y + rowH / 2 - 8} width="16" height="16" rx="4" fill={FAMILY_COLOR[r.family]} />
             <text x={labelW - 22} y={y + rowH / 2 + 4} textAnchor="middle" fontSize="10.5" fontWeight="700" fill="#fff" fontFamily="JetBrains Mono">{r.family}</text>
-            <text x={labelW - 36} y={y + rowH / 2 + 4} textAnchor="end" fontSize="13" fill="#1b1f24">{SHORT[r.code]?.[0] ?? r.code}</text>
-            <rect x={x0} y={y + 5} width={Math.max(2, x1 - x0)} height={rowH - 10} rx="3" fill={up ? "#e8742a" : "#13796f"} />
-            <text x={width - 4} y={y + rowH / 2 + 4} textAnchor="end" fontSize="12.5" fontFamily="JetBrains Mono" fontWeight="600" fill={up ? "#b4531a" : "#13796f"}>
+            <text x={labelW - 36} y={y + rowH / 2 + 4} textAnchor="end" fontSize="13" fill="#111d3c">{SHORT[r.code]?.[0] ?? r.code}</text>
+            <rect x={x0} y={y + 4} width={Math.max(3, x1 - x0)} height={rowH - 8} rx="5" fill={up ? "#ff7b5c" : "#0b7f63"} />
+            <text x={width - 4} y={y + rowH / 2 + 4} textAnchor="end" fontSize="12.5" fontFamily="JetBrains Mono" fontWeight="700" fill={up ? "#c4452a" : "#0b7f63"}>
               {up ? "+" : "−"}{Math.abs(r.contribution).toFixed(2)}
             </text>
           </g>
@@ -185,8 +191,8 @@ export function Waterfall({ reasons, priorLogOdds, logOdds, p, prior, width = 76
       })}
       {/* result row */}
       <g>
-        <text x={labelW - 10} y={yOf(n - 1) + rowH / 2 + 4} textAnchor="end" fontSize="13" fontWeight="700" fill="#1b1f24">Result p = {p >= 0.995 ? p.toFixed(3) : p.toFixed(2)}</text>
-        <line x1={x(priorLogOdds)} x2={x(logOdds)} y1={yOf(n - 1) + rowH / 2} y2={yOf(n - 1) + rowH / 2} stroke="#1b1f24" strokeOpacity="0.25" strokeDasharray="3 3" />
+        <text x={labelW - 10} y={yOf(n - 1) + rowH / 2 + 4} textAnchor="end" fontSize="13" fontWeight="700" fill="#111d3c">Result p = {p >= 0.995 ? p.toFixed(3) : p.toFixed(2)}</text>
+        <line x1={x(priorLogOdds)} x2={x(logOdds)} y1={yOf(n - 1) + rowH / 2} y2={yOf(n - 1) + rowH / 2} stroke="#111d3c" strokeOpacity="0.25" strokeDasharray="3 3" />
         <circle cx={x(logOdds)} cy={yOf(n - 1) + rowH / 2} r="7.5" fill={tierCol} stroke="#fff" strokeWidth="2" />
         <text x={width - 4} y={yOf(n - 1) + rowH / 2 + 4} textAnchor="end" fontSize="12.5" fontFamily="JetBrains Mono" fontWeight="700">{logOdds.toFixed(2)}</text>
       </g>
