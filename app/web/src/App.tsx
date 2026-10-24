@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from "react";
-import { ArrowClockwise, CheckCircle, GearSix, Phone, Users, Wallet, XCircle } from "@phosphor-icons/react";
+import { ArrowClockwise, CheckCircle, Phone, Users, Wallet, XCircle } from "@phosphor-icons/react";
 import { API, api, subscribe, urlParam, type Lang, type Scenario } from "./api";
 import { Console } from "./Console";
 import { PayerPhone } from "./PayerPhone";
@@ -144,18 +144,20 @@ function NativeApp() {
   useEffect(() => {
     if (role === "payer") Pehchaan.startProtection({ role: "payer", api: API }).catch(() => {});
   }, [role]);
+  // Setup is reached from the "Setup" action on the app's status notification, so no button covers the screens
+  useEffect(() => {
+    const open = (r: string | null) => { if (r === "setup") setSetup(true); };
+    Pehchaan.getLaunchRoute().then((x) => open(x.route)).catch(() => {});
+    const h = Pehchaan.addListener("route", (x) => open(x.route));
+    return () => { h.then((x) => x.remove()); };
+  }, []);
   if (!role || setup) {
     return <NativeSetup role={role} onDone={(r) => {
       try { localStorage.setItem(ROLE_KEY, r); } catch { /* ignore */ }
       setRole(r); setSetup(false);
     }} />;
   }
-  return (
-    <>
-      <Standalone kind={role} />
-      <button className="native-gear" aria-label="Setup" onClick={() => setSetup(true)}><GearSix size={18} weight="bold" /></button>
-    </>
-  );
+  return <Standalone kind={role} />;
 }
 
 function NativeSetup({ role, onDone }: { role: Role | null; onDone: (r: Role) => void }) {
@@ -171,7 +173,7 @@ function NativeSetup({ role, onDone }: { role: Role | null; onDone: (r: Role) =>
 
   async function choose(r: Role) {
     setPick(r);
-    setSt(await Pehchaan.requestAll().catch(() => null) ?? await Pehchaan.status().catch(() => null));
+    setSt(await Pehchaan.requestForRole({ role: r }).catch(() => null) ?? await Pehchaan.status().catch(() => null));
   }
 
   if (!pick) {

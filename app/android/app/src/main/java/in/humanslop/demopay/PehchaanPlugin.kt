@@ -48,6 +48,8 @@ class PehchaanPlugin : Plugin() {
     override fun handleOnPause() {
         Pehchaan.appVisible = false
         Pehchaan.unwatchScreenRecording(activity)
+        // Only a Family Verify alert may show over the lock screen, and only while it is up
+        if (Build.VERSION.SDK_INT >= 27) { activity.setShowWhenLocked(false); activity.setTurnScreenOn(false) }
     }
 
     override fun handleOnNewIntent(intent: Intent) {
@@ -60,7 +62,9 @@ class PehchaanPlugin : Plugin() {
         val route = intent?.getStringExtra(Pehchaan.EXTRA_ROUTE) ?: return null
         intent.removeExtra(Pehchaan.EXTRA_ROUTE)
         launchRoute = route
-        if (Build.VERSION.SDK_INT >= 27) activity.runOnUiThread { activity.setShowWhenLocked(true); activity.setTurnScreenOn(true) }
+        if (route == "relative" && Build.VERSION.SDK_INT >= 27) {
+            activity.runOnUiThread { activity.setShowWhenLocked(true); activity.setTurnScreenOn(true) }
+        }
         return route
     }
 
@@ -76,8 +80,13 @@ class PehchaanPlugin : Plugin() {
     @PluginMethod
     fun status(call: PluginCall) = call.resolve(statusJs())
 
+    /** Ask only for what the role uses: the relative's phone never needs call log or contacts. */
     @PluginMethod
-    fun requestAll(call: PluginCall) = requestAllPermissions(call, "permissionsDone")
+    fun requestForRole(call: PluginCall) {
+        val aliases = if (call.getString("role") == "relative") arrayOf("notifications")
+        else arrayOf("phone", "contacts", "notifications")
+        requestPermissionForAliases(aliases, call, "permissionsDone")
+    }
 
     @PermissionCallback
     private fun permissionsDone(call: PluginCall) {

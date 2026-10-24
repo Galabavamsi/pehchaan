@@ -20,7 +20,7 @@ export interface NativeStatus {
 interface PehchaanPlugin {
   getCallContext(): Promise<CallInfo>;
   status(): Promise<NativeStatus>;
-  requestAll(): Promise<NativeStatus>;
+  requestForRole(o: { role: Role }): Promise<NativeStatus>;
   startProtection(o: { role: "payer" | "relative"; deviceId?: string; api: string }): Promise<void>;
   stopProtection(): Promise<void>;
   setSecure(o: { on: boolean }): Promise<void>;

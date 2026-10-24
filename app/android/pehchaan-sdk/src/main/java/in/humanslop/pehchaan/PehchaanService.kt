@@ -52,6 +52,7 @@ class PehchaanService : Service() {
         .setOngoing(true)
         .setPriority(NotificationCompat.PRIORITY_LOW)
         .setContentIntent(Pehchaan.openAppIntent(this, cfg?.role ?: "payer", 1))
+        .addAction(0, "Setup", Pehchaan.openAppIntent(this, "setup", 3))
         .build()
 
     override fun onDestroy() {

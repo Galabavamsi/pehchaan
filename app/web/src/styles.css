@@ -469,8 +469,6 @@ html.native .statusbar { display: none; }
 .native-setup .check { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line, #e3ddd2); font-size: 15px; }
 .native-setup .check .ok { color: var(--teal); } .native-setup .check .no { color: var(--red); }
 .native-setup .check button { margin-left: auto; }
-.native-gear { position: fixed; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 50; width: 34px; height: 34px;
-  border-radius: 50%; border: none; background: rgba(27,31,36,0.12); color: var(--ink); display: grid; place-items: center; opacity: 0.55; }
 .native-idle { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; padding: 24px; }
 .native-idle h1 { font-family: var(--f-head); font-size: 24px; margin: 0; }
 .native-idle p { margin: 0; color: var(--ink-2); line-height: 1.45; max-width: 300px; }
