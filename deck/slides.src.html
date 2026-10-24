@@ -1014,7 +1014,7 @@
         <tr><td class="k">All 7 cloners</td><td>–</td><td>226/357</td><td>354/357</td><td>217/357</td></tr>
         <tr><td class="k">Real voices flagged</td><td>0.936</td><td><b>40/124</b></td><td><b>41/124</b></td><td><b>85/124</b></td></tr>
       </table>
-      <p class="xs" style="margin-top:6px">* never trained on. Similarity = ClonEval's WavLM speaker similarity to the real speaker. On real calls A flags 13/256 real voices; NII catches Sarvam 11/12 but flags 146/256.</p>
+      <p class="xs" style="margin-top:6px">* never trained on. Similarity = ClonEval's WavLM speaker similarity to the real speaker. Every A and NII flag on real voices here is one of 44 dialer recordings of a cellular call; 80 direct mic recordings: 0 flagged. On real calls A flags 13/256 real voices; NII catches Sarvam 11/12 but flags 146/256.</p>
     </div>
     <div class="card" style="width:455px;padding:10px 13px">
       <div class="lbl">Retrain with paid-API voices · single seed</div>
@@ -1032,7 +1032,7 @@
         <ul class="tight" style="margin-top:6px">
           <li class="sm">Synthetic gains don't transfer to real calls: <b>A stays served</b>, A2 and A2-ivc are not promoted.</li>
           <li class="sm">A commercial cloner on a new person's voice beats every model we trained, even one trained on that cloner.</li>
-          <li class="sm">Clean recordings of real voices are flagged about a third of the time.</li>
+          <li class="sm">Real voices recorded from the phone network (a dialer's capture) are flagged almost always (A 40/44); direct mic recordings weren't (0/80).</li>
           <li class="sm">So the voice score never moves money: the decision rests on verifying the person.</li>
         </ul>
       </div>

@@ -234,9 +234,9 @@ export function Bench() {
             <div className="sec-t"><WarningCircle size={16} weight="fill" /> Where it still fails</div>
             <ul className="fine">
               <li><b>Brand-new commercial cloners</b>, especially instant voice cloning, can pass as genuine.</li>
-              <li><b>Clean recordings of real voices</b> (a laptop mic, a voice note) are often flagged: our model A flagged 40 of 124
-                on clean audio, and 40 of 79 for the speaker no model was trained on. It is tuned for phone calls, where it flagged
-                13 of 256 (clone-vs-detect benchmark, 24 Oct).</li>
+              <li><b>Real voices recorded from the phone network</b> (a dialer's recording of a cellular call) are almost always
+                flagged: model A flagged 40 of 44 such clips, but none of 80 direct microphone recordings. On the speakerphone
+                path Pehchaan uses, it flagged 13 of 256 (clone-vs-detect benchmark, 24 Oct).</li>
               <li><b>Short clips</b> (under 4 s of speech) and heavy noise: low confidence.</li>
               <li><b>Phone audio</b> through cheap speakerphones and codecs shifts scores; the real-call retrain (A) helps but doesn't remove it.</li>
               <li>Music, overlapping speakers or non-speech are out of scope.</li>

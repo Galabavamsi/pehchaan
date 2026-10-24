@@ -191,6 +191,14 @@ none is typed by hand. Each detector keeps its own threshold (its EER point on t
 | **All clones** (95 % CI) | – | 228/357 = 63.9 % (58–69 %) | 226/357 = 63.3 % (58–69 %) | 354/357 = 99.2 % (97–100 %) | 217/357 = 60.8 % (55–66 %) | 269/357 = 75.4 % (70–80 %) |
 | **Genuine flagged** (95 % CI) | 0.936 (ceiling) | 44/124 = 35.5 % (27–45 %) | 40/124 = 32.3 % (24–41 %) | 41/124 = 33.1 % (25–42 %) | 85/124 = 68.5 % (59–77 %) | 44/124 = 35.5 % (27–45 %) |
 
+*Clarification, 24 Oct evening:* the genuine row is two kinds of recording. 44 of S02's 79 genuine clips
+(`team_S02-S01_Ecellular_*`) are dialer recordings captured from the network side of a real cellular call; the
+other 80 (S01 45, S02 35) are direct microphone recordings. Every v1, A and NII flag on genuine clean audio is one of
+the 44 dialer clips (v1 44/44, A 40/44, NII 41/44); the 80 direct recordings were flagged 0/80 by each. Off the shelf
+(LA) flags both kinds (direct 41/80, dialer 44/44). So the clean-audio false flags describe call audio recorded on the
+network side, not microphone recordings. Counts from the per-clip cache
+`ml/realcall/work/bench_v2/clean__panel.csv` with each detector's panel threshold (`serve/panel_config.json`).
+
 Clean audio, held-out speaker S02 only:
 
 | Cloner | Similarity | v1 | A | NII | LA (off the shelf) | Fused A+NII+v1 |
