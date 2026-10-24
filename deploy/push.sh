@@ -16,7 +16,8 @@ echo "== build web for https://$API_HOST"
 
 echo "== ship code"
 git ls-files -co --exclude-standard -z | tar --null -T - -czf - | ssh "$HOST" "mkdir -p ~/pehchaan && tar -xzf - -C ~/pehchaan"
-tar -C app/web/dist -czf - . | ssh "$HOST" "rm -rf ~/pehchaan/deploy/web && mkdir -p ~/pehchaan/deploy/web && tar -xzf - -C ~/pehchaan/deploy/web"
+# empty web/ in place: Caddy bind-mounts this folder, so a fresh folder would leave a running Caddy serving nothing
+tar -C app/web/dist -czf - . | ssh "$HOST" "mkdir -p ~/pehchaan/deploy/web && find ~/pehchaan/deploy/web -mindepth 1 -delete && tar -xzf - -C ~/pehchaan/deploy/web"
 scp -q "$ENV_FILE" "$HOST:pehchaan/deploy/.env.deploy"
 
 echo "== start"
