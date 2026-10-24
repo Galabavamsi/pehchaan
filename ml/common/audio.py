@@ -33,6 +33,25 @@ def load_any(path, sr: int = SR) -> np.ndarray:
         return np.frombuffer(raw, dtype=np.float32).copy()
 
 
+def decode_bytes(data: bytes, sr: int = SR) -> np.ndarray:
+    """Decode an uploaded file of any common format (wav, flac, ogg, mp3, m4a/aac, opus, webm) to mono float32
+    at `sr`. soundfile first; ffmpeg otherwise, through a temp file because m4a/mp4 need a seekable input."""
+    import io
+    try:
+        x, s = sf.read(io.BytesIO(data), dtype="float32", always_2d=True)
+        return resample(x.mean(axis=1), s, sr)
+    except Exception:
+        import os
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as f:
+            f.write(data)
+            tmp = f.name
+        try:
+            return load_any(tmp, sr)
+        finally:
+            os.unlink(tmp)   # uploads are never kept on disk
+
+
 def save(path, x: np.ndarray, sr: int = SR):
     sf.write(str(path), np.clip(x, -1, 1).astype(np.float32), sr, subtype="PCM_16")
 

@@ -1,0 +1,100 @@
+{
+ "sample": "6000 clips of the simulated test set (same sample as realcall/compare_models.py)",
+ "rule": "threshold = EER point on this sample; fused = mean of (score - threshold) / std",
+ "models": {
+  "v1": {
+   "name": "Pehchaan v1 (Round 1)",
+   "trained_on": "consented Indic corpus, simulated phone channels",
+   "threshold": -2.5033,
+   "std": 9.2283,
+   "sim_eer": 0.0478,
+   "sim_eer_heldout_generators": 0.1806,
+   "n": 6000
+  },
+  "A": {
+   "name": "Pehchaan A (real-call retrain)",
+   "trained_on": "v1 corpus + learned speakerphone channel + real-call clips",
+   "threshold": -0.2787,
+   "std": 7.0772,
+   "sim_eer": 0.0612,
+   "sim_eer_heldout_generators": 0.148,
+   "n": 6000
+  },
+  "nii": {
+   "name": "NII AntiDeepfake MMS-300M (off the shelf)",
+   "trained_on": "NII's 56k h genuine + 18k h artefact speech; never saw our data",
+   "licence": "CC BY-NC-SA 4.0",
+   "threshold": -3.5508,
+   "std": 6.23,
+   "sim_eer": 0.153,
+   "sim_eer_heldout_generators": 0.1644,
+   "n": 6000
+  },
+  "la": {
+   "name": "XLS-R + AASIST LA (off the shelf)",
+   "trained_on": "ASVspoof 2019 LA (English); never saw our data",
+   "threshold": 8.3176,
+   "std": 4.8044,
+   "sim_eer": 0.3528,
+   "sim_eer_heldout_generators": 0.5478,
+   "n": 6000
+  }
+ },
+ "fused": {
+  "A+v1": {
+   "threshold": -0.0098,
+   "sim_eer": 0.052,
+   "n": 6000
+  },
+  "nii+v1": {
+   "threshold": 0.1391,
+   "sim_eer": 0.0457,
+   "n": 6000
+  },
+  "la+v1": {
+   "threshold": -0.0034,
+   "sim_eer": 0.1243,
+   "n": 6000
+  },
+  "A+nii": {
+   "threshold": 0.0903,
+   "sim_eer": 0.052,
+   "n": 6000
+  },
+  "A+la": {
+   "threshold": -0.0616,
+   "sim_eer": 0.141,
+   "n": 6000
+  },
+  "la+nii": {
+   "threshold": 0.119,
+   "sim_eer": 0.1825,
+   "n": 6000
+  },
+  "A+nii+v1": {
+   "threshold": 0.0548,
+   "sim_eer": 0.0407,
+   "n": 6000
+  },
+  "A+la+v1": {
+   "threshold": -0.0692,
+   "sim_eer": 0.0757,
+   "n": 6000
+  },
+  "la+nii+v1": {
+   "threshold": 0.1043,
+   "sim_eer": 0.0727,
+   "n": 6000
+  },
+  "A+la+nii": {
+   "threshold": 0.0688,
+   "sim_eer": 0.0847,
+   "n": 6000
+  },
+  "A+la+nii+v1": {
+   "threshold": 0.0494,
+   "sim_eer": 0.0544,
+   "n": 6000
+  }
+ }
+}

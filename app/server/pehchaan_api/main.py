@@ -195,8 +195,8 @@ def create_app(db_path: str | None = None, key_path: str | None = None) -> FastA
     async def voice_score(file: UploadFile = File(...), case_id: str | None = Form(None),
                           demo_hint: str | None = Form(None)):
         data = await file.read()
-        if len(data) > 12 * 16000 * 2 + 4096 * 4:  # ~12 s of 16 kHz mono PCM16 (+ headroom)
-            data = data[: 12 * 16000 * 2 + 44]
+        if len(data) > voice_svc.MAX_UPLOAD_BYTES:  # never cut compressed audio mid-stream: refuse instead
+            raise HTTPException(413, "audio file larger than 25 MB")
         res = await voice_svc.score(data, file.filename or "clip.wav", demo_hint)
         res["audio_retained"] = False
         mode = default_config().voice.mode
@@ -213,6 +213,21 @@ def create_app(db_path: str | None = None, key_path: str | None = None) -> FastA
             case = svc.attach_voice(case_id, res)
             await publish(case)
             res["assessment"] = svc._response(case, time.perf_counter())
+        return res
+
+    @app.post("/v1/voice/panel")
+    async def voice_panel(file: UploadFile = File(...)):
+        """Detector bench: every detector on the same clip, side by side, plus the fused verdict. Evidence only:
+        nothing here changes a payment decision (G2), and the audio is processed in memory and dropped."""
+        data = await file.read()
+        if len(data) > voice_svc.MAX_UPLOAD_BYTES:
+            raise HTTPException(413, "audio file larger than 25 MB")
+        try:
+            res = await voice_svc.panel(data, file.filename or "clip")
+        except voice_svc.PanelUnavailable as exc:
+            raise HTTPException(503, f"detector panel unavailable: {exc}")
+        res["audio_retained"] = False
+        res["used_in_decision"] = False
         return res
 
     @app.get("/v1/demo/audio/{kind}.wav")

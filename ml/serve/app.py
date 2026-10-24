@@ -3,32 +3,49 @@
   uvicorn serve.app:app --host 0.0.0.0 --port 8090        (run from the ml/ directory)
   env: PEHCHAAN_DEVICE=cpu|cuda (default: cuda if available), PEHCHAAN_MODEL_CONFIG=serve/model_config.json
 
-Request : multipart field `file` (wav; any rate is resampled to 16 kHz mono; only the first 12 s are used)
-          or a raw audio/wav body.
-Response: {p_synthetic, band, quality{speech_sec, snr_db, ok}, watermark{detected, scheme}, model_version, latency_ms}
+Request : multipart field `file` (any common format: wav, flac, ogg, mp3, m4a/aac, opus, webm; resampled to
+          16 kHz mono; up to PEHCHAAN_MAX_SECONDS, default 60 s, is scored) or a raw audio body.
+Response: {p_synthetic, band, quality{speech_sec, snr_db, ok}, watermark{detected, scheme}, model_version, latency_ms,
+          audio_seconds, seconds_scored, aggregate{raw_mean, raw_max, n_windows}, windows[{t, raw, p, speech}]}
 Rules   : G3 quality gate -> speech < 4 s or SNR < 10 dB gives band "inconclusive" (never "real").
+          The whole clip is scored in ~4 s windows (2 s hop); windows that are mostly silence are skipped; the
+          call-level score is the mean window logit (longer speech -> more reliable, see FINDINGS).
           Bands come from calibrated p_synthetic and the dev-chosen thresholds in model_config.json.
           A watermark hit is reported separately; it is positive-only evidence.
 """
-import io
 import json
 import os
 import sys
 import time
 
 import numpy as np
-import soundfile as sf
 import torch
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ML = os.path.dirname(HERE)
 sys.path.insert(0, ML)
-from common.audio import resample, windows  # noqa: E402
+from common.audio import decode_bytes, fix_length  # noqa: E402
 
 CFG_PATH = os.environ.get("PEHCHAAN_MODEL_CONFIG", os.path.join(HERE, "model_config.json"))
-MAX_S = 12.0
+MAX_S = float(os.environ.get("PEHCHAAN_MAX_SECONDS", "60"))
 SR = 16000
+WIN, HOP = 64600, 32000       # the model's native 4.04 s input, 2 s hop
+MIN_SPEECH_FRAC = 0.25        # skip windows that are mostly silence (unless every window is)
+
+
+def plan_windows(n_samples, speech_mask=None):
+    """Start offsets of the scoring windows over the whole clip, silent windows dropped."""
+    if n_samples <= WIN:
+        return [0]
+    starts = list(range(0, n_samples - WIN + 1, HOP))
+    if starts[-1] != n_samples - WIN:
+        starts.append(n_samples - WIN)
+    if speech_mask is not None:
+        frac = [float(speech_mask[s:s + WIN].mean()) for s in starts]
+        keep = [s for s, f in zip(starts, frac) if f >= MIN_SPEECH_FRAC]
+        starts = keep or [starts[int(np.argmax(frac))]]
+    return starts
 
 
 class Service:
@@ -76,12 +93,16 @@ class Service:
             self._vad = load_silero_vad()
         return self._vad
 
-    def quality(self, x):
+    def speech_mask(self, x):
         from silero_vad import get_speech_timestamps
         ts = get_speech_timestamps(torch.from_numpy(x), self.vad(), sampling_rate=SR, min_silence_duration_ms=200)
         mask = np.zeros(len(x), dtype=bool)
         for t in ts:
             mask[t["start"]:t["end"]] = True
+        return mask
+
+    def quality(self, x, mask=None):
+        mask = self.speech_mask(x) if mask is None else mask
         speech_sec = float(mask.sum() / SR)
         # SNR: speech-frame power vs non-speech power (or the 10th-percentile frame power if there is no pause)
         fr = 400
@@ -113,32 +134,49 @@ class Service:
                 "confidence": round(conf, 3)}
 
     # ---------------------------------------------------------------- detector
+    def calibrate(self, raw):
+        return float(1 / (1 + np.exp(-(self.a * raw + self.b))))
+
     @torch.no_grad()
-    def score(self, x):
+    def window_scores(self, x, starts, batch=8):
+        """Raw spoof-minus-bona-fide logit per window (higher = more likely synthetic)."""
         if self.device.type == "cpu":  # silero-vad sets torch threads to 1 when it loads; restore
             torch.set_num_threads(self.threads)
-        segs = windows(x, 64600, hop=32000, max_windows=6)
-        t = torch.from_numpy(np.stack(segs)).to(self.device)
-        if self.device.type == "cuda":
-            with torch.autocast(device_type="cuda", dtype=torch.float16):
+        segs = [fix_length(x[s:s + WIN], WIN) for s in starts]
+        out = []
+        for b in range(0, len(segs), batch):
+            t = torch.from_numpy(np.stack(segs[b:b + batch])).to(self.device)
+            if self.device.type == "cuda":
+                with torch.autocast(device_type="cuda", dtype=torch.float16):
+                    lg = self.model(t).float()
+            else:
                 lg = self.model(t).float()
-        else:
-            lg = self.model(t).float()
-        s = float((lg[:, 0] - lg[:, 1]).mean())
-        return s, float(1 / (1 + np.exp(-(self.a * s + self.b))))
+            out.extend((lg[:, 0] - lg[:, 1]).cpu().numpy().tolist())
+        return np.array(out, dtype=np.float32)
+
+    def score(self, x, mask=None):
+        starts = plan_windows(len(x), mask)
+        w = self.window_scores(x, starts)
+        s = float(w.mean())
+        return s, self.calibrate(s), starts, w
+
+    def decode(self, data):
+        """Any common audio format -> (16 kHz mono clip capped at MAX_S, original duration in s)."""
+        try:
+            x = decode_bytes(data, SR)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"could not decode audio: {str(e)[:200]}")
+        if len(x) < SR // 2:
+            raise HTTPException(status_code=400, detail="audio shorter than 0.5 s")
+        return x[: int(MAX_S * SR)], len(x) / SR
 
     def run(self, wav_bytes, debug=False):
         t0 = time.perf_counter()
-        try:
-            x, sr = sf.read(io.BytesIO(wav_bytes), dtype="float32", always_2d=True)
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"could not decode audio: {e}")
-        x = resample(x.mean(1), sr, SR)[: int(MAX_S * SR)]
-        if len(x) < SR // 2:
-            raise HTTPException(status_code=400, detail="audio shorter than 0.5 s")
-        speech_sec, snr = self.quality(x)
+        x, audio_seconds = self.decode(wav_bytes)
+        mask = self.speech_mask(x)
+        speech_sec, snr = self.quality(x, mask)
         ok = speech_sec >= 4.0 and snr >= 10.0
-        raw, p = self.score(x)
+        raw, p, starts, w = self.score(x, mask)
         if not ok:
             band = "inconclusive"
         elif p >= self.p_hi:
@@ -155,6 +193,11 @@ class Service:
             "watermark": {"detected": wm["detected"], "scheme": wm["scheme"]},
             "model_version": self.version,
             "latency_ms": round((time.perf_counter() - t0) * 1000, 1),
+            "audio_seconds": round(audio_seconds, 2),
+            "seconds_scored": round(len(x) / SR, 2),
+            "aggregate": {"raw_mean": round(raw, 4), "raw_max": round(float(w.max()), 4), "n_windows": len(starts)},
+            "windows": [{"t": round(s / SR, 2), "raw": round(float(v), 3), "p": round(self.calibrate(float(v)), 4),
+                         "speech": round(float(mask[s:s + WIN].mean()), 2)} for s, v in zip(starts, w)],
         }
         if debug:  # not part of the SPEC contract; only with ?debug=1
             out["debug"] = {"raw_score": round(raw, 4), "device": self.device.type, "int8": self.int8, "watermark": wm}
@@ -163,6 +206,9 @@ class Service:
 
 app = FastAPI(title="Pehchaan Voice Provenance Service", version="0.1")
 _svc = None
+_panel = None
+PANEL_IDS = [m.strip() for m in os.environ.get("PEHCHAAN_PANEL", "").split(",") if m.strip()]
+FUSE_IDS = [m.strip() for m in os.environ.get("PEHCHAAN_FUSE", "A,nii,v1").split(",") if m.strip()]
 
 
 def svc():
@@ -172,20 +218,55 @@ def svc():
     return _svc
 
 
+def panel():
+    global _panel
+    if not PANEL_IDS:
+        raise HTTPException(status_code=404, detail="the detector panel is off (set PEHCHAAN_PANEL, e.g. v1,A,nii,la)")
+    if _panel is None:
+        from serve.panel import Panel
+        _panel = Panel(svc(), PANEL_IDS, FUSE_IDS)
+    return _panel
+
+
 @app.on_event("startup")
 def _load():
     svc()
+    if PANEL_IDS:
+        panel()
 
 
 @app.get("/healthz")
 def healthz():
     s = svc()
-    return {"ok": True, "model_version": s.version, "device": s.device.type}
+    out = {"ok": True, "model_version": s.version, "device": s.device.type, "max_seconds": MAX_S}
+    if _panel is not None:
+        out["panel"] = {"models": list(_panel.models), "fused": _panel.fuse, "skipped": _panel.skipped}
+    return out
 
 
 @app.post("/v1/voice/score")
 async def voice_score(request: Request, file: UploadFile = File(None), debug: int = 0):
     data = await file.read() if file is not None else await request.body()
     if not data:
-        raise HTTPException(status_code=400, detail="send a wav file as multipart field 'file' or as the request body")
+        raise HTTPException(status_code=400, detail="send an audio file as multipart field 'file' or as the request body")
     return svc().run(data, debug=bool(debug))
+
+
+@app.post("/v1/voice/panel")
+async def voice_panel(request: Request, file: UploadFile = File(None)):
+    """Every panel detector on the same clip, side by side, plus the fused verdict (evidence only, never decides)."""
+    data = await file.read() if file is not None else await request.body()
+    if not data:
+        raise HTTPException(status_code=400, detail="send an audio file as multipart field 'file' or as the request body")
+    p, s = panel(), svc()
+    t0 = time.perf_counter()
+    x, audio_seconds = s.decode(data)
+    mask = s.speech_mask(x)
+    speech_sec, snr = s.quality(x, mask)
+    starts = plan_windows(len(x), mask)
+    out = p.run(x, mask, starts)
+    out.update({"quality": {"speech_sec": round(speech_sec, 2), "snr_db": round(snr, 1),
+                            "ok": bool(speech_sec >= 4.0 and snr >= 10.0)},
+                "audio_seconds": round(audio_seconds, 2), "seconds_scored": round(len(x) / SR, 2),
+                "n_windows": len(starts), "latency_ms": round((time.perf_counter() - t0) * 1000, 1)})
+    return out

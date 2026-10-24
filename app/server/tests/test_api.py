@@ -211,3 +211,13 @@ def test_evidence_pack_signed_and_prefilled(client, device_factory):
     assert pack["prefill"]["ncrp"]["fields"]["Suspect mobile number"] == "+447700900123"
     assert pack["payer"]["phone_masked"].endswith("210") and "98123" not in pack["payer"]["phone_masked"]
     assert pack["hash_chain"]["verified"] and pack["hash_chain"]["length"] >= 6
+
+
+def test_voice_panel_needs_the_real_service_and_long_uploads_are_not_cut(client, monkeypatch):
+    monkeypatch.delenv("VOICE_SERVICE_URL", raising=False)
+    wav = client.get("/v1/demo/audio/bonafide.wav").content
+    r = client.post("/v1/voice/panel", files={"file": ("k.wav", wav, "audio/wav")})
+    assert r.status_code == 503 and "unavailable" in r.json()["detail"]   # never a mock panel
+    long = wav * 4                                                          # > 12 s: used to be cut mid-stream
+    v = client.post("/v1/voice/score", files={"file": ("l.wav", long, "audio/wav")}).json()
+    assert v["audio_retained"] is False and "band" in v
