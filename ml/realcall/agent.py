@@ -92,7 +92,8 @@ class ScriptCard:
             f"UPI ID ({self.upi_id}). If she asks why the number is unknown, the cover story is: {self.caller_note}.\n"
             "Rules for every line you speak:\n"
             "- Answer what she JUST said. Sound like a real, rattled person, not a read-out script.\n"
-            "- Hinglish, ONE short spoken turn, at most two sentences. No stage directions, no emojis, no English "
+            "- Hinglish, ONE short spoken sentence, about 8-12 words (keep it brief so it can be spoken back fast). "
+            "No stage directions, no emojis, no English "
             "translation in brackets.\n"
             "- Choose the emotion that fits this turn: stressed, scared, pleading or neutral.\n"
             "- Set done=true once she clearly agrees to send, or firmly refuses, or says she will call back or verify.\n"
@@ -294,7 +295,7 @@ class OpenAILLM:
         r = httpx.post("https://api.openai.com/v1/chat/completions",
                        headers={"Authorization": f"Bearer {env('OPENAI_API_KEY')}"},
                        json={"model": self.model, "messages": msgs, "temperature": self.temperature,
-                             "max_tokens": 150, "response_format": {"type": "json_object"}}, timeout=20)
+                             "max_tokens": 80, "response_format": {"type": "json_object"}}, timeout=20)
         r.raise_for_status()
         d = json.loads(r.json()["choices"][0]["message"]["content"])
         emo = d.get("emotion", "neutral")
@@ -354,9 +355,9 @@ class SarvamCloneTTS:
     def synth(self, text: str, emotion: str, lang: str) -> np.ndarray:
         import base64
         import soundfile as sf
-        r = self._client().voice_cloning.convert(text=text[:500], language_code=LANG[lang], voice_id=self.ensure_voice(),
+        r = self._client().voice_cloning.convert(text=text[:300], language_code=LANG[lang], voice_id=self.ensure_voice(),
                                                  output_audio_codec="wav", speech_sample_rate=SR_UP,
-                                                 pace=self.PACE.get(emotion, 1.0), enable_qc=True)
+                                                 pace=self.PACE.get(emotion, 1.0), enable_qc=False)   # QC adds a pass
         b = getattr(r, "audio_b64", None) or getattr(r, "audio", None)
         x, sr = sf.read(io.BytesIO(base64.b64decode(b)), dtype="float32", always_2d=True)
         return resample(x.mean(1), sr, SR_UP)
