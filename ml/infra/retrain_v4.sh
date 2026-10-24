@@ -1,8 +1,11 @@
 #!/bin/bash
-# Paid-API retrain (2026-10-24; common/protocol.py note of that date): model A's recipe (ours_v3_rc: learned channel
-# + real-call rows) plus the new Sarvam v3 / v4 Flash, OpenAI, Deepgram and S01 Sarvam-clone clips, and FLEURS speech
-# for the languages that had no bona fide training audio. Then score the new model on real calls and the same fixed
-# simulated sample as model A, score both on the new engines' unseen voices, upload, and stop the box.
+# Paid-API retrain (2026-10-24; common/protocol.py notes of that date). Model A's recipe (ours_v3_rc: learned channel
+# + real-call rows) plus the new stock-voice clips (Sarvam v3 / v4 Flash, OpenAI, Deepgram) and FLEURS speech for the
+# languages that had no bona fide training audio. Two candidates, model A untouched:
+#   ours_a2      stock voices only: Sarvam IVC stays a never-trained cloner for it
+#   ours_a2_ivc  plus the S01 Sarvam clones (source api2_ivc): its Sarvam IVC result is "seen generator"
+# Scores A and both candidates on one fixed dev set (the promotion check), the new candidates on real calls and the
+# same simulated sample as A's results, and all three on the new engines' unseen voices; uploads; stops the box.
 #   nohup bash ~/pehchaan/ml/infra/retrain_v4.sh > ~/logs/retrain_v4.log 2>&1 &
 #
 # Same safety as retrain_v3.sh: a run counts as finished only with "best dev EER" in its log and a best.pt, which
@@ -14,7 +17,6 @@ W=~/work
 RC=$W/realcall
 OUT=$W/scores_v4
 BUCKET=s3://pehchaan-ml-301745146083-use1
-NAME=ours_v4_api
 export REALCALL_WORK=$RC
 cd $ML
 mkdir -p ~/logs $OUT
@@ -37,50 +39,77 @@ if [ -s $D/urls_v4.txt ]; then
 fi
 if $PY data_prep/add_api2.py > ~/logs/add_api2.log 2>&1; then tail -4 ~/logs/add_api2.log; else FAILED+=("add_api2"); tail -20 ~/logs/add_api2.log; fi
 
+# One fixed dev set for every model: old corpus dev rows (seeded sample) + real-call dev rows. Built from the
+# manifests that existed before today, so the comparison with model A is like-for-like.
+if ! $PY - <<'EOF'
+import os
+import pandas as pd
+from common.protocol import HELDOUT_GENERATORS, HELDOUT_SPEAKERS
+W = os.path.expanduser("~/work")
+ok = lambda d: d[(~d.generator.isin(HELDOUT_GENERATORS)) & (~d.speaker.astype(str).isin(HELDOUT_SPEAKERS))]
+ev = pd.read_csv(f"{W}/manifests/corpus_eval.csv")
+ev = ok(ev[(ev.split == "dev") & (ev.source != "asv19")]).sample(n=4000, random_state=0)
+ev[["utt_id", "path", "label", "generator", "channel"]].to_csv(f"{W}/scores_v4/dev_sim.csv", index=False)
+rc = pd.read_csv(f"{W}/realcall/realcall.csv")
+rc = ok(rc[(rc.split == "dev") & (rc.qc == "ok") & rc.path.notna() & rc.label.isin(["bonafide", "spoof"])])
+rc[[c for c in ("utt_id", "path", "label", "generator", "speaker", "device") if c in rc]].to_csv(f"{W}/scores_v4/dev_rc.csv", index=False)
+print("dev_sim", len(ev), ev.label.value_counts().to_dict(), "| dev_rc", len(rc), rc.label.value_counts().to_dict())
+EOF
+then FAILED+=("dev_manifests"); fi
+
 ARGS="--src_manifest $W/manifests/corpus_src_v4.csv --eval_manifest $W/manifests/corpus_eval_v4.csv --init la --epochs 6
       --steps_per_epoch 600 --bs 16 --dev_max 2500 --seed 0 --aug_set v3 --realcall_manifest $RC/realcall.csv
       --realcall_weight 0.25"
-if [ ${#FAILED[@]} -eq 0 ]; then
-  echo "=== composition ($(date -Is))"
-  $PY train/finetune.py $ARGS --out ~/runs/${NAME}_dry --dry_run > ~/logs/dry_v4.log 2>&1 || FAILED+=("dry_run")
-  grep -E "^train |sampling mass" ~/logs/dry_v4.log
-fi
-if [ ${#FAILED[@]} -eq 0 ]; then
-  echo "=== train $NAME ($(date -Is))"
-  if [ -f ~/runs/$NAME/DONE ]; then echo "already finished, skipping"
+
+train() {  # name extra_args
+  local name=$1 extra=$2
+  echo "=== train $name ($(date -Is))"
+  if [ -f ~/runs/$name/DONE ]; then echo "already finished, skipping"; return; fi
+  rm -rf ~/runs/$name; rm -f $OUT/*__$name.csv    # scores of old weights must never survive a retrain
+  $PY train/finetune.py $ARGS $extra --out ~/runs/${name}_dry --dry_run > ~/logs/dry_$name.log 2>&1 \
+    && grep -E "^train |sampling mass" ~/logs/dry_$name.log
+  if $PY train/finetune.py $ARGS $extra --out ~/runs/$name > ~/logs/tr_$name.log 2>&1 \
+     && grep -q "best dev EER" ~/logs/tr_$name.log && [ -f ~/runs/$name/best.pt ]; then
+    date -Is > ~/runs/$name/DONE; tail -2 ~/logs/tr_$name.log
   else
-    rm -rf ~/runs/$NAME; rm -f $OUT/*__$NAME.csv    # scores of old weights must never survive a retrain
-    if $PY train/finetune.py $ARGS --out ~/runs/$NAME > ~/logs/tr_$NAME.log 2>&1 \
-       && grep -q "best dev EER" ~/logs/tr_$NAME.log && [ -f ~/runs/$NAME/best.pt ]; then
-      date -Is > ~/runs/$NAME/DONE; tail -2 ~/logs/tr_$NAME.log
-    else
-      echo "!!! training $NAME FAILED"; tail -5 ~/logs/tr_$NAME.log; FAILED+=("train:$NAME")
-    fi
+    echo "!!! training $name FAILED"; tail -5 ~/logs/tr_$name.log; FAILED+=("train:$name")
   fi
+}
+
+score() {  # name manifest out [root]
+  local m=$1 man=$2 out=$3 root=${4:-}
+  [ -f ~/runs/$m/best.pt ] || { echo "skip $m on $(basename $man)"; return; }
+  rm -f $out
+  $PY eval/score.py --manifest $man ${root:+--root $root} --detector ckpt:$HOME/runs/$m/best.pt --out $out \
+      > ~/logs/score_$(basename $out .csv).log 2>&1 || FAILED+=("score:$(basename $out)")
+}
+
+if [ ${#FAILED[@]} -eq 0 ]; then
+  train ours_a2 "--exclude_sources api2_ivc"
+  train ours_a2_ivc ""
 fi
 
 echo "=== score ($(date -Is))"
-# model A's real-call and simulated scores are in scores_rc; the same two manifests make the comparison like-for-like
-cp $W/scores_rc/realcall_eval.csv $W/scores_rc/sim_test.csv $OUT/ 2>/dev/null || FAILED+=("score:manifests")
-cp $W/manifests/api2_test.csv $OUT/ 2>/dev/null || FAILED+=("score:api2_manifest")
-if [ -f ~/runs/$NAME/DONE ]; then
-  $PY eval/score.py --manifest $OUT/realcall_eval.csv --root $RC --detector ckpt:$HOME/runs/$NAME/best.pt \
-      --out $OUT/real__$NAME.csv > ~/logs/score_real_$NAME.log 2>&1 || FAILED+=("score_real:$NAME")
-  $PY eval/score.py --manifest $OUT/sim_test.csv --limit 6000 --detector ckpt:$HOME/runs/$NAME/best.pt \
-      --out $OUT/sim__$NAME.csv > ~/logs/score_sim_$NAME.log 2>&1 || FAILED+=("score_sim:$NAME")
-fi
-for m in $NAME ours_v3_rc; do
-  [ -f ~/runs/$m/best.pt ] || { echo "skip api2 scoring for $m"; continue; }
-  rm -f $OUT/api2__$m.csv
-  $PY eval/score.py --manifest $OUT/api2_test.csv --detector ckpt:$HOME/runs/$m/best.pt \
-      --out $OUT/api2__$m.csv > ~/logs/score_api2_$m.log 2>&1 || FAILED+=("score_api2:$m")
+cp $W/scores_rc/realcall_eval.csv $W/scores_rc/sim_test.csv $W/manifests/api2_test.csv $OUT/ 2>/dev/null || FAILED+=("score:manifests")
+for m in ours_v3_rc ours_a2 ours_a2_ivc; do
+  score $m $OUT/dev_sim.csv $OUT/devsim__$m.csv
+  score $m $OUT/dev_rc.csv $OUT/devrc__$m.csv $RC
+  score $m $OUT/api2_test.csv $OUT/api2__$m.csv
+done
+for m in ours_a2 ours_a2_ivc; do    # model A's real-call and simulated scores already exist in scores_rc
+  [ -f ~/runs/$m/DONE ] || continue
+  score $m $OUT/realcall_eval.csv $OUT/real__$m.csv $RC
+  $PY eval/score.py --manifest $OUT/sim_test.csv --limit 6000 --detector ckpt:$HOME/runs/$m/best.pt \
+      --out $OUT/sim__$m.csv > ~/logs/score_sim_$m.log 2>&1 || FAILED+=("score_sim:$m")
 done
 
 echo "=== upload ($(date -Is))"
 aws s3 sync $OUT $BUCKET/work/scores_v4 --only-show-errors || FAILED+=("upload:scores")
-if [ -f ~/runs/$NAME/DONE ]; then aws s3 sync ~/runs/$NAME $BUCKET/runs/$NAME --only-show-errors || FAILED+=("upload:$NAME"); fi
-aws s3 cp ~/logs/ $BUCKET/logs/retrain_v4/ --recursive --exclude "*" --include "tr_${NAME}*" --include "score_*" \
-    --include "add_api2.log" --include "dry_v4.log" --include "retrain_v4.log" --only-show-errors || FAILED+=("upload:logs")
+for m in ours_a2 ours_a2_ivc; do
+  if [ -f ~/runs/$m/DONE ]; then aws s3 sync ~/runs/$m $BUCKET/runs/$m --only-show-errors || FAILED+=("upload:$m"); fi
+done
+aws s3 cp ~/logs/ $BUCKET/logs/retrain_v4/ --recursive --exclude "*" --include "tr_ours_a2*" --include "dry_ours_a2*" \
+    --include "score_*" --include "add_api2.log" --include "retrain_v4.log" --only-show-errors || FAILED+=("upload:logs")
 
 if [ ${#FAILED[@]} -eq 0 ]; then STATUS="SUCCESS"; else STATUS="FAILED: ${FAILED[*]}"; fi
 echo "$STATUS ($(date -Is))" | tee ~/logs/retrain_v4_status.txt

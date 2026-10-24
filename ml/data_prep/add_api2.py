@@ -41,8 +41,9 @@ def rows_api2():
                          native_channel="clean"))
     for p in sorted((A2 / "sarvam_ivct").glob("*.flac")):
         _, spk, lang, fid = p.stem.split("__")
+        # own source tag, so a run can leave the Sarvam cloner out (--exclude_sources api2_ivc) and keep it held out
         rows.append(dict(utt_id=p.stem, path=str(p), label="spoof", generator="sarvam_ivct", speaker=spk, lang=lang,
-                         line_id=f"fleurs{fid[1:]}", text="", gender="", source="api2", split="train", heldout=False,
+                         line_id=f"fleurs{fid[1:]}", text="", gender="", source="api2_ivc", split="train", heldout=False,
                          native_channel="clean"))
     return pd.DataFrame(rows)
 

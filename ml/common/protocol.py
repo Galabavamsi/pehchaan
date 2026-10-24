@@ -63,6 +63,11 @@ def team_split(speaker: str, line_id: str, section: str) -> str:
 # below include every voice behind the old held-out commercial clips, so those clips stay unseen voices.
 # A model trained on these generators reports Sarvam/OpenAI/Deepgram as "seen engine, unseen voices" and
 # Sarvam IVC only on S02 ("seen engine, unseen speaker").
+# Same day, before training: two candidates, neither replacing model A (ours_v3_rc) unless it beats A on the same
+# fixed dev set (old corpus dev rows + real-call dev rows), test reported as it lands:
+#   ours_a2      stock voices only (source api2); Sarvam IVC stays a never-trained cloner for it
+#   ours_a2_ivc  stock voices + the S01 Sarvam clones (source api2_ivc); its Sarvam IVC result is "seen generator,
+#                unseen speaker (S02)", never "generalises to an unseen cloner"
 API2_GENERATORS = {"sarvam_v3t", "sarvam_v4f", "openai_t", "deepgram_t", "sarvam_ivct"}
 API2_PERSONS = {
     "sarvam": {"test": {"shubh", "rahul", "amit", "rohan", "ritu", "priya", "kavya", "neha", "simran", "vijay",
