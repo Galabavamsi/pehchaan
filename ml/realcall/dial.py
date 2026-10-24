@@ -177,7 +177,8 @@ def cmd_agent(a, reg):
         # which builds the Sarvam clone, so a real --tts gpu call needs server._make_agent to read tts/engine too.
         print(f"note: --tts gpu ({engine}) prewarms and records the GPU backend, but realcall.server still drives the "
               f"live call with Sarvam IVC. Drive the agent with the GPU clone via `agent dry --tts gpu`.", flush=True)
-    no_fillers = getattr(a, "no_fillers", False)
+    use_fillers = getattr(a, "fillers", False)   # off by default: fillers add audio that the line echoes
+                                                  # back, which on some handsets cuts the reply; opt in once tested
     live_providers = None       # the live two-way call is driven by Sarvam IVC (even with --tts gpu); its opener and
     if not a.no_prewarm:        # fillers are rendered here, before the ring, so the son speaks the moment she answers
         if tts == "gpu":
@@ -185,7 +186,7 @@ def cmd_agent(a, reg):
         live_tts = agent.SarvamCloneTTS(a.speaker, reg, card.lang)
         live_tts.ensure_voice()                      # fails fast on missing consent/reference
         live_providers = agent.Providers(agent.SarvamSTT(), agent.OpenAILLM(), live_tts)
-        if not no_fillers:
+        if use_fillers:
             agent.FillerBank(a.speaker, "sarvam", card.lang).prepare(live_tts)
             print(f"prepared fillers for {a.speaker} ({card.lang})", flush=True)
     ensure_dirs()
@@ -202,7 +203,7 @@ def cmd_agent(a, reg):
         log_event("call_registered", call_id=call_id, kind="agent", device=a.device, device_hash=hash_number(to),
                   carrier=d.get("carrier"), network=d.get("network"), model=d.get("model"), route="cellular",
                   speaker=a.speaker, card=card.as_dict(), stt=a.stt, llm=a.llm, vad=a.vad, tts=tts, engine=engine,
-                  fillers=not no_fillers)
+                  fillers=use_fillers)
         resp = _vobiz_call(to, call_id)
         log_event("call_api", call_id=call_id, request_uuid=resp.get("request_uuid"), message=resp.get("message"))
         print(f"[{i + 1}/{a.n}] agent call {call_id[:8]} as {a.speaker} -> {a.device}: cloned son, up to {a.max_turns} "
@@ -277,8 +278,8 @@ def main():
     g.add_argument("--gpu-host", default=agent.GPU_HOST, help="serve_clone_tts.py over the SSH tunnel (--tts gpu)")
     g.add_argument("--vad", default="energy", choices=["energy", "silero"])
     g.add_argument("--no-prewarm", action="store_true", help="don't resolve the clone voice before dialing")
-    g.add_argument("--no-fillers", action="store_true",
-                   help="don't play short filler sounds while the reply is being made (leaves the pre-render gap)")
+    g.add_argument("--fillers", action="store_true",
+                   help="play short filler sounds while the reply is synthesised (off by default: the line echo can cut the reply)")
     sub.add_parser("check")
     a = ap.parse_args()
     reg = Registry()

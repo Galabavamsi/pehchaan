@@ -304,7 +304,7 @@ async def agent_ws(ws: WebSocket, call_id: str):
         return
 
     fillers = None                                            # "still here" sounds while a reply is synthesised
-    if c.get("fillers", True):
+    if c.get("fillers", False):   # opt-in (dial --fillers); the line echo can otherwise cut the reply
         try:
             kind = "gpu" if c.get("tts") == "gpu" else "sarvam"
             bank = agent.FillerBank(c.get("speaker") or "", kind, card.lang).load()
@@ -354,10 +354,13 @@ async def agent_ws(ws: WebSocket, call_id: str):
     def _drain(fut):                                          # retrieve an abandoned synth future's result/exception
         fut.add_done_callback(lambda f: f.cancelled() or f.exception())
 
-    async def speak(audio):
+    async def speak(audio, cut=True):
+        """Stream one line. cut=False plays it through even if barge is set, so the reply's first sentence is never
+        swallowed by the line echoing back (which otherwise trips barge and cuts chunk 0)."""
         st["speaking"] = True
         barge.clear()
-        ok = await _stream_out(send, audio, st["be"], st["stream_id"], barge.is_set, lambda: st["stop"])
+        ok = await _stream_out(send, audio, st["be"], st["stream_id"], (lambda: False) if not cut else barge.is_set,
+                               lambda: st["stop"])
         st["speaking"] = False
         return ok
 
@@ -374,8 +377,8 @@ async def agent_ws(ws: WebSocket, call_id: str):
                    if i + 1 < len(sents) else None)
             if t_first is None:
                 t_first = time.perf_counter()
-            ok = await speak(audio)
-            if not ok:                                                        # she barged in: drop the rest
+            ok = await speak(audio, cut=i > 0)        # first sentence always plays; echo can't swallow the reply
+            if not ok:                                # genuine barge-in on a later sentence: drop the rest
                 if nxt is not None:
                     _drain(nxt)
                 break
@@ -427,7 +430,7 @@ async def agent_ws(ws: WebSocket, call_id: str):
             plan, audio, ot = await loop.run_in_executor(None, conv.open)
             llm_ms = ot["llm_ms"]
         t_first = time.perf_counter()
-        await speak(audio)                                                    # opener is one pre-synthesised blob
+        await speak(audio, cut=False)                                                    # opener is one pre-synthesised blob
         log_event("agent_turn", call_id=call_id, step=0, emotion=plan.emotion, done=plan.done, prerendered=op is not None,
                   stt_ms=0, llm_ms=llm_ms, reply_ms=agent._ms(t0, t_first), first_sound_ms=agent._ms(t0, t_first), filler=False,
                   mother_chars=0, son_chars=len(plan.text))
