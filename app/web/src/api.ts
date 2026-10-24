@@ -68,7 +68,14 @@ async function req<T>(path: string, init?: RequestInit & { json?: unknown }): Pr
   const headers: Record<string, string> = { ...(init?.headers as any) };
   let body = init?.body;
   if (init?.json !== undefined) { headers["Content-Type"] = "application/json"; body = JSON.stringify(init.json); }
-  const r = await fetch(API + path, { ...init, headers, body });
+  // One quiet retry for network blips (a phone switching between Wi-Fi and mobile data), then a clear message
+  let r: Response;
+  try { r = await fetch(API + path, { ...init, headers, body }); }
+  catch {
+    await new Promise((ok) => setTimeout(ok, 1500));
+    try { r = await fetch(API + path, { ...init, headers, body }); }
+    catch { throw new Error("Couldn't reach Pehchaan. Check the internet and try again. · इंटरनेट देखें और फिर से कोशिश करें।"); }
+  }
   const sn = r.headers.get("X-Server-Now");
   if (sn) clock.skewMs = new Date(sn).getTime() - Date.now();
   if (!r.ok) {

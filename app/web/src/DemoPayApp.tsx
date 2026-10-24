@@ -9,7 +9,7 @@ import {
 import { API, type Assessment, type Lang, type Scenario } from "./api";
 import { Device, Seal } from "./components";
 import { formatINR, UIContext } from "./i18n";
-import { isNative, Pehchaan, rehearsal, usePhoneCall, type CallInfo, type PhoneCall } from "./native";
+import { isNative, maskNumber, Pehchaan, rehearsal, usePhoneCall, type CallInfo, type PhoneCall } from "./native";
 import { PayerPhone, type PayOutcome } from "./PayerPhone";
 import { isVpa, paidBefore, parseUpi, resolvePayee, TRY_THESE, type Payee } from "./payees";
 import type { Person } from "./people";
@@ -35,14 +35,6 @@ const BANKS = [
 const load = <T,>(k: string, d: T): T => { try { return JSON.parse(localStorage.getItem(k) || "") as T; } catch { return d; } };
 const save = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ } };
 const initials = (name: string) => name.split(/\s+/).filter((w) => /^\p{L}/u.test(w)).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-/** Real people's numbers stay off the screen in this demo (projector): first and last digits only. */
-export const maskNumber = (n: string) => {
-  const total = (n.match(/\d/g) || []).length;
-  let seen = 0;
-  const m = n.replace(/\d/g, (x) => (++seen <= 4 || seen > total - 3 ? x : "•"));
-  return m.startsWith("+91") && m.length === 13 ? `+91 ${m.slice(3, 8)} ${m.slice(8)}` : m;
-};
-
 export function DemoPayApp({ me, incomingUpi, onUpiHandled }: { me: Person; incomingUpi?: string | null; onUpiHandled?: () => void }) {
   const [lang, setLang] = useState<Lang>("en");
   const L = (en: string, hi: string) => (lang === "hi" ? hi : en);

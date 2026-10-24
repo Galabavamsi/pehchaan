@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
 import type { Bi, Lang } from "./api";
+import { isNative, maskPhones } from "./native";
 
 // UI copy. Calm, plain, sentence case. Never accusatory (G6).
 const S = {
@@ -145,7 +146,10 @@ export function useT() {
     for (const [a, b] of Object.entries(vars)) s = s.split(`{${a}}`).join(String(b ?? ""));
     return s;
   };
-  const bi = (x?: Bi | null) => (x ? (lang === "hi" ? x.hi : x.en) : "");
+  const bi = (x?: Bi | null) => {
+    const s = x ? (lang === "hi" ? x.hi : x.en) : "";
+    return isNative ? maskPhones(s) : s;  // real callers' numbers stay masked on the phones
+  };
   return { t, bi, lang };
 }
 

@@ -64,3 +64,14 @@ export const forRehearsal = (c: PhoneCall): PhoneCall =>
   rehearsal.get() && c.state !== "none" && c.number ? { ...c, in_contacts: false } : c;
 
 export type Role = "payer" | "relative";
+
+/** Phone numbers inside server-written text (e.g. "You are on a call with +91 …") are masked on the phones too. */
+export const maskPhones = (text: string) => text.replace(/\+?\d[\d ]{8,}\d/g, (m) => maskNumber(m));
+
+/** Real people's numbers stay off the screen in this demo (projector): first and last digits only. */
+export const maskNumber = (n: string) => {
+  const total = (n.match(/\d/g) || []).length;
+  let seen = 0;
+  const m = n.replace(/\d/g, (x) => (++seen <= 4 || seen > total - 3 ? x : "•"));
+  return m.startsWith("+91") && m.length === 13 ? `+91 ${m.slice(3, 8)} ${m.slice(8)}` : m;
+};

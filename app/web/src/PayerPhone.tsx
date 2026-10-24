@@ -8,7 +8,7 @@ import { API, api, subscribe, type Action, type Assessment, type FvSent, type La
 import { Device, ReasonIcon, Ring, Seal, StatusBar, useCountdown } from "./components";
 import { formatINR, UIContext, useT } from "./i18n";
 import { recordWav } from "./wav";
-import { forRehearsal, isNative, Pehchaan, usePhoneCall, type CallInfo, type PhoneCall } from "./native";
+import { forRehearsal, isNative, maskNumber, Pehchaan, usePhoneCall, type CallInfo, type PhoneCall } from "./native";
 
 type Screen = "pay" | "who" | "family" | "bank" | "options" | "fv_wait" | "voice" | "hold" | "green" | "pin" | "sent" | "cancelled" | "report";
 type ClaimCode = "family" | "bank" | "upi_or_shop" | "authority" | "other" | "none";
@@ -373,7 +373,7 @@ function PhoneCallPill({ info }: { info: CallInfo }) {
   const voip = c.channel === "voip";
   const n = c.number;
   // The saved name (as the dialer shows it) if the caller is a contact; it stays on this phone
-  const pretty = info.meta.contact_name ?? (n ? (n.startsWith("+91") ? `+91 ${n.slice(3, 8)} ${n.slice(8)}` : n) : voip ? t("voip_call") : t("number_hidden"));
+  const pretty = info.meta.contact_name ?? (n ? maskNumber(n) : voip ? t("voip_call") : t("number_hidden"));
   const ended = c.state === "ended";
   const sec = c.duration_sec;
   return (
