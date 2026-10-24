@@ -14,6 +14,7 @@ import argparse
 import os
 import random
 import sys
+import time
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 
@@ -47,13 +48,20 @@ def main():
     def sign(item):
         repo, f, out = item
         url = f"https://huggingface.co/{repo}/resolve/main/{urllib.parse.quote(f)}"
-        r = requests.head(url, headers={"Authorization": f"Bearer {tok}"}, allow_redirects=False, timeout=60)
+        for attempt in range(5):   # a slow or busy link drops connections now and then
+            try:
+                r = requests.head(url, headers={"Authorization": f"Bearer {tok}"}, allow_redirects=False, timeout=60)
+                break
+            except requests.RequestException:
+                if attempt == 4:
+                    raise
+                time.sleep(2 ** attempt)
         loc = r.headers.get("Location", "")
         if r.status_code not in (301, 302, 307) or not loc.startswith("https://") or "huggingface.co" in loc:
             raise RuntimeError(f"no signed link for {f}: HTTP {r.status_code}")
         return loc, out
 
-    with ThreadPoolExecutor(16) as ex:
+    with ThreadPoolExecutor(8) as ex:
         links = list(ex.map(sign, todo))
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     with open(a.out, "w") as fh:
