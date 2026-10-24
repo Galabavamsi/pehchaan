@@ -17,6 +17,8 @@ type ClaimCode = "family" | "bank" | "upi_or_shop" | "authority" | "other" | "no
 export interface PayOutcome {
   status: "paid" | "cancelled" | "held" | "reported"; caseId: string | null; utr: string | null;
   first: Assessment | null; last: Assessment | null; amount: number;
+  /** The call object that was sent with the payment (null on the web demo). */
+  call: PhoneCall | null;
 }
 
 export function PayerPhone({ scenario, initialLang, initialLarge = false, onBack, onOutcome }: {
@@ -58,7 +60,11 @@ function PayerFlow({ scenario, toggles, onBack, onOutcome }: {
   // Android app: the call comes from the phone itself, not the scenario (SPEC §7)
   const phone = usePhoneCall();
   const [sentCall, setSentCall] = useState<PhoneCall | null>(null);
-  useEffect(() => { if (isNative) Pehchaan.setSecure({ on: screen === "pin" }).catch(() => {}); }, [screen]);
+  useEffect(() => {
+    if (!isNative) return;
+    Pehchaan.setSecure({ on: screen === "pin" }).catch(() => {});
+    return () => { Pehchaan.setSecure({ on: false }).catch(() => {}); };
+  }, [screen]);
 
   const amount = Number(amountStr || 0);
   const amountTxt = formatINR(amount);
@@ -174,7 +180,7 @@ function PayerFlow({ scenario, toggles, onBack, onOutcome }: {
   useEffect(() => {
     if (!onOutcome) return;
     const status = ({ sent: "paid", cancelled: "cancelled", hold: "held", report: "reported" } as const)[screen as "sent"];
-    if (status) onOutcome({ status, caseId, utr, first: firstRef.current, last: a, amount });
+    if (status) onOutcome({ status, caseId, utr, first: firstRef.current, last: a, amount, call: sentCall });
   }, [screen, utr]);
 
   useEffect(() => { if (!toast) return; const x = setTimeout(() => setToast(null), 3500); return () => clearTimeout(x); }, [toast]);

@@ -147,6 +147,8 @@ object CallMonitor {
         val onPstn = liveTel == TelephonyManager.CALL_STATE_OFFHOOK || audioMode == AudioManager.MODE_IN_CALL
         val onVoip = audioMode == AudioManager.MODE_IN_COMMUNICATION
         if ((onPstn || onVoip) && state != "active") {
+            // A call we didn't see start: the stored number belongs to an earlier call, unless this one rang first
+            if (state != "ringing" || onVoip) number = null
             state = "active"; channel = if (onPstn) "pstn" else "voip"; start = null; end = null; source = "live"
         } else if (!onPstn && !onVoip && state == "active" && liveTel != null) {
             state = "idle"; if (end == null) end = now

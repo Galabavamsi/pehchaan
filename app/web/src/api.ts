@@ -68,13 +68,17 @@ async function req<T>(path: string, init?: RequestInit & { json?: unknown }): Pr
   const headers: Record<string, string> = { ...(init?.headers as any) };
   let body = init?.body;
   if (init?.json !== undefined) { headers["Content-Type"] = "application/json"; body = JSON.stringify(init.json); }
-  // One quiet retry for network blips (a phone switching between Wi-Fi and mobile data), then a clear message
+  // Network blips (a phone switching between Wi-Fi and mobile data): one quiet retry for reads only, since a
+  // repeated write could create a second case or answer twice; then a clear message instead of "Failed to fetch"
+  const offline = "Couldn't reach Pehchaan. Check the internet and try again. · इंटरनेट देखें और फिर से कोशिश करें।";
+  const safe = ["GET", "HEAD"].includes((init?.method ?? "GET").toUpperCase());
   let r: Response;
   try { r = await fetch(API + path, { ...init, headers, body }); }
   catch {
+    if (!safe) throw new Error(offline);
     await new Promise((ok) => setTimeout(ok, 1500));
     try { r = await fetch(API + path, { ...init, headers, body }); }
-    catch { throw new Error("Couldn't reach Pehchaan. Check the internet and try again. · इंटरनेट देखें और फिर से कोशिश करें।"); }
+    catch { throw new Error(offline); }
   }
   const sn = r.headers.get("X-Server-Now");
   if (sn) clock.skewMs = new Date(sn).getTime() - Date.now();

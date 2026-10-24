@@ -45,7 +45,9 @@ export function parseUpi(uri: string): { vpa: string; name: string | null; amoun
   const vpa = q.get("pa");
   if (!vpa || !isVpa(vpa)) return null;
   const am = Number(q.get("am"));
-  return { vpa, name: q.get("pn"), amount: Number.isFinite(am) && am > 0 ? Math.round(am) : null, note: q.get("tn") };
+  // Whole rupees only: the amount keypad has no paise, so an amount with paise is left for the payer to type
+  const amount = Number.isInteger(am) && am > 0 ? am : null;
+  return { vpa, name: q.get("pn"), amount, note: q.get("tn") };
 }
 
 export const upiLink = (p: Payee, amount?: number) =>

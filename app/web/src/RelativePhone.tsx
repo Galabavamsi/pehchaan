@@ -66,6 +66,10 @@ export function useFamilyInbox(relative: Relative) {
     const msg = new TextEncoder().encode(`pehchaan-fv|${push.challenge_id}|${push.nonce}|${ans}`);
     const sig = b64(nacl.sign.detached(msg, kp.secretKey));
     try { await api.respond(push.challenge_id, ans, relative.device_id, sig); setDone(ans); note(push.challenge_id, { answer: ans }); }
+    catch (e: any) {
+      if (!String(e?.message ?? "").startsWith("409")) throw e;
+      setDone(ans); note(push.challenge_id, { answer: ans });  // already answered from this phone
+    }
     finally { setBusy(false); }
   }
   const dismiss = () => { setDone(null); setPush(null); };

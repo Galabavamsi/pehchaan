@@ -9,7 +9,7 @@ import {
 import { API, type Assessment, type Lang, type Scenario } from "./api";
 import { Device, Seal } from "./components";
 import { formatINR, UIContext } from "./i18n";
-import { isNative, maskNumber, Pehchaan, rehearsal, usePhoneCall, type CallInfo, type PhoneCall } from "./native";
+import { isNative, maskNumber, maskPhones, Pehchaan, rehearsal, usePhoneCall, type CallInfo, type PhoneCall } from "./native";
 import { PayerPhone, type PayOutcome } from "./PayerPhone";
 import { isVpa, paidBefore, parseUpi, resolvePayee, TRY_THESE, type Payee } from "./payees";
 import type { Person } from "./people";
@@ -79,7 +79,7 @@ export function DemoPayApp({ me, incomingUpi, onUpiHandled }: { me: Person; inco
     const tx: Tx = {
       id: v.txId, at: new Date().toISOString(), vpa: v.payee.vpa, name: v.payee.name, amount: o.amount, status: o.status,
       utr: o.utr ?? (o.status === "paid" ? String(Date.now()).slice(-12) : null), caseId: o.caseId,
-      why: explain(o, phone?.call ?? null),
+      why: explain(o, o.call),
     };
     setTxs((all) => [tx, ...all.filter((x) => x.id !== tx.id)]);
     if (o.status === "paid") setView({ k: "receipt", txId: tx.id });
@@ -366,10 +366,15 @@ function Scan({ L, onBack, onUpi, onTypeInstead }: {
           setNotUpi(true);
         }
       }
-      raf = requestAnimationFrame(tick);
+      if (!done) raf = requestAnimationFrame(tick);
     };
     navigator.mediaDevices?.getUserMedia({ video: { facingMode: "environment" }, audio: false })
-      .then((s) => { stream = s; if (video.current) { video.current.srcObject = s; video.current.play().catch(() => {}); } raf = requestAnimationFrame(tick); })
+      .then((s) => {
+        if (done) { s.getTracks().forEach((t) => t.stop()); return; }  // left Scan before the camera opened
+        stream = s;
+        if (video.current) { video.current.srcObject = s; video.current.play().catch(() => {}); }
+        raf = requestAnimationFrame(tick);
+      })
       .catch(() => setErr(L("Camera is off for DemoPay. Allow the camera, or type the UPI ID.", "DemoPay के लिए कैमरा बंद है। कैमरा चालू करें या UPI ID टाइप करें।")));
     return () => { done = true; cancelAnimationFrame(raf); stream?.getTracks().forEach((t) => t.stop()); };
   }, []);
@@ -429,7 +434,7 @@ function Receipt({ L, lang, tx, bank, onDone }: { L: (en: string, hi: string) =>
       {w && (
         <section className={`dp-why ${w.tone}`} data-testid="dp-why">
           <div className="dp-why-h"><Seal size={18} /><b>{lang === "hi" ? w.title[1] : w.title[0]}</b></div>
-          <ul>{w.lines.map((l, i) => <li key={i}>{lang === "hi" ? l[1] : l[0]}</li>)}</ul>
+          <ul>{w.lines.map((l, i) => <li key={i}>{maskPhones(lang === "hi" ? l[1] : l[0])}</li>)}</ul>
         </section>
       )}
       <div className="dp-rc-foot"><button className="dp-btn" onClick={onDone}>{L("Done", "ठीक है")}</button></div>
@@ -473,7 +478,8 @@ function explain(o: PayOutcome, call: PhoneCall | null): Why {
     return { tone: "ok", title: ["Checked: nothing looked risky", "जाँच हुई: कुछ खतरनाक नहीं दिखा"], lines: [...trig, ...caller] };
   }
   const last = o.last ?? a;
-  const top: [string, string][] = (last.top_reasons?.length ? last.top_reasons : last.reasons).slice(0, 3).map((r) => [r.text.en, r.text.hi]);
+  const top: [string, string][] = (last.top_reasons?.length ? last.top_reasons : last.reasons).slice(0, 3)
+    .map((r) => [maskPhones(r.text.en), maskPhones(r.text.hi)]);
   const tone = o.status === "paid" ? "ok" : o.status === "cancelled" ? "warn" : "stop";
   const title: [string, string] = o.status === "paid" ? ["Checked and confirmed", "जाँच हुई और पुष्टि हुई"]
     : o.status === "held" ? ["Held by Pehchaan", "पहचान ने रोका"] : o.status === "reported" ? ["Stopped and reported", "रोका और रिपोर्ट किया"]
