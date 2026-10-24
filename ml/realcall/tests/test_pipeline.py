@@ -545,7 +545,14 @@ def test_agent_skips_empty_transcript(monkeypatch):
     speech = fake_speech(1.1, 150, 11)
     with cl.websocket_connect(f"/ws/agent/{cid}") as ws:
         ws.send_text(json.dumps({"event": "start", "start": {"streamId": "s1"}}))
-        inbound = np.concatenate([np.zeros(int(0.6 * SR), np.float32), speech, np.zeros(int(0.9 * SR), np.float32)])
+        warm = np.zeros(int(0.3 * SR), np.float32)                # a little audio first, so the byte order is known
+        for i in range(0, len(warm) // 320 * 320, 320):
+            ws.send_text(json.dumps({"event": "media", "media": {"track": "inbound",
+                        "payload": base64.b64encode((warm[i:i + 320] * 32767).astype("<i2").tobytes()).decode()}}))
+        for _ in range(400):                                      # let the opener play before anything else
+            if ws.receive_json()["event"] == "playAudio":
+                break
+        inbound = np.concatenate([np.zeros(int(0.3 * SR), np.float32), speech, np.zeros(int(0.9 * SR), np.float32)])
         for i in range(0, len(inbound) // 320 * 320, 320):
             pcm = (inbound[i:i + 320] * 32767).astype("<i2").tobytes()
             ws.send_text(json.dumps({"event": "media", "media": {"track": "inbound", "payload": base64.b64encode(pcm).decode()}}))

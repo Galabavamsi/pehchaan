@@ -432,23 +432,26 @@ async def agent_ws(ws: WebSocket, call_id: str):
     async def brain():
         await started.wait()
         asyncio.create_task(warm_providers())            # fire-and-forget; it swallows its own errors
-        if st["stop"]:
-            return
+        for _ in range(30):                              # wait up to ~1.5 s for enough inbound to know the byte order,
+            if st["be"] is not None or st["stop"]:       # so the opener isn't sent byte-swapped (heard as static)
+                break
+            await asyncio.sleep(0.05)
         t0 = time.perf_counter()
-        op = await loop.run_in_executor(None, agent.take_opener, call_id)     # rendered before the ring, if present
-        if op is not None:
-            plan, audio = op
-            conv.use_opener(plan)
-            llm_ms = 0
-        else:
-            plan, audio, ot = await loop.run_in_executor(None, conv.open)
-            llm_ms = ot["llm_ms"]
-        t_first = time.perf_counter()
-        await speak(audio, cut=False)                                                    # opener is one pre-synthesised blob
-        log_event("agent_turn", call_id=call_id, step=0, emotion=plan.emotion, done=plan.done, prerendered=op is not None,
-                  stt_ms=0, llm_ms=llm_ms, reply_ms=agent._ms(t0, t_first), first_sound_ms=agent._ms(t0, t_first), filler=False,
-                  mother_chars=0, son_chars=len(plan.text))
-        print(f"[agent {call_id[:8]}] son ({plan.emotion}): {plan.text}", flush=True)
+        if not st["stop"]:                               # hung up during the wait -> skip to the end (sends stop)
+            op = await loop.run_in_executor(None, agent.take_opener, call_id)   # rendered before the ring, if present
+            if op is not None:
+                plan, audio = op
+                conv.use_opener(plan)
+                llm_ms = 0
+            else:
+                plan, audio, ot = await loop.run_in_executor(None, conv.open)
+                llm_ms = ot["llm_ms"]
+            t_first = time.perf_counter()
+            await speak(audio, cut=False)                                       # opener is one pre-synthesised blob
+            log_event("agent_turn", call_id=call_id, step=0, emotion=plan.emotion, done=plan.done, prerendered=op is not None,
+                      stt_ms=0, llm_ms=llm_ms, reply_ms=agent._ms(t0, t_first), first_sound_ms=agent._ms(t0, t_first),
+                      filler=False, mother_chars=0, son_chars=len(plan.text))
+            print(f"[agent {call_id[:8]}] son ({plan.emotion}): {plan.text}", flush=True)
         while not st["stop"] and st["turns"] < card.max_turns:
             utt = await utt_q.get()
             if utt is None:
