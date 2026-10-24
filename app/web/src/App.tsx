@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import { ArrowClockwise, Phone } from "@phosphor-icons/react";
 import { API, api, subscribe, urlParam, type Lang, type Scenario } from "./api";
 import { Bench } from "./Bench";
+import { BenchmarkPage } from "./Benchmark";
 import { JuryPanel } from "./JuryPanel";
 import { RedTeamPage, Tour } from "./Tour";
 import { Console } from "./Console";
@@ -47,6 +48,7 @@ export function App() {
   if (route === "bench") return <Bench />;
   if (route === "tour") return <Tour />;
   if (route === "redteam") return <RedTeamPage />;
+  if (route === "benchmark") return <BenchmarkPage />;
   if (route === "payer") return <Standalone kind="payer" lang={lang} />;
   if (route === "relative") return <Standalone kind="relative" lang={lang} />;
   return <DemoControl />;

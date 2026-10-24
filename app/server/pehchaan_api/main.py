@@ -436,6 +436,15 @@ def create_app(db_path: str | None = None, key_path: str | None = None) -> FastA
             raise HTTPException(404, "no red-team run yet: python app/server/redteam.py")
         return json.loads(f.read_text())
 
+    @app.get("/v1/benchmark")
+    def benchmark():
+        """Clone-vs-detect benchmark (ml/eval/clone_vs_detect.py): how convincing each cloner is, how often each
+        detector catches it, on clean audio, a phone codec and real phone calls."""
+        f = REPO / "ml" / "results" / "clone_vs_detect.json"
+        if not f.exists():
+            raise HTTPException(404, "no benchmark run yet: cd ml && python eval/clone_vs_detect.py")
+        return json.loads(f.read_text())
+
     @app.post("/v1/demo/fv/{challenge_id}/timeout")
     async def demo_force_timeout(challenge_id: str):
         t = timers.pop(challenge_id, None)

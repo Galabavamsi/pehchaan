@@ -23,6 +23,10 @@ Other routes:
 - `#/payer?scenario=T1&lang=hi&large=1`: the payer phone on its own.
 - `#/relative`: the relative phone; it follows the scenario loaded on the demo page.
 - `#/console`: the full analyst console, 1440 px wide.
+- `#/demo` → **Your case**: the jury sets the caller, call state, amount, payee and registry flags (`POST /v1/demo/custom`); Restart replays it.
+- `#/bench`: drop or record audio, every detector side by side (`POST /v1/voice/panel`, needs the voice service with `PEHCHAAN_PANEL`).
+- `#/benchmark`: clone-vs-detect results (`GET /v1/benchmark`, from `ml/results/clone_vs_detect.json`).
+- `#/redteam`, `#/tour`: the red-team matrix (`GET /v1/redteam`, from `python app/server/redteam.py`) and the visitor tour.
 
 Point the voice check at the ML service with `VOICE_SERVICE_URL=http://host:port` (the server proxies to `/v1/voice/score`).
 
