@@ -11,7 +11,7 @@ import { Device, Seal } from "./components";
 import { formatINR, UIContext } from "./i18n";
 import { isNative, maskNumber, maskPhones, Pehchaan, rehearsal, usePhoneCall, type CallInfo, type PhoneCall } from "./native";
 import { PayerPhone, type PayOutcome } from "./PayerPhone";
-import { isVpa, paidBefore, parseUpi, resolvePayee, TRY_THESE, type Payee } from "./payees";
+import { callerPayee, isVpa, paidBefore, parseUpi, resolvePayee, TRY_THESE, type Payee } from "./payees";
 import type { Person } from "./people";
 import { callsPayer, FamilyAnswered, FamilyPrompt, LangBtn, useFamilyInbox, type FamilyInbox } from "./RelativePhone";
 
@@ -111,7 +111,7 @@ export function DemoPayApp({ me, incomingUpi, onUpiHandled }: { me: Person; inco
           onScan={() => go({ k: "scan" })} onPayTo={() => go({ k: "payto" })} onHistory={() => go({ k: "history" })}
           onPerson={(vpa) => startPay(vpa, null)} onTx={(id) => go({ k: "receipt", txId: id })} />
       )}
-      {view.k === "payto" && <PayTo L={L} lang={lang} me={me} onBack={home} onPick={(vpa) => startPay(vpa, null)} />}
+      {view.k === "payto" && <PayTo L={L} lang={lang} me={me} phone={phone} onBack={home} onPick={(vpa, name) => startPay(vpa, null, name)} />}
       {view.k === "scan" && <Scan L={L} onBack={home} onUpi={(u) => startPay(u.vpa, u.amount, u.name)} onTypeInstead={() => setView({ k: "payto" })} />}
       {view.k === "history" && <History L={L} txs={txs} onBack={home} onTx={(id) => setView({ k: "receipt", txId: id })} />}
       {view.k === "receipt" && (() => {
@@ -289,10 +289,16 @@ function TxRow({ L, tx, onClick }: { L: (en: string, hi: string) => string; tx: 
 
 // ------------------------------------------------------------------ choose a payee
 
-function PayTo({ L, lang, me, onBack, onPick }: { L: (en: string, hi: string) => string; lang: Lang; me: Person; onBack: () => void; onPick: (vpa: string) => void }) {
+function PayTo({ L, lang, me, phone, onBack, onPick }: {
+  L: (en: string, hi: string) => string; lang: Lang; me: Person; phone: CallInfo | null; onBack: () => void; onPick: (vpa: string, name?: string) => void;
+}) {
   const [q, setQ] = useState("");
   const ok = isVpa(q);
   const found = ok ? resolvePayee(q) : null;
+  // The number on the call (or one that called within the hour), as a UPI number payee (VAMSI_HANDOFF §2b)
+  const c = phone?.call;
+  const caller = c && c.state !== "none" && c.number ? callerPayee(c.number) : null;
+  const callerMin = Math.max(1, Math.round((c?.ended_sec_ago ?? 0) / 60));
   return (
     <>
       <Bar onBack={onBack} title={L("Pay to a UPI ID", "UPI ID पर पैसे भेजें")} />
@@ -312,6 +318,22 @@ function PayTo({ L, lang, me, onBack, onPick }: { L: (en: string, hi: string) =>
             </span>
             <CaretRight size={20} />
           </button>
+        )}
+
+        {caller && (
+          <>
+            <h2 className="dp-h2">{L("Pay a phone number", "फ़ोन नंबर पर भेजें")}</h2>
+            <div className="dp-list">
+              <button className="dp-row" onClick={() => onPick(caller.vpa, caller.name)} data-testid="dp-pay-caller">
+                <span className="dp-av sm"><Phone size={16} weight="fill" /></span>
+                <span className="dp-row-t">
+                  <b>{phone?.meta.contact_name ?? caller.name}</b>
+                  <span>{caller.vpa} · {c?.state === "active" ? L("on a call with you now", "अभी आपसे कॉल पर") : L(`called you ${callerMin} min ago`, `${callerMin} मिनट पहले कॉल किया`)}</span>
+                </span>
+                <CaretRight size={18} />
+              </button>
+            </div>
+          </>
         )}
 
         <h2 className="dp-h2">{L("Try these payees", "इन्हें आज़माएँ")}</h2>

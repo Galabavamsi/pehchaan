@@ -36,6 +36,16 @@ export function resolvePayee(vpa: string, nameFromQr?: string | null): Payee & {
   return { vpa: v, name: nameFromQr?.trim() || derived || "UPI user", verified: false };
 }
 
+/**
+ * VAMSI_HANDOFF §2b: the scam says "send it to this number I'm calling from". The caller's number as a UPI number
+ * payee (number@upi). Only the digits the phones already show (first 2, last 3) go into the handle and the name, so
+ * the real number never reaches a screen, the server's payee fields or the evidence pack.
+ */
+export function callerPayee(number: string): Payee {
+  const d = number.replace(/\D/g, "").slice(-10);
+  return { vpa: `${d.slice(0, 2)}xxxxx${d.slice(-3)}@upi`, name: `+91 ${d.slice(0, 2)}••• ••${d.slice(-3)}` };
+}
+
 export const paidBefore = (list: { vpa: string }[], vpa: string) => list.find((p) => p.vpa === vpa.trim().toLowerCase());
 
 /** Parse a `upi://pay?pa=…&pn=…&am=…&tn=…` link (from a QR or an intent). */
