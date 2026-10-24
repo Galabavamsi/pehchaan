@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Bank, CheckCircle, Eye, LockKey, SealCheck, ShieldCheck, UserCircle, WarningCircle, XCircle } from "@phosphor-icons/react";
 import { api, subscribe, type Reason, type Tier } from "./api";
 import { famName, Seal, TierChip, Waterfall } from "./components";
@@ -47,10 +47,11 @@ export function Console({ compact = false, follow = false }: { compact?: boolean
     } catch (e: any) { setMsg(String(e.message)); } finally { setBusy(false); }
   };
 
-  const shown = list.filter((c) => filter === "all" ? true : filter === "held" ? c.status === "held" :
-    (c.status === "held" && (c.amount_inr ?? 0) >= 50000));
+  // Needs review: large holds (analyst release) and, since SPEC v0.3, voice hits from the shadow detector
+  const needsReview = (c: any) => (c.status === "held" && (c.amount_inr ?? 0) >= 50000) || !!c.review;
+  const shown = list.filter((c) => filter === "all" ? true : filter === "held" ? c.status === "held" : needsReview(c));
   const counts = { all: list.length, held: list.filter((c) => c.status === "held").length,
-    review: list.filter((c) => c.status === "held" && (c.amount_inr ?? 0) >= 50000).length };
+    review: list.filter(needsReview).length };
 
   return (
     <div className={`console ${compact ? "compact" : ""}`} data-testid="console">
@@ -82,7 +83,8 @@ export function Console({ compact = false, follow = false }: { compact?: boolean
                 <span style={{ minWidth: 0 }}>
                   <div className="qt">{c.payee_name}</div>
                   <div className="qs">{claimLabel(c.claim)} · {statusLabel(c.status)}</div>
-                  <div style={{ marginTop: 6 }}><TierChip tier={c.tier} label={tierWord(c.tier, c.status)} /></div>
+                  <div style={{ marginTop: 6 }}><TierChip tier={c.tier} label={tierWord(c.tier, c.status)} />
+                    {c.review && <span className="review-chip" title="Voice check flagged it; not used in the payment decision">Voice flagged</span>}</div>
                 </span>
                 <span>
                   <div className="qa">{formatINR(c.amount_inr)}</div>
@@ -147,6 +149,15 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
         <span className="grow" />
         <span className="mono" style={{ fontSize: 13, color: "var(--slate)" }}>config v{d.config_version} · {d.created_at_ist?.slice(11, 19)} IST</span>
       </div>
+      {d.review && (
+        <div className="review-banner" data-testid="review-banner">
+          <WarningCircle size={18} weight="fill" />
+          <span><b>For review:</b> the voice check scored this call {d.review.reason === "voice_watermark" ? "as carrying an AI watermark" : "likely synthetic"}
+            {d.review.p_synthetic != null && <> (p <span className="mono">{Number(d.review.p_synthetic).toFixed(2)}</span>)</>}.
+            {d.review.voice_mode === "shadow" ? " Shadow mode: it did not change the tier, the hold or anything the customer saw. Your label feeds the real-call gate." : ""}
+            <span className="mono" style={{ fontSize: 11.5, color: "var(--slate)" }}> {d.review.model_version}</span></span>
+        </div>
+      )}
       <div className="dh-sub">
         <b className="mono">{d.amount_display}</b> to <b>{d.payee_name}</b> <span className="mono">({d.payee_vpa})</span>{" "}
         from <b>{d.payer_name}</b> ({d.payer_age_band}) · caller <span className="mono">{d.caller_display}</span>{" "}
@@ -224,6 +235,7 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
               ))}
             </div>
           </section>
+          <PrivacyPanel d={d} />
           {!compact && (
             <section className="panel">
               <h3>Timeline</h3>
@@ -241,5 +253,26 @@ function Detail({ d, compact, busy, note, setNote, decide, msg }: {
         </div>
       </div>
     </div>
+  );
+}
+
+/** FINALE_PLAN C1: the privacy rules (SPEC section 6), each shown from this case's own records. */
+function PrivacyPanel({ d }: { d: any }) {
+  const voiceEv = (d.events || []).find((e: any) => e.type === "voice_scored");
+  const fv = d.checks?.family_verify;
+  const rel = d.hold?.release_requires;
+  const rows: [string, React.ReactNode][] = [
+    ["Voice audio", voiceEv ? <>scored in memory and discarded: <span className="mono">audio_retained: {String(voiceEv.data.audio_retained)}</span> in event {voiceEv.seq}</> : "no voice check on this case"],
+    ["Contacts", <>the phone sent only “{d.caller_in_contacts ? "saved contact" : "not in contacts"}”, never the contact list</>],
+    ["Family Verify", fv ? <>{d.relative_name ?? "The relative"} saw an amount band and the payee name only; the answer is signed on their phone</> : "not used on this case"],
+    ["Analyst access", <>{d.access_log?.length ?? 0} views, each logged with who, when and why</>],
+    ["Hold release", !d.hold ? "no hold" : rel === "analyst_review" ? "only an analyst (₹50,000 or more)" : rel === "none" ? "released by a positive check" : "only after a positive check (Family Verify, bank registry or callback)"],
+    ["Never collected", "call recordings, contact lists, SMS or WhatsApp content, location, voiceprints"],
+  ];
+  return (
+    <section className="panel" data-testid="privacy-panel">
+      <h3>Privacy, shown from this case</h3>
+      <dl className="kv">{rows.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>
+    </section>
   );
 }

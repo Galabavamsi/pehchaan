@@ -334,3 +334,33 @@ def test_redteam_results_are_served(client):
     assert r.status_code == 200
     rows = r.json()["rows"]
     assert len(rows) >= 16 and all({"id", "evasion", "outcome", "observed", "why"} <= set(x) for x in rows)
+
+
+def test_voice_hit_goes_to_analyst_review_only(client):
+    """SPEC v0.3: a likely-synthetic voice result flags the case for analyst review; the payer's side is untouched."""
+    sc, a1 = start(client, "T1")
+    cid = a1["case_id"]
+    before = client.post("/v1/risk/assess", json={"case_id": cid, "claim": "family", "claim_target": "rel_rahul"}).json()
+    wav = client.get("/v1/demo/audio/synthetic.wav").content
+    v = client.post("/v1/voice/score", files={"file": ("c.wav", wav, "audio/wav")},
+                    data={"demo_hint": "synthetic", "case_id": cid}).json()
+    assert v["band"] == "likely_synthetic" and v["used_in_decision"] is False
+    assert v["assessment"]["tier"] == before["tier"] and "review" not in v["assessment"]   # G2, G6
+    case = client.get(f"/v1/cases/{cid}", headers=ANALYST).json()
+    assert case["review"]["reason"] == "voice_likely_synthetic" and case["review"]["voice_mode"] == "shadow"
+    assert any(c["case_id"] == cid and c["review"] for c in client.get("/v1/cases", headers=ANALYST).json())
+    assert "review_flagged" in [e["type"] for e in case["events"]]
+
+
+def test_voice_audio_is_never_written_to_disk(client, tmp_path):
+    """SPEC section 6 / FINALE_PLAN C1: a voice check leaves no audio behind on the server."""
+    sc, a1 = start(client, "T1")
+    before = {p for p in tmp_path.rglob("*") if p.is_file()}
+    wav = client.get("/v1/demo/audio/synthetic.wav").content
+    v = client.post("/v1/voice/score", files={"file": ("c.wav", wav, "audio/wav")}, data={"case_id": a1["case_id"]}).json()
+    assert v["audio_retained"] is False
+    new = {p for p in tmp_path.rglob("*") if p.is_file()} - before
+    audio = [p for p in tmp_path.rglob("*") if p.is_file() and (p.suffix.lower() in {".wav", ".mp3", ".m4a", ".ogg", ".webm", ".flac"}
+                                                                or p.read_bytes()[:4] == b"RIFF")]
+    assert not audio, audio
+    assert all(p.suffix in {".db", ".db-wal", ".db-shm", ".json", ".pem"} for p in new), new

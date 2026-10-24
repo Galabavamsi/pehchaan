@@ -538,3 +538,10 @@ h1.q[lang="hi"], .hi h1.q { font-size: calc(28px * var(--s)); line-height: 1.3; 
   .tour-body { padding: 20px 16px 40px; }
   .tour-top { padding: 12px 16px; }
 }
+
+/* SPEC v0.3: voice hits go to analyst review */
+.review-chip { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600;
+  background: var(--amber-soft); color: #7a5508; vertical-align: middle; }
+.review-banner { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0 4px; padding: 10px 12px; border-radius: 12px;
+  background: var(--amber-soft); color: var(--ink); font-size: 13.5px; line-height: 1.45; }
+.review-banner svg { color: #a87a12; flex: 0 0 auto; margin-top: 1px; }

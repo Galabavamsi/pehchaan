@@ -441,6 +441,12 @@ class CaseService:
             "p_synthetic": v.get("p_synthetic"), "band": v.get("band"), "model_version": v.get("model_version"),
             "voice_mode": CFG.voice.mode,
             "quality_ok": (v.get("quality") or {}).get("ok"), "audio_retained": False})
+        if v.get("band") == "likely_synthetic" or (v.get("watermark") or {}).get("detected"):
+            # SPEC v0.3: a voice hit goes to the analyst's review queue; the payer's decision is untouched (G2)
+            case["review"] = {"reason": "voice_watermark" if (v.get("watermark") or {}).get("detected") else "voice_likely_synthetic",
+                              "p_synthetic": v.get("p_synthetic"), "model_version": v.get("model_version"),
+                              "voice_mode": CFG.voice.mode, "at": self.ts()}
+            self._event(case, "review_flagged", "voice_service", {"reason": case["review"]["reason"]})
 
     def attach_voice(self, cid: str, v: dict) -> dict:
         case = self.get(cid)

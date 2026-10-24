@@ -64,7 +64,7 @@ def case_summary(c: dict) -> dict:
     return {k: c.get(k) for k in (
         "case_id", "created_at_ist", "updated_at_ist", "status", "tier", "p", "amount_inr", "amount_display",
         "payee_name", "payee_vpa", "payer_name", "caller_display", "call_channel", "claim", "scenario", "stage",
-        "relative_name", "hold")} | {"top_codes": [r["code"] for r in (c.get("top_reasons") or [])][:3]}
+        "relative_name", "hold", "review")} | {"top_codes": [r["code"] for r in (c.get("top_reasons") or [])][:3]}
 
 
 # --------------------------------------------------------------------------- models
