@@ -56,6 +56,7 @@ input → detection → alert → human action path, without accusing the payer 
 | A4 | **Stronger model (GPU):** (1) fuse v1 + model A + NII MMS-300M by z-normalised average, weights fitted on dev only; (2) if time, re-initialise from AntiDeepfake MMS-300M with the model A recipe. Promote only if it beats model A on dev; report test as it lands | 2–5 GPU h | `metrics.json` / FINDINGS updated, single seed stated |
 | A5 | **Fresh never-trained test (on site):** dated protocol note first; new clones from generators absent from training (stock voices, or consenting team voices only) + fresh genuine speech (consenting people, and public CC data not in training); score with the served model | 2 h, evening | FINDINGS on-site section: EER, false-positive rate, n, Wilson CI, failure cases |
 | A6 | **Threshold and failure cases:** a single decision threshold from dev for kit verdicts; failure list on the bench (short clips, unseen commercial cloners, music/noise, heavy phone codecs) | 0.5 h | Bench shows threshold and failure list |
+| A7 | **Clone-vs-detect benchmark** (method from ClonEval, arXiv:2504.20581): for every cloner in our consented corpus, *how convincing* = cosine similarity of WavLM speaker embeddings (`microsoft/wavlm-base-plus-sv`, 16 kHz) between the clone and the real speaker; *how detectable* = catch rate and false-positive rate for **every detector side by side** (off-the-shelf XLS-R+AASIST, NII MMS-300M, ours v1, ours A, fused), clean and phone conditions, held-out cloners marked. Outputs: a leaderboard table, a scatter (similarity vs. catch rate, one dot per cloner per detector), and on `#/bench` every model scoring the judge's file in parallel | 3 h (CPU, laptop) | `ml/results/clone_vs_detect.json` + bench page; numbers in FINDINGS on-site section |
 
 ### B. Live end-to-end journey (Stage 1 #1 = 25, Stage 2 #4 = 25)
 
@@ -108,6 +109,33 @@ Q&A sheet with honest "we don't know" answers; three timed rehearsals.
 
 ---
 
+## 2b. Closing demo: clone a consenting judge, live (optional, high impact)
+
+The judge reads a short passage, we clone their voice in front of them, a call in their cloned voice asks for money,
+and Pehchaan still stops the payment because it asks the real "son's" phone.
+
+| Step | Time |
+|---|---|
+| Judge reads the consent summary and signs the cloning consent form (photo saved as evidence, registered as a participant, e.g. `J01`) | 1 min |
+| Record 30–60 s of the judge reading a set passage on the laptop mic (Sarvam needs only ~10 s; extra lets us pick the cleanest 10–15 s) | 1 min |
+| Create the cloned voice (Sarvam instant cloning API) and synthesise a 15 s scam line | ~10–20 s |
+| Show the **ClonEval similarity** of the clone to their real voice, and **every detector's score in parallel** | ~10 s |
+| Place the call to **Phone A** (a team phone) and play it on speaker | ~30 s |
+| Pay → "Who asked?" → Family Verify on Phone B → "Not me" → HOLD | ~30 s |
+| **Delete the cloned voice and the recording on screen** (`sarvam_clone --delete-voices`, then remove the files) | 10 s |
+
+Total ≈ **3 minutes**. For comparison, ElevenLabs instant cloning needs ≥ 10 s (1–2 min recommended); Sarvam's own
+flow records ~10 s. Both require the speaker's consent.
+
+**Non-negotiable rules** (CLAUDE.md consent rules, and they're also good theatre):
+- Only with the judge's **explicit, signed** consent, registered before any cloning (`consent.py` refuses otherwise).
+  If they hesitate, use a teammate's consented clone instead; never pressure.
+- The call goes **only to a team phone** (or the judge's own phone if they ask). **Never call the judge's real family**
+  or anyone who hasn't agreed; "show how your family could be cheated" is shown on our phones, not on theirs.
+- The script is role-play; nothing is kept: delete the voice at Sarvam and the recording right after, on screen.
+- Needs on-site code: `sarvam_clone --ref <file>` (clone from a fresh recording) and a one-page "live clone" screen.
+  Rehearse it twice with a teammate first; fallback = the pre-made consented clone.
+
 ## 3. Timeline
 
 | When | Varun | Vamsi | GPU |
@@ -127,5 +155,7 @@ Ask the organisers early **when the Stage 1 spot-check happens**: if it's on day
 ## 4. Decisions for the team
 1. Voice alerts go to analyst review only (recommended above), or voice may also raise PAUSE for the payer (needs a SPEC change and conflicts with G6 copy rules)?
 2. GPU: start the A10G for A4 (≈ $1.21/h, budget ~$10)?
-3. Run the live demo from the laptop + hotspot, or redeploy a server on site?
+3. ~~Laptop or server~~ **Decided 24 Oct: the live demo runs on the server** (`demo.` / `api.humanslop.in`). Running
+   all detectors in parallel there needs more memory than the 4 GB box (v1 alone settles at ~1 GB): either upsize
+   (e.g. c7i.2xlarge, 16 GB) or run the multi-model bench on the laptop and keep the server on the fused model.
 4. Push: this rewritten history goes to a **new** branch on your fork (no force-push needed); delete the old `finale-prep` branch there later if you want.
