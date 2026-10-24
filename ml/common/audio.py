@@ -22,24 +22,45 @@ def load(path, sr: int = SR) -> np.ndarray:
     return resample(x, s, sr)
 
 
+def _ffmpeg(path, sr: int = SR, max_s: float | None = None, timeout: float | None = None) -> np.ndarray:
+    """ffmpeg -> mono float32 at `sr`; only the first `max_s` seconds are decoded, and the decoder is killed after
+    `timeout` seconds."""
+    import subprocess
+    cmd = ["ffmpeg", "-v", "error", "-i", str(path)] + (["-t", f"{max_s:g}"] if max_s else []) + \
+          ["-ac", "1", "-ar", str(sr), "-f", "f32le", "-"]
+    try:
+        raw = subprocess.run(cmd, capture_output=True, check=True, timeout=timeout).stdout
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"decoding took longer than {timeout:g} s") from None
+    return np.frombuffer(raw, dtype=np.float32).copy()
+
+
 def load_any(path, sr: int = SR) -> np.ndarray:
     """Like load(), but falls back to ffmpeg for m4a/mp3/opus etc."""
     try:
         return load(path, sr)
     except Exception:
-        import subprocess
-        cmd = ["ffmpeg", "-v", "error", "-i", str(path), "-ac", "1", "-ar", str(sr), "-f", "f32le", "-"]
-        raw = subprocess.run(cmd, capture_output=True, check=True).stdout
-        return np.frombuffer(raw, dtype=np.float32).copy()
+        return _ffmpeg(path, sr)
 
 
-def decode_bytes(data: bytes, sr: int = SR) -> np.ndarray:
+def decode_bytes(data: bytes, sr: int = SR, max_s: float | None = None,
+                 timeout: float | None = None) -> tuple[np.ndarray, float, bool]:
     """Decode an uploaded file of any common format (wav, flac, ogg, mp3, m4a/aac, opus, webm) to mono float32
-    at `sr`. soundfile first; ffmpeg otherwise, through a temp file because m4a/mp4 need a seekable input."""
+    at `sr`, decoding at most its first `max_s` seconds. soundfile first; ffmpeg otherwise (with `timeout`), through
+    a temp file because m4a/mp4 need a seekable input.
+
+    Returns (audio, seconds, exact): `seconds` is the file's duration when the header gives it, otherwise how much
+    was decoded, and `exact` is False when the file may be longer than that (so `seconds` is a lower bound; ffmpeg
+    output within 50 ms of the limit counts as reaching it)."""
     import io
     try:
-        x, s = sf.read(io.BytesIO(data), dtype="float32", always_2d=True)
-        return resample(x.mean(axis=1), s, sr)
+        with sf.SoundFile(io.BytesIO(data)) as f:
+            total, s = f.frames, f.samplerate
+            known = 0 < total < 2 ** 62
+            limit = int(max_s * s) if max_s else -1
+            x = f.read(min(total, limit) if known and limit >= 0 else limit, dtype="float32", always_2d=True)
+        exact = known or limit < 0 or len(x) < limit
+        return resample(x.mean(axis=1), s, sr), (total if known else len(x)) / s, exact
     except Exception:
         import os
         import tempfile
@@ -47,9 +68,10 @@ def decode_bytes(data: bytes, sr: int = SR) -> np.ndarray:
             f.write(data)
             tmp = f.name
         try:
-            return load_any(tmp, sr)
+            x = _ffmpeg(tmp, sr, max_s, timeout)
         finally:
             os.unlink(tmp)   # uploads are never kept on disk
+        return x, len(x) / sr, not max_s or len(x) < int((max_s - 0.05) * sr)
 
 
 def save(path, x: np.ndarray, sr: int = SR):

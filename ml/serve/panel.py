@@ -2,8 +2,9 @@
 
 Enabled with PEHCHAAN_PANEL (comma list of ids from serve/panel_config.json, e.g. "v1,A,nii,la") and
 PEHCHAAN_FUSE (the ids fused into Pehchaan's verdict, default "A,nii,v1": the lowest simulated EER, 4.1%).
-Each detector keeps its own threshold (its EER point on the shared simulated test sample) and is scored the way
-its stored scores were made: XLS-R+AASIST models as the mean over ~4 s windows, NII on whole chunks of up to 16 s.
+Each detector keeps its own threshold (its EER point on the shared simulated test sample) and is scored by the
+shared rules in common/scoring.py (also used by eval/clone_vs_detect.py): XLS-R+AASIST models as the mean over the
+planned ~4 s windows, NII on whole chunks of up to 16 s of the same clip.
 Panel results are evidence for analysts and judges; they never change a payment decision (SPEC G2, shadow mode).
 """
 import json
@@ -13,12 +14,13 @@ import time
 import numpy as np
 import torch
 
+from common.scoring import aasist_score, nii_chunks
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ML = os.path.dirname(HERE)
 CONFIG = os.path.join(HERE, "panel_config.json")
 CKPTS = {"A": os.path.join(ML, "runs", "ours_v3_rc", "best.pt"),
          "la": os.path.join(ML, "runs", "ssl_la", "LA_model.pth")}
-NII_CHUNK = 16 * 16000
 
 
 def _int8(model):
@@ -63,14 +65,8 @@ class Panel:
         if kind == "svc":
             return float(self.svc.window_scores(x, starts).mean())
         if kind == "aasist":
-            from serve.app import WIN
-            from common.audio import fix_length
-            segs = [fix_length(x[s:s + WIN], WIN) for s in starts]
-            lg = np.concatenate([d.logits(segs[b:b + 8]) for b in range(0, len(segs), 8)])
-            return float((lg[:, 0] - lg[:, 1]).mean())
-        chunks = [x[i:i + NII_CHUNK] for i in range(0, len(x), NII_CHUNK)]
-        chunks = [c for c in chunks if len(c) >= 16000] or [x]
-        return float(np.mean(d.score_batch(chunks)))
+            return aasist_score(d.logits, x, starts)
+        return float(np.mean(d.score_batch(nii_chunks(x))))
 
     def run(self, x, mask, starts):
         if self.svc.device.type == "cpu":
