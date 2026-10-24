@@ -413,3 +413,69 @@ What it means:
 Reproduce: `ml/realcall/work/retrain_v4/d2cmp` (scores from S3 `work/scores_v4`, plus the labelled real-call manifest),
 then `python -m realcall.compare_models --dir realcall/work/retrain_v4/d2cmp --name retrain_v4 --device D2` and
 `python -m eval.compare_v4 --dir realcall/work/retrain_v4/d2cmp`.
+
+## On site, 25 Oct 2026 (night): generalisation run v5, single seed
+
+**What changed** (protocol note "v5" in `common/protocol.py`, written 24 Oct evening before any IndicVoices clip was
+downloaded or cloned, but *after* we had seen every model miss S02's Sarvam clones, so every result here is a
+follow-up to that miss, not a blind test):
+- **Many speakers:** ai4bharat/IndicVoices Hindi (CC-BY-4.0), raw field recordings. 600 speakers selected from 1,591
+  eligible, split by person: 438 train, 52 dev, 110 test; 1,800 target utterances (3.5 h). Each target has
+  content-matched XTTS-v2 and F5-Hindi clones of the same speaker (141 clones dropped for duration, 3 not generated).
+  XTTS-v2 and F5-Hindi stay seen cloners, so the IndicVoices test rows measure "seen cloner, unseen speaker".
+- **Never-trained engines:** a larger MLAAD test set, 200 clips per (language, system), clean and through the AMR
+  channel: 3,000 clips per condition.
+- **Candidates** (model A's recipe, seed 0): **n1** = NII MMS-300M AntiDeepfake initialisation + the A2 data;
+  **a3** = A's initialisation + the A2 data + IndicVoices; **n3** = NII initialisation + the A2 data + IndicVoices.
+  NII-initialised weights inherit CC-BY-NC-SA-4.0 (research and education only). Sarvam IVC is never trained.
+- **Run:** `infra/retrain_v5.sh` on a g5.2xlarge, 24 Oct 22:27 → 25 Oct 02:24 IST, status SUCCESS; the box stopped
+  itself. Weights in S3 `runs/ours_n1`, `runs/ours_a3`, `runs/ours_n3`; scores in `work/scores_v5`.
+- **Threshold:** each model's own EER point on the fixed simulated test sample (6,000 clips), as for A.
+
+**Promotion check and real phone calls** (the 510 pre-registered real-call test clips, D1 + held-out handset D2; 95 %
+Wilson intervals):
+
+| Model | Fixed dev EER (n = 4,025) | Real-call EER | S02 EER | Genuine flagged | Clones caught | Sarvam IVC caught, S01 / S02 |
+|---|---|---|---|---|---|---|
+| A (current) | 2.86 % | 11.0 % | 13.5 % | 11/256 = 4.3 % (2.4–7.5 %) | 204/254 = 80.3 % (75.0–84.7 %) | 0/5 / 0/7 |
+| NII zero-shot | 17.99 % | 51.2 % | 55.6 % | 144/256 = 56.3 % (50.1–62.2 %) | 133/254 = 52.4 % (46.2–58.4 %) | 5/5 / 5/7 |
+| n1: NII init | 1.29 % | 11.4 % | 16.1 % | 9/256 = 3.5 % (1.9–6.5 %) | 186/254 = 73.2 % (67.5–78.3 %) | 0/5 / 0/7 |
+| a3: + IndicVoices | 2.68 % | 10.6 % | 12.2 % | 9/256 = 3.5 % (1.9–6.5 %) | 203/254 = 79.9 % (74.6–84.4 %) | 0/5 / 0/7 |
+| **n3: NII init + IndicVoices** | 2.04 % | **7.8 %** | **10.3 %** | **3/256 = 1.2 % (0.4–3.4 %)** | 190/254 = 74.8 % (69.1–79.7 %) | 0/5 / 0/7 |
+
+**Generalisation tests** (synthetic and clean audio; A was not scored on these sets in this run):
+
+| Model | Unseen IndicVoices speakers (110), EER over 5 channels | … genuine flagged | MLAAD clean: caught (AUC) | MLAAD AMR: caught (AUC) | Paid-API unseen voices caught | Clean bench, Sarvam IVC: S01 AUC, caught / S02 AUC, caught |
+|---|---|---|---|---|---|---|
+| A (current) | – | – | – | – | 5,465/6,000 = 91.1 % | – |
+| NII zero-shot | 11.8 % | 376/1,650 | 2,742/3,000 = 91.4 % (0.977) | 2,859/3,000 = 95.3 % (0.950) | 4,892/6,000 = 81.5 % | 1.000, 41/41 / 0.743, 30/30 |
+| n1 | 5.3 % | 49/1,650 | 2,839/3,000 = 94.6 % (0.997) | 2,830/3,000 = 94.3 % (0.992) | 5,764/6,000 = 96.1 % | 1.000, 24/41 / 0.531, 18/30 |
+| a3 | 7.5 % | 40/1,650 | 2,357/3,000 = 78.6 % (0.985) | 2,370/3,000 = 79.0 % (0.983) | 5,692/6,000 = 94.9 % | 0.989, 0/41 / 0.397, 0/30 |
+| n3 | **2.2 %** | **10/1,650** | 2,718/3,000 = 90.6 % (**0.999**) | 2,672/3,000 = 89.1 % (0.995) | 5,699/6,000 = 95.0 % | 1.000, 34/41 / 0.724, 12/30 |
+
+MLAAD AUCs are against unseen IndicVoices genuine speech on the same channel. After the AMR channel, n3 catches
+2/41 (S01) and 1/30 (S02) Sarvam clones on the bench. Direct microphone recordings of S01 and S02 are flagged 0/80 by
+n1, a3 and n3; S02's network-side dialer recordings are flagged 18/44 by n3.
+
+What it means:
+1. **Promotion check:** all three candidates beat A on the fixed dev set (n1 1.29 %, n3 2.04 %, a3 2.68 %, A 2.86 %).
+   The pre-registered rule says a candidate replaces A only if it beats A on dev; it does not say how to choose
+   between several that do. By dev alone, n1 is the lowest.
+2. **Real calls:** n3 is the first model to improve on A on real phone calls: EER 7.8 % against 11.0 %, and it
+   flags 3 genuine clips where A flags 11 (intervals 0.4–3.4 % and 2.4–7.5 %, which overlap slightly). At its
+   threshold it catches fewer clones (74.8 % against 80.3 %; intervals overlap). Neither the backbone alone (n1) nor
+   the extra speakers alone (a3) improves on A; the combination does. Caveat: four models (three candidates and NII
+   zero-shot) were compared on the same test set, so the best of them is an optimistic pick; single seed.
+3. **Sarvam IVC on an unseen speaker still beats every fine-tuned model over the phone:** 0/12 on real calls for
+   A, n1, a3 and n3. On clean audio n3 separates S02's Sarvam clones better than n1 or a3 (AUC 0.724) but catches
+   12/30 at its threshold, and 1/30 after AMR. NII zero-shot catches them only while flagging 56 % of genuine calls.
+4. **Unseen speakers:** n3 reaches 2.2 % EER on 110 IndicVoices speakers it never heard (seen cloners), flagging
+   10 of 1,650 genuine clips.
+5. **Decision (25 Oct, 02:50 IST, Varun): n3 is the reference detector**, the model we quote and show in the laptop
+   detector bench, with the selection caveat above (dated note in `common/protocol.py`). Voice stays in shadow mode
+   (the live-caller gate is not run), the deployed server keeps v1, and n3 inherits CC-BY-NC-SA-4.0 (research and
+   education only).
+
+Reproduce: `aws s3 sync s3://pehchaan-ml-301745146083-use1/work/scores_v5 ml/realcall/work/retrain_v5/scores` and
+`aws s3 cp s3://pehchaan-ml-301745146083-use1/work/manifests/iv_test.csv ml/realcall/work/retrain_v5/scores/`, then
+`cd ml && python -m eval.compare_v5` (writes `realcall/work/reports/retrain_v5.json`, the source of every number above).
