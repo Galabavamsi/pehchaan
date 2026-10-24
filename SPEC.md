@@ -33,6 +33,10 @@ Pehchaan assesses a payment only if **both** hold:
 
 *v0.3 (24 Oct 2026, on site): two evasions closed. "Hang up, wait 15 minutes, then pay" is covered by the longer window for large amounts (RBI's April 2026 paper: ~92% of fraud value is in payments above ₹50,000). "Send ₹9,500 five times" is covered by counting what was already sent during the same call, so splitting a demand under ₹10,000 no longer escapes the trigger. Payments made during the call also don't make a payee familiar: a payee first paid during this call stays **new** for the rest of the call, and those payments don't count toward the trusted bypass. Without this, the second ₹9,500 would go through silently (the payee already "paid once") and the fourth would be trusted.*
 
+*v0.3 (24 Oct 2026, from the code review): **a payment counts only once it is confirmed sent.** Assessing a payment records nothing: the payer may still abandon it, retry it or fail the PIN. A payment that opens no case (not triggered, or a silent Green) gets a `payment_ref`; the app reports it with `POST /v1/payments/{payment_ref}/sent` after the UPI app confirms the debit, and it is counted once however often that is repeated. A case's payment counts when the case moves to "sent" (Pay / Continue), once. Only counted payments feed the payee history (new payee, usual amount, the trusted bypass), the same-call running total and the burst signal. Before this, three abandoned no-call attempts to an unpaid payee made it "paid three times", so it qualified for the trusted bypass on a later call.*
+
+*v0.3 (24 Oct 2026, same review): **"the same call" means since the call started.** The running total and "paid before this call" look back to the call's start minus 2 minutes of slack. The start is the `started_at` the app sends, or else now − `duration_sec` − `ended_sec_ago` (0 for an active call). A `started_at` later than the server's clock is ignored (the phone's clock is ahead, or a demo clock is set) and `duration_sec` is used instead. Only when the app sends neither does the server fall back to the last 60 minutes. Before this, a rolling hour was used for both, so 70 minutes into one long call (typical of digital arrest) the earlier payments dropped out: the total restarted and the payee counted as paid before the call.*
+
 Every other payment is untouched, which keeps friction at zero for the large majority. **Trusted bypass:** payees paid ≥ 3 times before this call, with an amount ≤ 1.5× their usual, go Green.
 
 ## 3. Signals — six independent families
@@ -89,7 +93,7 @@ Initial LRs (scam vs genuine, given the trigger fired):
   Otherwise the result is capped at Amber.
 - **G2 (voice is supporting evidence):** V never counts toward G1, and if removing V would drop the tier below Red, the result is capped at Amber (strict). `voice_no_strong_evidence` has LR 1.0: the detector can raise suspicion but **never lower it**, because detectors miss unseen generators. "Sounds real" is not proof.
 - **Voice shadow mode (default, v0.2 final):** on one real cellular call, every detector we tested, ours included, flagged 91–95% of genuine speech as synthetic (measured LR on real-call genuine speech = 0.93). The detector score is therefore logged and shown to analysts but uses LR 1.0 in decisions, until it passes a real-call gate (≤ 5% false flags on ≥ 50 consented real calls). `watermark_detected` stays active. See `ml/results/SUMMARY.md`.
-  - *v0.3 (24 Oct 2026):* a `likely_synthetic` band or a watermark puts the case in the analyst's **Needs review** queue with the score and the model version. It never changes the tier, the hold or anything the payer sees (G2, G6). This is how the detector earns its keep while in shadow: analysts see its hits and misses, and their labels feed the real-call gate.
+  - *v0.3 (24 Oct 2026):* a `likely_synthetic` band or a watermark puts the case in the analyst's **Needs review** queue with the score and the model version. It never changes the tier, the hold or anything the payer sees (G2, G6). This is how the detector earns its keep while in shadow: analysts see its hits and misses, and their labels feed the real-call gate. Any analyst decision on the case resolves the review (who, when, which decision) and leaves the case's voice evidence in place; the queue shows open reviews only.
 - **G3 (quality gate):** speech < 4 s or SNR < 10 dB means `voice_inconclusive`.
 - **G4 (decisive positive):** `fv_confirmed`, `callback_confirmed` or `bank_active_call_1600` (the bank's own registry confirms a live 1600 call) put the result at Green, unless `payee_flagged_high` is present (then Amber).
 - **G5 (trusted bypass):** see §2.
@@ -160,7 +164,8 @@ Every decision returns `reasons[]`: code, plain-language text (EN + HI), contrib
 - Feedback & model-ops loop: labels, recalibration, red-team refresh, drift monitoring, LLM tracing in Langfuse.
 
 **Prototype API contracts:**
-- `POST /v1/risk/assess` → `{case_id, tier, p, reasons[], actions[], guardrails[]}`
+- `POST /v1/risk/assess` → `{case_id, tier, p, reasons[], actions[], guardrails[]}`, plus `payment_ref` when no case is opened. The call may carry `started_at` (ISO 8601) or a live `duration_sec`.
+- `POST /v1/payments/{payment_ref}/sent` → `{recorded: true}` the first time, `{recorded: false, already: true}` after that, 404 for an unknown ref (v0.3).
 - `POST /v1/voice/score` (wav, 16 kHz mono, ≤ 12 s) → `{p_synthetic, band, quality{speech_sec, snr_db, ok}, watermark{detected, scheme}, model_version, latency_ms}`
 - `POST /v1/verify/family` → creates a challenge; `POST /v1/verify/family/{id}/respond`; WebSocket `/ws/case/{case_id}` streams updates.
 - `GET /v1/cases`, `GET /v1/cases/{id}`, `POST /v1/cases/{id}/decision` (analyst)

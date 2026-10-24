@@ -47,6 +47,17 @@ If a piece isn't working by the end of its box, ship without it: the web pages (
   `state: "ended"` and `ended_sec_ago` (the trigger window is 10 minutes, 60 minutes for amounts ≥ ₹50,000).
   Send the same `call.number` for every payment during one call: what was already sent during that call counts
   toward ₹10,000 (SPEC v0.3 split payments).
+- **Tell the server when the call started** (SPEC v0.3, "same call = since it started"): send a live
+  `duration_sec` (seconds since the call started, computed at the Pay tap; for an ended call, its length) or
+  `started_at` (ISO 8601 with offset, from the call-state plugin). Prefer `duration_sec`: it doesn't depend on the
+  phone's clock, and a `started_at` ahead of the server's clock is ignored. With neither, the server can only look
+  back 60 minutes, so earlier payments in a long call drop out.
+- **Report payments that went through.** A payment that opens no case (`case_id: null`: not triggered, or a silent
+  Green) comes back with a `payment_ref`. After the UPI app confirms the debit, call
+  `POST /v1/payments/{payment_ref}/sent` (`{"recorded": true}`; a repeat returns `{"recorded": false,
+  "already": true}`, so retries are safe; an unknown ref is 404). Don't call it if the payer backs out or the PIN
+  fails: only reported payments count toward the payee's history, the trusted bypass and the same-call total.
+  A payment that opened a case is recorded by Pay / Continue (`POST /v1/cases/{case_id}/user-action`); no extra call.
 - Then the claim: `POST /v1/risk/assess` with `{"case_id": "...", "claim": "family", "claim_target": "rel_rahul"}`.
   A family claim for an enrolled relative sends Family Verify automatically (check the response's
   `auto_family_verify`). Claims: `family`, `bank`, `upi_or_shop`, `authority`, `other`, `none`.

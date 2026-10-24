@@ -10,6 +10,7 @@ import os
 import sys
 import time
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -72,7 +73,10 @@ class CallIn(BaseModel):
     state: Literal["active", "ended", "none"] = "active"
     number: str | None = None
     channel: Literal["pstn", "whatsapp", "voip"] = "pstn"
-    duration_sec: float = 0
+    started_at: datetime | None = Field(None, description="When the call started, ISO 8601 (IST if no offset). "
+                                                          "SPEC v0.3: 'this call' runs from here")
+    duration_sec: float | None = Field(None, description="Seconds since the call started (live), or its length once "
+                                                         "ended; used for the call's start when started_at is absent")
     ended_sec_ago: float | None = None
     in_contacts: bool | None = Field(None, description="On-device contact-hash match result, if the SDK sends it")
 
@@ -211,6 +215,12 @@ def create_app(db_path: str | None = None, key_path: str | None = None) -> FastA
                     res = fv.pop("assessment")
                     res["auto_family_verify"] = fv
         return res
+
+    @app.post("/v1/payments/{payment_ref}/sent")
+    def payment_sent(payment_ref: str):
+        """The UPI app confirmed a payment that opened no case (the `payment_ref` from assess). SPEC v0.3: only then
+        does it count toward the payee's history, the same-call total and the burst signal, and only once."""
+        return svc.payment_sent(payment_ref)
 
     # ------------------------------------------------------------- voice
     @app.post("/v1/voice/score")

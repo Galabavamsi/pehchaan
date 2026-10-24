@@ -54,6 +54,14 @@ def assess(c, payment, call=CALL_44, payer="u_sunita"):
     return c.post("/v1/risk/assess", json={"payer_id": payer, "payment": payment, "call": call}).json()
 
 
+def pay(c, a):
+    """The payer goes ahead: Continue on a case, or (no case opened) the app reports the payment sent (SPEC v0.3:
+    only a payment that went through counts toward the payee's history and the same-call total)."""
+    if a.get("case_id"):
+        return c.post(f"/v1/cases/{a['case_id']}/user-action", json={"action": "continue"})
+    return c.post(f"/v1/payments/{a['payment_ref']}/sent")
+
+
 def claim(c, cid, code, target=None):
     return c.post("/v1/risk/assess", json={"case_id": cid, "claim": code, "claim_target": target}).json()
 
@@ -81,13 +89,12 @@ def fresh(c, name="T1"):
 # --------------------------------------------------------------------------- the rows
 def r_split(c):
     fresh(c)
-    pay = {"payee_vpa": "fees.desk@okdemo", "payee_name": "Fees Desk", "amount_inr": 9500}
+    payment = {"payee_vpa": "fees.desk@okdemo", "payee_name": "Fees Desk", "amount_inr": 9500}
     seen = []
     for _ in range(4):
-        a = assess(c, pay)
+        a = assess(c, payment)
         seen.append(outcome(a))
-        if a.get("case_id"):
-            c.post(f"/v1/cases/{a['case_id']}/user-action", json={"action": "continue"})
+        pay(c, a)
     return {"outcome": "paused" if all(s == "paused" for s in seen) else "missed",
             "observed": f"each of the 4 payments was {', '.join(seen)}; the trigger counts what was already sent "
                         f"during the call and the payee stays new for the rest of the call"}
@@ -225,6 +232,7 @@ def r_hopping(c):
         a = assess(c, {"payee_vpa": f"shop{i}@okdemo", "payee_name": name, "amount_inr": 4000},
                    {"state": "none", "number": None})
         seen.append(("burst_new_payees" in (a.get("signals") or []), a["triggered"]))
+        pay(c, a)
     return {"outcome": "missed",
             "observed": f"no call, three new payees at ₹4,000: burst signal per payment {[s for s, _ in seen]}, "
                         f"assessed {[t for _, t in seen]}. With no call Pehchaan stays out by design (SPEC section 2); "
@@ -238,8 +246,7 @@ def r_hopping_call(c):
         a = assess(c, {"payee_vpa": f"shop{i}@okdemo", "payee_name": name, "amount_inr": 4000},
                    {"state": "active", "number": "+918765432110", "channel": "pstn", "duration_sec": 300})
         seen.append("burst_new_payees" in (a.get("signals") or []))
-        if a.get("case_id"):
-            c.post(f"/v1/cases/{a['case_id']}/user-action", json={"action": "continue"})
+        pay(c, a)
     return {"outcome": "paused", "observed": f"on a call, three new payees at ₹4,000: each paused; burst signal {seen}"}
 
 

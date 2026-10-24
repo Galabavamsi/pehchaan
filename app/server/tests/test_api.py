@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 import pytest
 from conftest import ANALYST
+from pehchaan.evidence import ist_iso
 
 
 def start(client, name):
@@ -364,3 +367,104 @@ def test_voice_audio_is_never_written_to_disk(client, tmp_path):
                                                                 or p.read_bytes()[:4] == b"RIFF")]
     assert not audio, audio
     assert all(p.suffix in {".db", ".db-wal", ".db-shm", ".json", ".pem"} for p in new), new
+
+
+def no_call_payment(client, vpa, amount=5000):
+    return client.post("/v1/risk/assess", json={"payer_id": "u_sunita", "call": {"state": "none"},
+                                                "payment": {"payee_vpa": vpa, "payee_name": "Shop", "amount_inr": amount}}).json()
+
+
+def test_abandoned_assessments_leave_no_history(client):
+    """SPEC v0.3: assessing a payment records nothing. A payment that opens no case gets a payment_ref and counts only
+    when the app reports it sent; abandoned or retried attempts leave the payee new."""
+    sc, a = start(client, "L1")   # silent Green on a call
+    assert a["case_id"] is None and a["status"] == "cleared_silently" and a["payment_ref"]
+    for _ in range(3):            # tapped Pay with no call, then backed out at the PIN, three times
+        r = no_call_payment(client, "never.paid@okdemo")
+        assert r["triggered"] is False and r["payment_ref"]
+    svc = client.app.state.svc
+    for vpa in (sc["payment"]["payee_vpa"], "never.paid@okdemo"):
+        assert svc.history.payee("u_sunita", vpa) is None
+        assert svc.s.one("SELECT COUNT(*) AS n FROM sent_payments WHERE payee_vpa=?", (vpa,))["n"] == 0
+
+
+def test_unpaid_attempts_never_earn_the_trusted_bypass(client):
+    """The review's attack: three no-call attempts to a payee who was never paid used to make it 'paid three times',
+    so a later scam call paying it got the trusted bypass (G5). Only confirmed payments count now."""
+    client.post("/v1/demo/scenario/T1", params={"background": False})
+    for _ in range(3):
+        no_call_payment(client, "unpaid.desk@okdemo", 12000)
+    call = {"state": "active", "number": "+447700900123", "channel": "whatsapp", "duration_sec": 300}
+    pay = {"payee_vpa": "unpaid.desk@okdemo", "payee_name": "Unpaid Desk", "amount_inr": 12000}
+    a = client.post("/v1/risk/assess", json={"payer_id": "u_sunita", "call": call, "payment": pay}).json()
+    assert a["triggered"] and "new payee" in a["trigger"]["why"] and a["case_id"]
+    assert not any(g["id"] == "G5" for g in a["guardrails"])
+    # three payments that really went through, before the call, do make the payee familiar
+    for _ in range(3):
+        ref = no_call_payment(client, "paid.desk@okdemo", 12000)["payment_ref"]
+        assert client.post(f"/v1/payments/{ref}/sent").json() == {"recorded": True}
+    b = client.post("/v1/risk/assess", json={"payer_id": "u_sunita", "call": call,
+                                             "payment": dict(pay, payee_vpa="paid.desk@okdemo")}).json()
+    assert b["tier"] == "green" and b["case_id"] is None and any(g["id"] == "G5" for g in b["guardrails"])
+
+
+def test_payment_confirmation_counts_once(client):
+    """POST /v1/payments/{ref}/sent records a payment once; a case's payment counts on the move to 'sent', once."""
+    client.post("/v1/demo/scenario/T1", params={"background": False})
+    svc = client.app.state.svc
+    ref = no_call_payment(client, "once@okdemo", 3000)["payment_ref"]
+    first = client.post(f"/v1/payments/{ref}/sent")
+    assert first.status_code == 200 and first.json() == {"recorded": True}
+    again = client.post(f"/v1/payments/{ref}/sent")
+    assert again.status_code == 200 and again.json() == {"recorded": False, "already": True}
+    assert svc.history.payee("u_sunita", "once@okdemo") == {"count": 1, "usual_amount": 3000}
+    assert client.post("/v1/payments/pay_0000000000000000/sent").status_code == 404
+    sc, a = start(client, "T1")
+    r1 = client.post(f"/v1/cases/{a['case_id']}/user-action", json={"action": "continue"}).json()
+    r2 = client.post(f"/v1/cases/{a['case_id']}/user-action", json={"action": "continue"}).json()
+    assert r1["status"] == r2["status"] == "sent" and r1["utr"] == r2["utr"]
+    assert svc.history.payee("u_sunita", sc["payment"]["payee_vpa"])["count"] == 1
+
+
+def test_a_long_call_keeps_its_earlier_payments(client):
+    """SPEC v0.3: 'this call' runs from the call's start. 75 minutes into one call (digital arrest runs long), the
+    ₹9,500 sent at its start still counts: the running total reaches ₹10,000 and the payee is still new."""
+    client.post("/v1/demo/scenario/T1", params={"background": False})
+    svc = client.app.state.svc
+    call = {"state": "active", "number": "+447700900123", "channel": "whatsapp", "duration_sec": 300}
+    pay = {"payee_vpa": "settlement.desk@okdemo", "payee_name": "Settlement Desk", "amount_inr": 9500}
+
+    def assess(c):
+        return client.post("/v1/risk/assess", json={"payer_id": "u_sunita", "call": c, "payment": pay}).json()
+
+    a = assess(call)
+    assert client.post(f"/v1/cases/{a['case_id']}/user-action", json={"action": "continue"}).json()["status"] == "sent"
+    svc._clock_offset = timedelta(minutes=75)
+    started = ist_iso(svc.now() - timedelta(seconds=300 + 75 * 60))
+    for c in (dict(call, duration_sec=300 + 75 * 60),                          # the live duration
+              {**call, "duration_sec": None, "started_at": started},           # or the start time
+              {**call, "duration_sec": 300 + 75 * 60,                          # a start in the future is ignored
+               "started_at": ist_iso(svc.now() + timedelta(hours=3))}):
+        b = assess(c)
+        assert b["triggered"] and "new payee" in b["trigger"]["why"], (c, b["trigger"])
+        assert any("split payments" in w for w in b["trigger"]["why"])
+    # with neither start nor duration the server can only look back an hour, which misses the first payment
+    assert assess({**call, "duration_sec": None})["triggered"] is False
+
+
+def test_analyst_decision_resolves_the_voice_review(client):
+    """A decision on a case in the Needs review queue resolves the review and keeps the voice evidence."""
+    sc, a1 = start(client, "T1")
+    cid = a1["case_id"]
+    wav = client.get("/v1/demo/audio/synthetic.wav").content
+    client.post("/v1/voice/score", files={"file": ("c.wav", wav, "audio/wav")}, data={"demo_hint": "synthetic", "case_id": cid})
+    assert "resolved" not in client.get(f"/v1/cases/{cid}", headers=ANALYST).json()["review"]
+    r = client.post(f"/v1/cases/{cid}/decision", json={"decision": "false_positive", "note": "real son"}, headers=ANALYST)
+    rv = r.json()["review"]
+    assert rv["resolved"]["decision"] == "false_positive" and rv["resolved"]["by"] == "a.verma" and rv["resolved"]["at"]
+    assert rv["reason"] == "voice_likely_synthetic" and rv["p_synthetic"] is not None and rv["model_version"]
+    listed = next(c for c in client.get("/v1/cases", headers=ANALYST).json() if c["case_id"] == cid)
+    assert listed["review"]["resolved"]["decision"] == "false_positive"
+    case = client.get(f"/v1/cases/{cid}", headers=ANALYST).json()
+    assert case["checks"]["voice"]["p_synthetic"] == rv["p_synthetic"]
+    assert next(e for e in case["events"] if e["type"] == "analyst_decision")["data"]["review_resolved"] is True
