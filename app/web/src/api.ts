@@ -112,14 +112,15 @@ export const api = {
 };
 
 /** Subscribe to a WebSocket topic with auto-reconnect. Returns an unsubscribe function. */
-export function subscribe(path: string, onMsg: (m: any) => void): () => void {
+export function subscribe(path: string, onMsg: (m: any) => void, onLink?: (up: boolean) => void): () => void {
   let ws: WebSocket | null = null;
   let closed = false;
   let timer: number | undefined;
   const open = () => {
     ws = new WebSocket(WS + path);
+    ws.onopen = () => onLink?.(true);
     ws.onmessage = (e) => { try { onMsg(JSON.parse(e.data)); } catch { /* ignore */ } };
-    ws.onclose = () => { if (!closed) timer = window.setTimeout(open, 800); };
+    ws.onclose = () => { onLink?.(false); if (!closed) timer = window.setTimeout(open, 800); };
   };
   open();
   return () => { closed = true; window.clearTimeout(timer); ws?.close(); };

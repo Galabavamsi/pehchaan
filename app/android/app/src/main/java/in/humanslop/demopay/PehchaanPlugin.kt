@@ -59,6 +59,13 @@ class PehchaanPlugin : Plugin() {
 
     /** Opened from a Family Verify alert: show over the lock screen and turn the screen on. */
     private fun takeRoute(intent: Intent?): String? {
+        // A upi://pay link or QR opened with DemoPay: hand the whole URI to the web layer once
+        if (intent?.action == Intent.ACTION_VIEW && intent.data?.scheme == "upi") {
+            val uri = intent.dataString
+            intent.data = null
+            launchRoute = "upi:$uri"
+            return launchRoute
+        }
         val route = intent?.getStringExtra(Pehchaan.EXTRA_ROUTE) ?: return null
         intent.removeExtra(Pehchaan.EXTRA_ROUTE)
         launchRoute = route

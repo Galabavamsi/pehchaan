@@ -148,6 +148,12 @@ Every decision returns `reasons[]`: code, plain-language text (EN + HI), contrib
   - Family Verify listener: a foreground service holds `/ws/device/{device_id}` and posts a high-priority, full-screen notification on `fv_request`. There is no FCM, and nothing is polled while idle.
 - Two build modes. The **Play-compliant** mode uses only `READ_PHONE_STATE` (call active and duration) and audio mode (VoIP, no permission). The caller's number is then unknown to the app, and number signals come from the bank or telco side (DoT FRI, CNAP). The **demo** build also uses `READ_CALL_LOG` to get the number for the contact check and the caller signals. Google Play allows call-log access only for default phone, SMS or assistant apps, so the demo build is sideloaded.
 - Demo host app "DemoPay": a Capacitor shell around `app/web` (the payer and relative screens), with a role picker on first launch. It sends the phone's real `call` object to `POST /v1/risk/assess`; the API contract is unchanged.
+- **Live payments, no scenario (added 24 Oct, on site).**
+  - The payer app is signed in as the seeded payer `u_sunita` and ignores the demo page's scenario.
+  - Payees come from the user, by three routes: a typed UPI ID, a scanned UPI QR (in-app scanner, or any `upi://pay` link or QR opened with DemoPay), or people already paid.
+  - A fictional UPI directory in the app stands in for the PSP's "verify UPI ID" lookup and gives the registered name. An unknown handle gets a name derived from the handle.
+  - Every payment ends with a "Pehchaan check" line saying why it did or didn't ask. The sources are the API's trigger (call condition, payment condition) and its reasons. Not checking is explained too.
+  - The family app keeps a history of the requests it received and the answers given, on the phone only.
 - Not in this build: iOS (CallKit's `CXCallObserver` says whether a call is active but gives no number), keys in Android Keystore, and call audio.
 
 **Bank/PSP cloud (AWS; production in ap-south-1 for RBI payment-data localisation):**

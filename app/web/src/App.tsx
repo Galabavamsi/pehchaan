@@ -4,8 +4,11 @@ import { API, api, subscribe, urlParam, type Lang, type Scenario } from "./api";
 import { Console } from "./Console";
 import { PayerPhone } from "./PayerPhone";
 import { RelativePhone } from "./RelativePhone";
-import { Seal } from "./components";
+import { Device, Seal } from "./components";
+import { DemoPayApp } from "./DemoPayApp";
 import { isNative, Pehchaan, ROLE_KEY, savedRole, type NativeStatus, type Role } from "./native";
+import { QrCards } from "./QrCards";
+import type { Relative } from "./api";
 
 const SCEN: { id: string; label: string }[] = [
   { id: "T1", label: "Cloned son, +44" },
@@ -49,6 +52,9 @@ function WebApp() {
   if (route === "console") return <Console follow={urlParam("follow") === "1"} />;
   if (route === "payer") return <Standalone kind="payer" lang={lang} />;
   if (route === "relative") return <Standalone kind="relative" lang={lang} />;
+  // Laptop helpers for the Android demo: the payer app in a phone frame, and payee QR cards to scan
+  if (route === "app") return <div className="theme-app" style={{ padding: 24, display: "flex", justifyContent: "center" }}><Device><DemoPayApp /></Device></div>;
+  if (route === "qr") return <QrCards />;
   return <DemoControl />;
 }
 
@@ -144,11 +150,16 @@ function NativeApp() {
   useEffect(() => {
     if (role === "payer") Pehchaan.startProtection({ role: "payer", api: API }).catch(() => {});
   }, [role]);
-  // Setup is reached from the "Setup" action on the app's status notification, so no button covers the screens
+  // Routes from outside the web layer (the launch route is read once, so one handler takes all of them):
+  // "setup" from the status notification's Setup action, "upi:…" from a UPI QR or link opened with DemoPay
+  const [upi, setUpi] = useState<string | null>(null);
   useEffect(() => {
-    const open = (r: string | null) => { if (r === "setup") setSetup(true); };
-    Pehchaan.getLaunchRoute().then((x) => open(x.route)).catch(() => {});
-    const h = Pehchaan.addListener("route", (x) => open(x.route));
+    const take = (r: string | null) => {
+      if (r === "setup") setSetup(true);
+      else if (r?.startsWith("upi:")) setUpi(r.slice(4));
+    };
+    Pehchaan.getLaunchRoute().then((x) => take(x.route)).catch(() => {});
+    const h = Pehchaan.addListener("route", (x) => take(x.route));
     return () => { h.then((x) => x.remove()); };
   }, []);
   if (!role || setup) {
@@ -157,7 +168,23 @@ function NativeApp() {
       setRole(r); setSetup(false);
     }} />;
   }
-  return <Standalone kind={role} />;
+  return role === "payer" ? <DemoPayApp incomingUpi={upi} onUpiHandled={() => setUpi(null)} /> : <NativeFamily />;
+}
+
+/** The family phone is always Rahul in Sunita's circle, whichever scenario the demo page has loaded. */
+const RAHUL: Relative = {
+  id: "rel_rahul", name: "Rahul", name_hi: "राहुल", full_name: "Rahul Sharma", relation: "son", relation_hi: "बेटा", pronoun: "he",
+  device_id: "dev_rahul", lives_in: "London", calls_payer: "Mummy", calls_payer_hi: "मम्मी",
+};
+function NativeFamily() {
+  const [rel, setRel] = useState<Relative>(RAHUL);
+  useEffect(() => {
+    fetch(`${API}/v1/demo/current`).then((r) => (r.ok ? r.json() : null)).then((sc: Scenario | null) => {
+      const r = sc?.payer?.id === "u_sunita" ? sc.payer.circle.find((x) => x.id === RAHUL.id) : null;
+      if (r) setRel(r);
+    }).catch(() => {});
+  }, []);
+  return <RelativePhone relative={rel} payerName="Sunita Sharma" payerNameHi="सुनीता शर्मा" />;
 }
 
 function NativeSetup({ role, onDone }: { role: Role | null; onDone: (r: Role) => void }) {

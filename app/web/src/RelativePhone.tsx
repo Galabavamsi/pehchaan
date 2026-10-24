@@ -36,6 +36,11 @@ export function RelativePhone({ relative, payerName, payerNameHi, initialLang = 
   );
 }
 
+/** Requests this phone received, kept on the phone only (SPEC §7). */
+interface FamilyReq { id: string; at: string; amount: string; payee: string; answer: "yes" | "no" | "expired" | null }
+const REQ_KEY = "family.requests";
+const loadReqs = (): FamilyReq[] => { try { return JSON.parse(localStorage.getItem(REQ_KEY) || "[]"); } catch { return []; } };
+
 function RelativeFlow({ relative, payerName, payerNameHi, lang, setLang }: {
   relative: Relative; payerName: string; payerNameHi?: string; lang: Lang; setLang: (l: Lang) => void;
 }) {
@@ -45,7 +50,16 @@ function RelativeFlow({ relative, payerName, payerNameHi, lang, setLang }: {
   const [done, setDone] = useState<null | "yes" | "no">(null);
   const [keyId, setKeyId] = useState("");
   const [busy, setBusy] = useState(false);
+  const [linked, setLinked] = useState(false);
+  const [reqs, setReqs] = useState<FamilyReq[]>(loadReqs);
   const kp = deviceKey(relative.device_id);
+  const note = (id: string, patch: Partial<FamilyReq>) => setReqs((all) => {
+    const base = all.find((r) => r.id === id) ?? { id, at: new Date().toISOString(), amount: "", payee: "", answer: null };
+    const next = [{ ...base, ...patch }, ...all.filter((r) => r.id !== id)].slice(0, 30);
+    try { localStorage.setItem(REQ_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    return next;
+  });
+  const received = (d: any) => { if (d?.challenge_id) note(d.challenge_id, { amount: d.amount_band ?? "", payee: d.payee_name ?? "" }); };
   const calls = lang === "hi" ? relative.calls_payer_hi || payerNameHi || payerName : relative.calls_payer || payerName;
 
   useEffect(() => {
@@ -58,10 +72,11 @@ function RelativeFlow({ relative, payerName, payerNameHi, lang, setLang }: {
       setKeyId(hex.slice(-4).toUpperCase());
     }).catch(() => setKeyId(pub.slice(-4)));
     return subscribe(`/ws/device/${relative.device_id}`, (m) => {
-      if (m.type === "hello" && m.pending?.length) { setPush(m.pending[0]); setDone(null); }
-      if (m.type === "fv_request") { setPush(m.data); setDone(null); setOpen(false); }
+      if (m.type === "hello" && m.pending?.length) { setPush(m.pending[0]); setDone(null); received(m.pending[0]); }
+      if (m.type === "fv_request") { setPush(m.data); setDone(null); setOpen(false); received(m.data); }
+      if (m.type === "fv_expired") setPush((cur: any) => { if (cur?.challenge_id) note(cur.challenge_id, { answer: "expired" }); return null; });
       if (m.type === "fv_expired" || m.type === "reset") { setPush(null); setOpen(false); if (m.type === "reset") setDone(null); }
-    });
+    }, setLinked);
   }, [relative.device_id]);
 
   // On the real phone the system notification was the alert, so open the question directly
@@ -72,7 +87,7 @@ function RelativeFlow({ relative, payerName, payerNameHi, lang, setLang }: {
     setBusy(true);
     const msg = new TextEncoder().encode(`pehchaan-fv|${push.challenge_id}|${push.nonce}|${ans}`);
     const sig = b64(nacl.sign.detached(msg, kp.secretKey));
-    try { await api.respond(push.challenge_id, ans, relative.device_id, sig); setDone(ans); setOpen(false); }
+    try { await api.respond(push.challenge_id, ans, relative.device_id, sig); setDone(ans); setOpen(false); note(push.challenge_id, { answer: ans }); }
     finally { setBusy(false); }
   }
 
@@ -95,6 +110,7 @@ function RelativeFlow({ relative, payerName, payerNameHi, lang, setLang }: {
           {done === "no" && <p>{t("rel_no_done_s", { payer: calls })}</p>}
           <div style={{ marginTop: "auto", display: "grid", gap: 10 }}>
             <button className="btn solid full"><Phone size={18} weight="fill" /> {t("rel_call_payer", { payer: calls })}</button>
+            {isNative && <button className="btn ghost full" onClick={() => { setDone(null); setPush(null); }}>{lang === "hi" ? "होम पर जाएँ" : "Back to home"}</button>}
           </div>
         </div>
       </>
@@ -106,15 +122,36 @@ function RelativeFlow({ relative, payerName, payerNameHi, lang, setLang }: {
   }
 
   if (isNative) {
+    const L = (en: string, hi: string) => (lang === "hi" ? hi : en);
+    const said = { yes: L("You said: yes, it's me", "आपने कहा: हाँ, मैं हूँ"), no: L("You said: not me. Payment held", "आपने कहा: मैं नहीं। पेमेंट रोका गया"),
+      expired: L("No answer in time", "समय पर जवाब नहीं"), pending: L("Waiting for your answer", "आपके जवाब का इंतज़ार") };
     return (
-      <>
+      <div className="famapp" data-testid="rel-idle">
         <div className="pp-head"><Seal size={20} /><span className="word">Pehchaan Family</span><span className="grow" />{langBtn}</div>
-        <div className="native-idle" data-testid="rel-idle">
-          <ShieldCheck size={44} weight="duotone" style={{ color: "var(--teal)" }} />
-          <h1>{t("rel_circle", { payer: calls })}</h1>
-          <p>{t("rel_idle_s", { payer: calls })}</p>
+        <div className={`fam-status ${linked ? "on" : ""}`}>
+          <span className="fam-dot" />{linked ? L("Connected. This phone will ask you first.", "जुड़ा है। यह फ़ोन पहले आपसे पूछेगा।") : L("Connecting to Pehchaan…", "पहचान से जुड़ रहा है…")}
         </div>
-      </>
+        <section className="fam-circle">
+          <span className="dp-av">{calls[0]}</span>
+          <div><b>{calls}</b><span>{lang === "hi" ? payerNameHi || payerName : payerName}</span></div>
+          <ShieldCheck size={26} weight="duotone" className="fam-shield" />
+        </section>
+        <p className="fam-how">{t("rel_idle_s", { payer: calls })}</p>
+        <h2 className="dp-h2">{L("Requests", "अनुरोध")}</h2>
+        {reqs.length === 0 ? <p className="dp-empty">{L("No requests yet. You'll see each one here, with your answer.", "अभी कोई अनुरोध नहीं। हर अनुरोध और आपका जवाब यहाँ दिखेगा।")}</p> : (
+          <div className="dp-list">
+            {reqs.map((r) => (
+              <div className="dp-row" key={r.id}>
+                <span className={`fam-ans ${r.answer ?? "pending"}`}>{r.answer === "no" ? <ShieldCheck size={18} weight="fill" /> : r.answer === "yes" ? <Check size={18} weight="bold" /> : <Timer size={18} weight="bold" />}</span>
+                <span className="dp-row-t">
+                  <b>{r.amount} {L("to", "को")} {r.payee}</b>
+                  <span>{said[r.answer ?? "pending"]} · {new Date(r.at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     );
   }
 

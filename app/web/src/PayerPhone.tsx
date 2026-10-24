@@ -13,14 +13,22 @@ import { isNative, Pehchaan, usePhoneCall, type CallInfo, type PhoneCall } from 
 type Screen = "pay" | "who" | "family" | "bank" | "options" | "fv_wait" | "voice" | "hold" | "green" | "pin" | "sent" | "cancelled" | "report";
 type ClaimCode = "family" | "bank" | "upi_or_shop" | "authority" | "other" | "none";
 
-export function PayerPhone({ scenario, initialLang, initialLarge = false }: { scenario: Scenario; initialLang?: Lang; initialLarge?: boolean }) {
+/** How a payment ended, for a host app's history and receipt (Android DemoPay). */
+export interface PayOutcome {
+  status: "paid" | "cancelled" | "held" | "reported"; caseId: string | null; utr: string | null;
+  first: Assessment | null; last: Assessment | null; amount: number;
+}
+
+export function PayerPhone({ scenario, initialLang, initialLarge = false, onBack, onOutcome }: {
+  scenario: Scenario; initialLang?: Lang; initialLarge?: boolean; onBack?: () => void; onOutcome?: (o: PayOutcome) => void;
+}) {
   const [lang, setLang] = useState<Lang>(initialLang ?? "en");
   const [large, setLarge] = useState(initialLarge);
   return (
     <UIContext.Provider value={{ lang, large }}>
       <Device testid="payer-device" large={large} lang={lang}>
         <PayerFlow key={scenario.scenario + scenario.payment.payee_vpa} scenario={scenario}
-          toggles={{ lang, setLang, large, setLarge }} />
+          toggles={{ lang, setLang, large, setLarge }} onBack={onBack} onOutcome={onOutcome} />
       </Device>
     </UIContext.Provider>
   );
@@ -28,7 +36,9 @@ export function PayerPhone({ scenario, initialLang, initialLarge = false }: { sc
 
 interface Toggles { lang: Lang; setLang: (l: Lang) => void; large: boolean; setLarge: (b: boolean) => void }
 
-function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles }) {
+function PayerFlow({ scenario, toggles, onBack, onOutcome }: {
+  scenario: Scenario; toggles: Toggles; onBack?: () => void; onOutcome?: (o: PayOutcome) => void;
+}) {
   const { t, bi, lang } = useT();
   const [screen, setScreen] = useState<Screen>("pay");
   const [amountStr, setAmountStr] = useState(String(scenario.payment.amount_inr));
@@ -42,6 +52,7 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
   const [toast, setToast] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [utr, setUtr] = useState<string | null>(null);
+  const firstRef = useRef<Assessment | null>(null);
   const screenRef = useRef(screen);
   screenRef.current = screen;
   // Android app: the call comes from the phone itself, not the scenario (SPEC §7)
@@ -89,6 +100,7 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
     }));
     if (!r) return;
     setA(r);
+    firstRef.current = r;
     if (r.case_id) setCaseId(r.case_id);
     if (!r.case_id || (!r.ask_claim && r.tier === "green")) { setScreen("pin"); return; }
     if (r.ask_claim || r.tier !== "red") setScreen("who"); else route(r);
@@ -158,6 +170,12 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
     if (p) { setPack(p); setScreen("report"); }
   }
 
+  useEffect(() => {
+    if (!onOutcome) return;
+    const status = ({ sent: "paid", cancelled: "cancelled", hold: "held", report: "reported" } as const)[screen as "sent"];
+    if (status) onOutcome({ status, caseId, utr, first: firstRef.current, last: a, amount });
+  }, [screen, utr]);
+
   useEffect(() => { if (!toast) return; const x = setTimeout(() => setToast(null), 3500); return () => clearTimeout(x); }, [toast]);
 
   const head = (variant: "plain" | "amber" | "red" | "teal" = "plain") => (
@@ -181,7 +199,7 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
           <div className="body">
             {screen === "pay" && (
               <PayScreen scenario={scenario} amountStr={amountStr} setAmountStr={setAmountStr} busy={busy}
-                onPay={onPay} toggles={toggles} />
+                onPay={onPay} toggles={toggles} onBack={onBack} />
             )}
             {screen === "pin" && <PinScreen amountTxt={amountTxt} payee={payee} onDone={async () => {
               if (caseId && a?.status !== "sent") {
@@ -292,7 +310,7 @@ function PayerFlow({ scenario, toggles }: { scenario: Scenario; toggles: Toggles
           </div>
           <div className="foot">
             <button className="btn saffron full" onClick={openReport}>{t("report_this")}</button>
-            <button className="btn ghost full" onClick={() => setScreen("pay")}>{t("done")}</button>
+            <button className="btn ghost full" onClick={() => (onBack ? onBack() : setScreen("pay"))}>{t("done")}</button>
           </div>
         </div>
       )}
@@ -391,8 +409,9 @@ function LeftPhone({ call }: { call: PhoneCall }) {
   );
 }
 
-function PayScreen({ scenario, amountStr, setAmountStr, busy, onPay, toggles }: {
+function PayScreen({ scenario, amountStr, setAmountStr, busy, onPay, toggles, onBack }: {
   scenario: Scenario; amountStr: string; setAmountStr: (s: string) => void; busy: boolean; onPay: () => void; toggles: Toggles;
+  onBack?: () => void;
 }) {
   const { t } = useT();
   const p = scenario.payment;
@@ -406,7 +425,7 @@ function PayScreen({ scenario, amountStr, setAmountStr, busy, onPay, toggles }: 
   return (
     <div data-testid="screen-pay">
       <div className="appbar">
-        <ArrowLeft size={22} />
+        <button className="iconbtn" onClick={onBack} aria-label="Back"><ArrowLeft size={22} /></button>
         <span className="brand"><span className="sq">₹</span>DemoPay</span>
         <span className="spacer" />
         <LangToggle toggles={toggles} />
