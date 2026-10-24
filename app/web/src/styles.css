@@ -447,3 +447,213 @@ h1.q[lang="hi"], .hi h1.q { font-size: calc(28px * var(--s)); line-height: 1.3; 
 .shadow-badge { display: inline-block; margin: 2px 8px 2px 0; padding: 1px 8px; border-radius: 999px; font-size: 11.5px;
   font-weight: 600; letter-spacing: 0.01em; color: var(--ink); background: #e9e4f2; border: 1px dashed #8b83a3; white-space: nowrap; }
 
+
+/* Android app (Capacitor): the real phone is the device frame (SPEC §7) */
+html.native, html.native body { background: var(--paper); }
+html.native .device { display: block; padding: 0; background: none; border-radius: 0; }
+html.native .screen { width: 100vw; height: 100vh; height: 100dvh; border-radius: 0;
+  padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box; }
+html.native .statusbar { display: none; }
+.leftphone { margin-top: 14px; }
+.leftphone .lp-body { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: var(--white); border: 1px solid var(--line, #e3ddd2);
+  font-size: 13px; line-height: 1.45; color: var(--ink-2); }
+.leftphone .lp-body p { margin: 0 0 6px; }
+.leftphone pre { margin: 0; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+.native-setup { min-height: 100dvh; box-sizing: border-box; padding: calc(24px + env(safe-area-inset-top)) 20px 28px; display: flex; flex-direction: column; gap: 14px; }
+.native-setup h1 { font-family: var(--f-head); font-size: 26px; margin: 4px 0 0; letter-spacing: -0.02em; }
+.native-setup p { margin: 0; color: var(--ink-2); line-height: 1.45; }
+.native-setup .role { text-align: left; display: flex; gap: 14px; align-items: center; padding: 16px; border-radius: 18px;
+  border: 1.5px solid var(--line, #e3ddd2); background: var(--white); font: inherit; color: inherit; }
+.native-setup .role b { display: block; font-size: 17px; }
+.native-setup .role span { color: var(--slate); font-size: 14px; }
+.native-setup .check { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line, #e3ddd2); font-size: 15px; }
+.native-setup .check .ok { color: var(--teal); } .native-setup .check .no { color: var(--red); }
+.native-setup .check button { margin-left: auto; }
+
+/* ===================================================================================================
+   Android app theme (SPEC §7). DemoPay is a fictional UPI app: cool mist, white, blue-black ink and its own
+   "neel" indigo; Pehchaan keeps only its saffron seal. One family (Mukta) for Latin and Devanagari.
+   Scoped to the app (html.native) and the laptop preview (.theme-app); the projector demo keeps its look.
+   =================================================================================================== */
+html.native, .theme-app {
+  --paper: #eef2f6; --paper-2: #e3e9f0; --paper-3: #cfd8e3;
+  --white: #ffffff; --ink: #172036; --ink-2: #39435a; --slate: #5a6478; --line: #dde3ea;
+  --teal: #0e7a5e; --teal-soft: #e2f3ec;
+  --amber: #f2b33d; --amber-soft: #fff2d6;
+  --red: #c0352b; --red-deep: #9f2a22; --red-soft: #fce9e7;
+  --neel: #2a3d9f; --neel-deep: #1e2c78; --neel-soft: #e8ecfa;
+  --f-head: "Mukta", "Noto Sans Devanagari", system-ui, sans-serif;
+  --f-body: "Mukta", "Noto Sans Devanagari", system-ui, sans-serif;
+  --f-mono: "Mukta", "Noto Sans Devanagari", system-ui, sans-serif;
+  font-family: var(--f-body);
+}
+html.native body { font-size: 16px; }
+.theme-app .amount .val, html.native .amount .val { font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+html.native .paybtn, .theme-app .paybtn { background: var(--neel); font-size: 19px; }
+html.native .appbar .brand .sq, .theme-app .appbar .brand .sq { background: var(--neel); }
+html.native .amount .caret, .theme-app .amount .caret { background: var(--neel); }
+html.native .key, .theme-app .key { font-size: 27px; font-weight: 600; }
+.iconbtn { border: 0; background: none; padding: 6px; margin: -6px; color: inherit; display: grid; place-items: center; border-radius: 50%; }
+.iconbtn:active { background: var(--paper-2); }
+
+/* ---- DemoPay ---- */
+.dp { height: 100%; overflow-y: auto; background: var(--paper); color: var(--ink); display: flex; flex-direction: column; padding-bottom: 10px; }
+html.native .dp { height: 100dvh; padding-top: env(safe-area-inset-top); padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+.dp button { font: inherit; color: inherit; cursor: pointer; }
+.dp-top { display: flex; align-items: center; gap: 12px; padding: 14px 16px 12px; }
+.dp-av { width: 44px; height: 44px; border-radius: 50%; background: var(--neel-soft); color: var(--neel); display: grid; place-items: center;
+  font-weight: 700; font-size: 17px; flex: 0 0 auto; }
+.dp-av.sm { width: 40px; height: 40px; font-size: 15px; }
+.dp-me { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.dp-me b { font-size: 18px; }
+.dp-me span { font-size: 13.5px; color: var(--slate); }
+.dp-chip { margin-left: auto; border: 1px solid var(--line); background: var(--white); border-radius: 99px; padding: 6px 12px; font-size: 14px; font-weight: 600; }
+.dp-chip.light { margin: 12px auto 0; display: block; background: rgba(255,255,255,0.14); color: #fff; border-color: rgba(255,255,255,0.3); }
+
+/* the one bold element: the phone knows about the call */
+.dp-callstrip { margin: 0 12px 12px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px;
+  background: #3a4458; color: #fff; }
+.dp-callstrip.live { background: var(--ink); box-shadow: inset 4px 0 0 #3ddc97; }
+.dp-cs-ic { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.12); display: grid; place-items: center; flex: 0 0 auto; }
+.dp-callstrip.live .dp-cs-ic { background: #1f9d6b; animation: dp-pulse 1.6s ease-out infinite; }
+.dp-cs-t { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
+.dp-cs-t b { font-size: 16px; }
+.dp-cs-t span { font-size: 13.5px; color: #c7cede; }
+.dp-cs-time { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; color: #8ff0c4; }
+@keyframes dp-pulse { 0% { box-shadow: 0 0 0 0 rgba(61,220,151,0.55); } 100% { box-shadow: 0 0 0 12px rgba(61,220,151,0); } }
+@media (prefers-reduced-motion: reduce) { .dp-callstrip.live .dp-cs-ic { animation: none; } }
+
+.dp-bank { margin: 0 12px; padding: 14px 16px; border-radius: 18px; background: var(--white); border: 1px solid var(--line); display: grid;
+  grid-template-columns: 1fr auto; row-gap: 2px; align-items: center; }
+.dp-bank-name { font-size: 17px; font-weight: 700; }
+.dp-bank-acct { font-size: 14px; color: var(--slate); grid-row: 2; }
+.dp-bal { grid-row: 1 / span 2; grid-column: 2; display: inline-flex; gap: 6px; align-items: center; border: 0; border-radius: 99px;
+  padding: 9px 14px; background: var(--neel-soft); color: var(--neel) !important; font-weight: 600; font-size: 14.5px; }
+.dp-bal-v { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.dp-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 12px 0; }
+.dp-act { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px; border-radius: 18px;
+  border: 1px solid var(--line); background: var(--white); text-align: left; color: var(--neel) !important; }
+.dp-act b { font-size: 17px; color: var(--ink); }
+.dp-act-main { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 14px; padding: 16px 18px;
+  background: var(--neel-deep); border-color: var(--neel-deep); color: #fff !important; }
+.dp-act-main b { color: #fff; font-size: 19px; display: block; }
+.dp-act-main span { color: #c9d1f5; font-size: 14px; }
+
+.dp-sec { margin-top: 18px; }
+.dp-sec h2, .dp-h2 { font-size: 15.5px; font-weight: 700; color: var(--ink-2); margin: 0 16px 8px; }
+.dp-h2 { margin: 22px 2px 6px; }
+.dp-people { display: flex; gap: 6px; overflow-x: auto; padding: 0 12px; scrollbar-width: none; }
+.dp-person { flex: 0 0 auto; width: 84px; display: flex; flex-direction: column; align-items: center; gap: 6px; border: 0;
+  background: none; padding: 4px 0; font-size: 13.5px; text-align: center; line-height: 1.2; }
+.dp-list { background: var(--white); border-radius: 16px; margin: 0 12px; overflow: hidden; border: 1px solid var(--line); }
+.dp-pad .dp-list { margin: 0; }
+.dp-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border: 0; border-bottom: 1px solid var(--line);
+  background: none; text-align: left; }
+.dp-row:last-child { border-bottom: 0; }
+.dp-row:active { background: var(--paper); }
+.dp-row-t { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.3; }
+.dp-row-t b { font-size: 16px; font-weight: 600; }
+.dp-row-t span { font-size: 13.5px; color: var(--slate); overflow-wrap: anywhere; }
+.dp-row-r { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.dp-row-r b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.dp-st { font-size: 12.5px; font-weight: 600; border-radius: 99px; padding: 1px 8px; }
+.dp-st.paid { background: var(--teal-soft); color: var(--teal); }
+.dp-st.held, .dp-st.reported { background: var(--red-soft); color: var(--red-deep); }
+.dp-st.cancelled { background: var(--paper-2); color: var(--ink-2); }
+.dp-empty { margin: 4px 16px; font-size: 14.5px; color: var(--slate); line-height: 1.45; }
+.dp-pad .dp-empty { margin: 4px 2px; }
+.dp-foot { margin-top: auto; padding: 22px 16px 6px; display: flex; justify-content: center; align-items: center; gap: 8px;
+  font-size: 13.5px; color: var(--slate); text-align: center; }
+
+.dp-bar { display: flex; align-items: center; gap: 14px; padding: 14px 16px 10px; font-size: 18px; font-weight: 700; }
+.dp-bar.dark { color: #fff; }
+.dp-pad { padding: 4px 16px 24px; }
+.dp-field { display: grid; gap: 6px; }
+.dp-field span { font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.dp-field input { font: inherit; font-size: 20px; padding: 13px 14px; border-radius: 14px; border: 1.5px solid var(--paper-3);
+  background: var(--white); color: var(--ink); outline: none; }
+.dp-field input:focus { border-color: var(--neel); box-shadow: 0 0 0 3px var(--neel-soft); }
+.dp-hint, .dp-note { font-size: 14px; color: var(--slate); margin: 8px 2px 0; line-height: 1.4; }
+.dp-note { margin: -2px 2px 10px; }
+.dp-verified { margin-top: 12px; display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-radius: 16px;
+  border: 1.5px solid var(--neel); background: var(--white); text-align: left; color: var(--neel) !important; }
+.dp-verified .dp-row-t b { color: var(--ink); }
+
+.dp-scan { height: 100%; display: flex; flex-direction: column; background: #0d1220; }
+html.native .dp-scan { margin-top: calc(-1 * env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); height: 100dvh; }
+.dp-scan-view { position: relative; flex: 1; overflow: hidden; }
+.dp-scan-view video { width: 100%; height: 100%; object-fit: cover; }
+.dp-scan-frame { position: absolute; left: 50%; top: 45%; width: 62vw; max-width: 260px; aspect-ratio: 1; transform: translate(-50%, -50%);
+  border-radius: 22px; box-shadow: 0 0 0 9999px rgba(13,18,32,0.55); outline: 3px solid #fff; }
+.dp-scan-foot { padding: 16px 20px 28px; text-align: center; color: #e3e8f4; font-size: 15.5px; line-height: 1.4; }
+
+.dp-receipt { display: flex; flex-direction: column; min-height: 100%; }
+.dp-rc-top { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 16px 20px; text-align: center; }
+.dp-rc-top svg { color: var(--teal); }
+.dp-rc-top.held svg, .dp-rc-top.reported svg { color: var(--red); }
+.dp-rc-top.cancelled svg { color: var(--slate); }
+.dp-rc-amt { font-size: 46px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.1; margin-top: 6px; }
+.dp-rc-title { font-size: 17px; font-weight: 600; color: var(--ink-2); }
+.dp-rc-rows { margin: 0 12px; background: var(--white); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.dp-rc-rows > div { display: flex; justify-content: space-between; gap: 14px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.dp-rc-rows > div:last-child { border-bottom: 0; }
+.dp-rc-rows dt { font-size: 14px; color: var(--slate); }
+.dp-rc-rows dd { margin: 0; text-align: right; font-size: 15px; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+.dp-rc-rows dd span { font-size: 13.5px; color: var(--slate); }
+.dp-num { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.dp-why { margin: 14px 12px 0; padding: 14px 16px; border-radius: 16px; background: var(--teal-soft); border-left: 4px solid var(--teal); }
+.dp-why.warn { background: var(--amber-soft); border-left-color: var(--amber); }
+.dp-why.stop { background: var(--red-soft); border-left-color: var(--red); }
+.dp-why-h { display: flex; align-items: center; gap: 8px; font-size: 16px; }
+.dp-why ul { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 4px; font-size: 15px; line-height: 1.4; color: var(--ink-2); }
+.dp-rc-foot { margin-top: auto; padding: 18px 12px 8px; }
+.dp-btn { width: 100%; height: 56px; border: 0; border-radius: 16px; background: var(--neel); color: #fff !important; font-size: 18px; font-weight: 700; }
+
+/* ---- Pehchaan Family (relative's phone) ---- */
+.famapp { height: 100%; overflow-y: auto; padding-bottom: 24px; }
+.fam-status { margin: 6px 16px 0; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px;
+  background: var(--white); border: 1px solid var(--line); font-size: 14.5px; color: var(--ink-2); }
+.fam-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--slate); flex: 0 0 auto; }
+.fam-status.on { color: var(--teal); }
+.fam-status.on .fam-dot { background: #1f9d6b; }
+.fam-circle { margin: 12px 16px 0; display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 18px; background: var(--white);
+  border: 1px solid var(--line); }
+.fam-circle div { display: flex; flex-direction: column; line-height: 1.3; }
+.fam-circle b { font-size: 19px; }
+.fam-circle span { font-size: 14px; color: var(--slate); }
+.fam-shield { margin-left: auto; color: var(--teal); }
+.fam-how { margin: 14px 18px 0; font-size: 15.5px; line-height: 1.5; color: var(--ink-2); }
+.famapp .dp-h2 { margin: 22px 18px 8px; }
+.famapp .dp-list { margin: 0 16px; }
+.famapp .dp-empty { margin: 4px 18px; }
+.fam-ans { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; background: var(--paper-2); color: var(--ink-2); }
+.fam-ans.no { background: var(--red-soft); color: var(--red-deep); }
+.fam-ans.yes { background: var(--teal-soft); color: var(--teal); }
+
+/* ---- payee QR cards (laptop, #/qr) ---- */
+.qr-page { min-height: 100vh; background: var(--paper); padding: 28px 32px 40px; }
+.qr-page header { display: flex; gap: 14px; align-items: flex-start; max-width: 1100px; margin: 0 auto 22px; }
+.qr-page h1 { font-size: 28px; margin: 0; line-height: 1.15; }
+.qr-page header p { margin: 6px 0 0; color: var(--slate); font-size: 16px; }
+.qr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; max-width: 1100px; margin: 0 auto; }
+.qr-card { margin: 0; background: var(--white); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.qr-svg svg { width: 100%; height: auto; display: block; }
+.qr-card figcaption { display: flex; flex-direction: column; gap: 2px; }
+.qr-card b { font-size: 19px; }
+.qr-vpa { font-size: 14px; color: var(--slate); }
+.qr-amt { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 4px; }
+.qr-amt.muted { font-size: 16px; font-weight: 600; color: var(--slate); }
+.qr-what { font-size: 14.5px; color: var(--ink-2); }
+.native-setup .rehearsal { align-items: flex-start; gap: 12px; border-bottom: 0; padding-top: 14px; }
+.native-setup .rehearsal input { width: 22px; height: 22px; margin-top: 2px; accent-color: var(--neel); flex: 0 0 auto; }
+.native-setup .rehearsal small { display: block; font-size: 13px; color: var(--slate); margin-top: 2px; }
+
+/* Family Verify for the other person opens over whatever DemoPay screen is up */
+.fv-overlay { position: fixed; inset: 0; z-index: 100; background: var(--paper); }
+.theme-app .fv-overlay { position: absolute; }
+.fv-overlay .device { display: block; padding: 0; background: none; border-radius: 0; height: 100%; }
+.fv-overlay .screen { width: 100%; height: 100%; border-radius: 0; }
+.fam-dot.on { background: #1f9d6b; }
+.dp-fam .fam-dot { margin: 0 6px 0 4px; }
+.dp-fam .fam-ans { font-weight: 700; }

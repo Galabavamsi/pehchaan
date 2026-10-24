@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
 import type { Bi, Lang } from "./api";
+import { isNative, maskPhones } from "./native";
 
 // UI copy. Calm, plain, sentence case. Never accusatory (G6).
 const S = {
@@ -13,10 +14,17 @@ const S = {
   unknown_number: ["Not in contacts", "सेव नहीं है"],
   whatsapp_call: ["WhatsApp call", "WhatsApp कॉल"],
   phone_call: ["Phone call", "फ़ोन कॉल"],
+  voip_call: ["Internet call (WhatsApp etc.)", "इंटरनेट कॉल (WhatsApp आदि)"],
+  in_contacts: ["Saved contact", "सेव किया हुआ नंबर"],
+  number_hidden: ["Number not shared with this app", "नंबर इस ऐप को नहीं मिला"],
+  call_ended_ago: ["Call ended {min} min ago", "कॉल {min} मिनट पहले खत्म हुई"],
+  left_phone: ["What left this phone", "इस फ़ोन से क्या भेजा गया"],
+  left_phone_s: ["Only these call details went to your bank. Your contacts, call audio and call history stayed on this phone.",
+                 "बैंक को सिर्फ़ ये कॉल की जानकारी गई। आपके कॉन्टैक्ट, कॉल की आवाज़ और कॉल हिस्ट्री इसी फ़ोन पर रहे।"],
   checking: ["Checking…", "जाँच हो रही है…"],
   who_asked: ["Who asked you to make this payment?", "ये पेमेंट करने को आपसे किसने कहा?"],
-  who_sub: ["You are paying {amount} to {payee} during a call. Your answer stays private.",
-            "आप कॉल के दौरान {payee} को {amount} भेज रहे हैं। आपका जवाब किसी और को नहीं दिखेगा।"],
+  who_sub: ["You are paying {amount} to {payee} during or just after a call. Your answer stays private.",
+            "आप कॉल के दौरान या ठीक बाद {payee} को {amount} भेज रहे हैं। आपका जवाब किसी और को नहीं दिखेगा।"],
   opt_family: ["Family member", "परिवार का सदस्य"], opt_family_s: ["Son, daughter or a relative", "बेटा, बेटी या कोई रिश्तेदार"],
   opt_bank: ["My bank", "मेरा बैंक"], opt_bank_s: ["Someone said they are from your bank", "किसी ने कहा कि वो आपके बैंक से हैं"],
   opt_upi: ["UPI app, shop or delivery", "UPI ऐप, दुकान या डिलीवरी"], opt_upi_s: ["A payments app, a shop or a delivery person", "कोई पेमेंट ऐप, दुकान या डिलीवरी वाला"],
@@ -138,7 +146,10 @@ export function useT() {
     for (const [a, b] of Object.entries(vars)) s = s.split(`{${a}}`).join(String(b ?? ""));
     return s;
   };
-  const bi = (x?: Bi | null) => (x ? (lang === "hi" ? x.hi : x.en) : "");
+  const bi = (x?: Bi | null) => {
+    const s = x ? (lang === "hi" ? x.hi : x.en) : "";
+    return isNative ? maskPhones(s) : s;  // real callers' numbers stay masked on the phones
+  };
   return { t, bi, lang };
 }
 

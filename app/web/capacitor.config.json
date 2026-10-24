@@ -1,0 +1,11 @@
+{
+  "appId": "in.humanslop.demopay",
+  "appName": "DemoPay",
+  "webDir": "dist",
+  "android": {
+    "path": "../android"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

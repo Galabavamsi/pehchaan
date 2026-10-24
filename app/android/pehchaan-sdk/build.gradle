@@ -1,0 +1,25 @@
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+// Pehchaan SDK: the native part a bank or TPAP app integrates (SPEC §7, "Android SDK and demo shell").
+android {
+    namespace = "in.humanslop.pehchaan"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21) }
+}
+
+dependencies {
+    implementation "androidx.core:core:$androidxCoreVersion"
+    implementation "com.squareup.okhttp3:okhttp:4.12.0"
+}
