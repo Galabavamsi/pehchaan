@@ -84,30 +84,31 @@ score() {  # name manifest out [root]
       > ~/logs/score_$(basename $out .csv).log 2>&1 || FAILED+=("score:$(basename $out)")
 }
 
-if [ ${#FAILED[@]} -eq 0 ]; then
-  train ours_a2 "--exclude_sources api2_ivc"
-  train ours_a2_ivc ""
-fi
-
-echo "=== score ($(date -Is))"
-cp $W/scores_rc/realcall_eval.csv $W/scores_rc/sim_test.csv $W/manifests/api2_test.csv $OUT/ 2>/dev/null || FAILED+=("score:manifests")
-for m in ours_v3_rc ours_a2 ours_a2_ivc; do
+score_all() {  # name: fixed dev set, new engines' unseen voices, and (new models only) real calls + simulated sample
+  local m=$1
   score $m $OUT/dev_sim.csv $OUT/devsim__$m.csv
   score $m $OUT/dev_rc.csv $OUT/devrc__$m.csv $RC
   score $m $OUT/api2_test.csv $OUT/api2__$m.csv
-done
-for m in ours_a2 ours_a2_ivc; do    # model A's real-call and simulated scores already exist in scores_rc
-  [ -f ~/runs/$m/DONE ] || continue
-  score $m $OUT/realcall_eval.csv $OUT/real__$m.csv $RC
-  $PY eval/score.py --manifest $OUT/sim_test.csv --limit 6000 --detector ckpt:$HOME/runs/$m/best.pt \
-      --out $OUT/sim__$m.csv > ~/logs/score_sim_$m.log 2>&1 || FAILED+=("score_sim:$m")
-done
+  if [ "$m" != "ours_v3_rc" ] && [ -f ~/runs/$m/DONE ]; then   # model A's real-call and simulated scores are in scores_rc
+    score $m $OUT/realcall_eval.csv $OUT/real__$m.csv $RC
+    $PY eval/score.py --manifest $OUT/sim_test.csv --limit 6000 --detector ckpt:$HOME/runs/$m/best.pt \
+        --out $OUT/sim__$m.csv > ~/logs/score_sim_$m.log 2>&1 || FAILED+=("score_sim:$m")
+  fi
+  aws s3 sync $OUT $BUCKET/work/scores_v4 --only-show-errors || FAILED+=("upload:scores")   # results land as they come
+  if [ -f ~/runs/$m/DONE ]; then aws s3 sync ~/runs/$m $BUCKET/runs/$m --only-show-errors || FAILED+=("upload:$m"); fi
+  echo "scored and uploaded $m ($(date -Is))"
+}
+
+cp $W/scores_rc/realcall_eval.csv $W/scores_rc/sim_test.csv $W/manifests/api2_test.csv $OUT/ 2>/dev/null || FAILED+=("score:manifests")
+if [ ${#FAILED[@]} -eq 0 ]; then
+  train ours_a2_ivc ""                               # Varun's choice first: + the S01 Sarvam clones
+  score_all ours_a2_ivc
+  score_all ours_v3_rc                               # model A on the same fixed dev set and new engines
+  train ours_a2 "--exclude_sources api2_ivc"         # control: stock voices only, Sarvam IVC never trained
+  score_all ours_a2
+fi
 
 echo "=== upload ($(date -Is))"
-aws s3 sync $OUT $BUCKET/work/scores_v4 --only-show-errors || FAILED+=("upload:scores")
-for m in ours_a2 ours_a2_ivc; do
-  if [ -f ~/runs/$m/DONE ]; then aws s3 sync ~/runs/$m $BUCKET/runs/$m --only-show-errors || FAILED+=("upload:$m"); fi
-done
 aws s3 cp ~/logs/ $BUCKET/logs/retrain_v4/ --recursive --exclude "*" --include "tr_ours_a2*" --include "dry_ours_a2*" \
     --include "score_*" --include "add_api2.log" --include "retrain_v4.log" --only-show-errors || FAILED+=("upload:logs")
 

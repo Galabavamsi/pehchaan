@@ -68,6 +68,9 @@ def team_split(speaker: str, line_id: str, section: str) -> str:
 #   ours_a2      stock voices only (source api2); Sarvam IVC stays a never-trained cloner for it
 #   ours_a2_ivc  stock voices + the S01 Sarvam clones (source api2_ivc); its Sarvam IVC result is "seen generator,
 #                unseen speaker (S02)", never "generalises to an unseen cloner"
+# Varun's decision, same day: Sarvam IVC ENTERS TRAINING on 2026-10-24, AFTER its 0/12 test result on real calls.
+# Every Sarvam IVC number for a retrained model is labelled "seen cloner, unseen speaker (S02)"; the 0/12 of the
+# older models (v1, A) stays as reported. ours_a2_ivc is trained first; ours_a2 is the control without it.
 API2_GENERATORS = {"sarvam_v3t", "sarvam_v4f", "openai_t", "deepgram_t", "sarvam_ivct"}
 API2_PERSONS = {
     "sarvam": {"test": {"shubh", "rahul", "amit", "rohan", "ritu", "priya", "kavya", "neha", "simran", "vijay",

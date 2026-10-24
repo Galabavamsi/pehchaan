@@ -65,7 +65,8 @@ def main():
     print("\nSarvam voice clones on real phone calls (test split), caught / clips by speaker:")
     for m, r in out.items():
         if "sarvam_ivc_real_calls" in r:
-            note = "  (S01: seen speaker + seen generator)" if m == "ours_a2_ivc" else ""
+            note = ('  S02 = "seen cloner, unseen speaker (S02)"; S01 = seen speaker and seen cloner'
+                    if m == "ours_a2_ivc" else "")
             print(f"  {r['model']:32s} {r['sarvam_ivc_real_calls']}{note}")
     (REPORTS / "retrain_v4_comparison.json").write_text(json.dumps(out, indent=1))
     print(f"\nwrote {REPORTS / 'retrain_v4_comparison.json'}")
