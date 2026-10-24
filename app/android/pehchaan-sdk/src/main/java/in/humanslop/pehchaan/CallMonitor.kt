@@ -29,10 +29,11 @@ import java.util.concurrent.CopyOnWriteArraySet
 object CallMonitor {
     private const val PREFS = "pehchaan.call"
     /**
-     * Calls that ended longer ago are reported as "none", with no number: three times the 10-minute trigger
-     * window, so "paid 15 minutes later" still reaches the API, but older personal calls never leave the phone.
+     * Calls that ended longer ago are reported as "none", with no number. It matches the longest trigger window
+     * (60 minutes for ₹50,000 or more, engine config call_window_large_min), so a large payment within the hour
+     * still reaches the API with its call, but older personal calls never leave the phone.
      */
-    private const val STALE_MS = 30 * 60 * 1000L
+    private const val STALE_MS = 60 * 60 * 1000L
 
     private val listeners = CopyOnWriteArraySet<(CallContext) -> Unit>()
     private var telephonyHooked = false

@@ -22,7 +22,7 @@ type View =
 
 interface Tx {
   id: string; at: string; vpa: string; name: string; amount: number;
-  status: PayOutcome["status"]; utr: string | null; caseId: string | null; why: Why | null;
+  status: PayOutcome["status"]; utr: string | null; caseId: string | null; why: Why | null; seconds?: number | null;
 }
 interface Why { tone: "ok" | "warn" | "stop"; title: [string, string]; lines: [string, string][] }
 
@@ -79,7 +79,7 @@ export function DemoPayApp({ me, incomingUpi, onUpiHandled }: { me: Person; inco
     const tx: Tx = {
       id: v.txId, at: new Date().toISOString(), vpa: v.payee.vpa, name: v.payee.name, amount: o.amount, status: o.status,
       utr: o.utr ?? (o.status === "paid" ? String(Date.now()).slice(-12) : null), caseId: o.caseId,
-      why: explain(o, o.call),
+      why: explain(o, o.call), seconds: o.status === "paid" ? o.seconds : null,
     };
     setTxs((all) => [tx, ...all.filter((x) => x.id !== tx.id)]);
     if (o.status === "paid") setView({ k: "receipt", txId: tx.id });
@@ -424,6 +424,7 @@ function Receipt({ L, lang, tx, bank, onDone }: { L: (en: string, hi: string) =>
         {icon}
         <div className="dp-rc-amt">{formatINR(tx.amount)}</div>
         <div className="dp-rc-title">{title}</div>
+        {tx.seconds != null && <div className="dp-rc-secs" data-testid="sent-after">{L(`${tx.seconds} s after you tapped Pay`, `Pay दबाने के ${tx.seconds} सेकंड बाद`)}</div>}
       </div>
       <dl className="dp-rc-rows">
         <div><dt>{L("Paid to", "किसे")}</dt><dd><b>{tx.name}</b><span>{tx.vpa}</span></dd></div>

@@ -19,6 +19,8 @@ export interface PayOutcome {
   first: Assessment | null; last: Assessment | null; amount: number;
   /** The call object that was sent with the payment (null on the web demo). */
   call: PhoneCall | null;
+  /** Seconds from tapping Pay to "sent" (FINALE_PLAN C2), for the host app's receipt. */
+  seconds: number | null;
 }
 
 export function PayerPhone({ scenario, initialLang, initialLarge = false, onBack, onOutcome }: {
@@ -193,7 +195,7 @@ function PayerFlow({ scenario, toggles, onBack, onOutcome }: {
   useEffect(() => {
     if (!onOutcome) return;
     const status = ({ sent: "paid", cancelled: "cancelled", hold: "held", report: "reported" } as const)[screen as "sent"];
-    if (status) onOutcome({ status, caseId, utr, first: firstRef.current, last: a, amount, call: sentCall });
+    if (status) onOutcome({ status, caseId, utr, first: firstRef.current, last: a, amount, call: sentCall, seconds: sentSecs });
   }, [screen, utr]);
 
   useEffect(() => { if (!toast) return; const x = setTimeout(() => setToast(null), 3500); return () => clearTimeout(x); }, [toast]);
