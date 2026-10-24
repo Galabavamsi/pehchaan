@@ -215,6 +215,7 @@ def test_attack_call_plays_clip_only_while_live(monkeypatch):
     from fastapi.testclient import TestClient
     from realcall import dial, server
     server.config = lambda: {**settings.DEFAULTS, "public_base_url": "https://example.trycloudflare.com"}
+    monkeypatch.setattr(dial, "_tunnel_ok", lambda: True)          # offline test: pretend the tunnel is up
     cl = TestClient(server.app)
     clip = TMP / "t1_S02.wav"
     save(clip, fake_speech(4, 180, 11), SR)
@@ -342,6 +343,7 @@ def test_agent_server_answer_ws_and_never_recorded(monkeypatch):
 def test_agent_dial_registers_card_and_enforces_consent(monkeypatch):
     from realcall import dial, server
     server.config = lambda: {**settings.DEFAULTS, "public_base_url": "https://example.trycloudflare.com"}
+    monkeypatch.setattr(dial, "_tunnel_ok", lambda: True)          # offline test: pretend the tunnel is up
     dialled = []
     monkeypatch.setattr(dial, "_vobiz_call", lambda to, cid: (dialled.append((to, cid)), {"request_uuid": "r1"})[1])
     monkeypatch.setattr(dial, "_wait_hangup", lambda cid, t: {"hangup_cause": "NORMAL_CLEARING", "duration_s": 3})
@@ -553,3 +555,17 @@ def test_agent_skips_empty_transcript(monkeypatch):
                 break
     turns = [e for e in settings.read_ledger() if e.get("ev") == "agent_turn" and e.get("call_id") == cid]
     assert [e["step"] for e in turns] == [0]                      # only the opener; the empty turns were skipped
+
+
+def test_dial_refuses_when_tunnel_down(monkeypatch):
+    """If the webhook can't be reached the call would drop on connect, so nothing is dialled (no paid call)."""
+    from realcall import dial
+    dialled = []
+    monkeypatch.setattr(dial, "_tunnel_ok", lambda: False)
+    monkeypatch.setattr(dial, "_vobiz_call", lambda to, cid: dialled.append(cid) or {"request_uuid": "r1"})
+    base = dict(device="D1", speaker="S02", lang="hi", persona="Rahul", upi="rahul.friend@okfinbank",
+                min_amount=2000, max_amount=50000, max_turns=4, n=1, stt="sarvam", llm="openai", vad="energy",
+                no_prewarm=True)
+    with pytest.raises(SystemExit, match="tunnel"):
+        dial.cmd_agent(type("A", (), base), Registry())
+    assert dialled == []

@@ -24,6 +24,23 @@ from realcall.settings import ATTACK, UPLINK, calls, config, env, ensure_dirs, l
 from realcall.tape import _texts, build, index_sources
 
 
+def _tunnel_ok() -> bool:
+    """Can Vobiz reach our webhook server right now? If the tunnel is down, Vobiz can't fetch the answer XML and drops
+    the call the moment it connects (seen 25 Oct, 01:06, after the laptop switched networks)."""
+    b = config().get("public_base_url", "")
+    try:
+        return bool(b) and requests.get(b.rstrip("/") + "/healthz", timeout=8).ok
+    except requests.RequestException:
+        return False
+
+
+def _require_tunnel():
+    if not _tunnel_ok():
+        raise SystemExit("the call server isn't reachable through the tunnel, so the call would drop on connect. "
+                         "Restart it (systemctl --user restart pehchaan-tunnel), check "
+                         "python -m realcall.dial check, then dial again")
+
+
 def _vobiz_call(to: str, call_id: str) -> dict:
     cfg = config()
     if not cfg.get("vobiz_number") or "X" in cfg["vobiz_number"]:
@@ -135,6 +152,7 @@ def cmd_attack(a, reg):
     clip = Path(a.clip)
     if not clip.exists():
         raise SystemExit(f"{clip} not found (make one with: python -m realcall.sarvam_clone --speakers {a.speaker} --say ...)")
+    _require_tunnel()           # no paid call if the webhook can't be reached
     ensure_dirs()
     x = load(clip)
     if a.lead_in:
@@ -189,6 +207,7 @@ def cmd_agent(a, reg):
         if use_fillers:
             agent.FillerBank(a.speaker, "sarvam", card.lang).prepare(live_tts)
             print(f"prepared fillers for {a.speaker} ({card.lang})", flush=True)
+    _require_tunnel()           # no paid call if the webhook can't be reached (the call would drop on connect)
     ensure_dirs()
     agent.clear_openers()       # drop any opener left over from an earlier run
     d = reg.device(a.device)
