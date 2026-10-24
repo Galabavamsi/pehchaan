@@ -132,6 +132,12 @@ export function Bench() {
           <div className="fine">Audio is scored in memory and dropped; nothing is stored. Bench results are evidence for analysts and judges and never move money.</div>
         </div>
 
+        {models.length === 1 && rows.some((r) => r.res) && (
+          <div className="fine" style={{ margin: "10px 2px 0" }} data-testid="bench-one-model">
+            Only {SHORT_NAME[models[0]] ?? models[0]} runs on this server. The full panel (four detectors and the fused
+            verdict) runs on the team laptop: ask us to show it.
+          </div>
+        )}
         {rows.length > 0 && (
           <div className="panel bench-table-wrap">
             <table className="rtable bench-table">

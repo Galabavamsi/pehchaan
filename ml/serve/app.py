@@ -207,7 +207,9 @@ class Service:
 app = FastAPI(title="Pehchaan Voice Provenance Service", version="0.1")
 _svc = None
 _panel = None
-PANEL_IDS = [m.strip() for m in os.environ.get("PEHCHAAN_PANEL", "").split(",") if m.strip()]
+# default: a panel of just the served model (no extra memory), so #/bench works on a small server too;
+# the laptop runs the full panel with PEHCHAAN_PANEL=v1,A,nii,la
+PANEL_IDS = [m.strip() for m in os.environ.get("PEHCHAAN_PANEL", "v1").split(",") if m.strip()]
 FUSE_IDS = [m.strip() for m in os.environ.get("PEHCHAAN_FUSE", "A,nii,v1").split(",") if m.strip()]
 
 

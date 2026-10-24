@@ -88,8 +88,9 @@ class Panel:
                         "sim_eer": c["sim_eer"], "in_fusion": m in self.fuse,
                         "latency_ms": round((time.perf_counter() - t0) * 1000, 1)})
         fused = None
-        if self.fuse:
-            f = self.cfg["fused"].get(self.fuse_key) if len(self.fuse) > 1 else {"threshold": 0.0, "sim_eer": self.cfg["models"][self.fuse[0]]["sim_eer"]}
+        f = (self.cfg["fused"].get(self.fuse_key) if len(self.fuse) > 1 else
+             {"threshold": 0.0, "sim_eer": self.cfg["models"][self.fuse[0]]["sim_eer"]} if self.fuse else None)
+        if f:   # a combination without a computed threshold (make_panel_config.py) gets no fused verdict
             z = float(np.mean([zs[m] for m in self.fuse]))
             fused = {"members": self.fuse, "z": round(z, 3), "threshold": f["threshold"], "sim_eer": f["sim_eer"],
                      "verdict": "synthetic" if z >= f["threshold"] else "genuine"}
