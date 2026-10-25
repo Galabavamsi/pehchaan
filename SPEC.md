@@ -152,7 +152,7 @@ Every decision returns `reasons[]`: code, plain-language text (EN + HI), contrib
 
 **Customer phone (Pehchaan SDK inside the bank/UPI app):** call-state sensor; on-device contact-hash matcher; payment hook; Pause & Verify UI; voice-check capture with VAD and quality gate.
 
-**Android SDK and demo shell (added 24 Oct 2026, on site; plan in `app/MOBILE_PLAN.md`):**
+**Android SDK and demo shell (added 24 Oct 2026, on site; code in `app/android`):**
 - `pehchaan-sdk`: a native Kotlin Android library. It is the part a bank or TPAP integrates.
   - Call context: call state, start and end, duration, `ended_sec_ago`. It uses `TelephonyCallback` (Android 12+) with a `PhoneStateListener` fallback.
   - VoIP: `AudioManager` mode `MODE_IN_COMMUNICATION` → `channel: "voip"`. It can't tell which app; it doesn't need to.

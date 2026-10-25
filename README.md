@@ -87,7 +87,6 @@ More detail:
 - `app/README.md`: demo routes, scenarios and the four-minute demo script.
 - `ml/README.md` and `ml/realcall/README.md`: the detector and the real-call pipeline.
 - `deploy/README.md`: the hosted demo.
-- `HANDOVER.md` section 6: setting up a new machine (keys, weights from S3).
 
 Secrets (`.env`), participant phone numbers (`ml/realcall/participants.yaml`), audio and model weights are not in
 git. Weights and real-call data live in a private S3 bucket.
@@ -129,28 +128,3 @@ person through an independent channel and never lets the voice score hold or rel
   non-commercial, including the NII weights that the reference detector n3 is built on. A commercial deployment would
   retrain without them.
 - **Deletion:** team recordings and derived data are deleted by 31 December 2026, as the consent forms promise.
-
-## Documentation index
-
-| Document | Purpose | Status |
-|---|---|---|
-| `SPEC.md` | Product and detection specification | Current (v0.3) |
-| `ml/realcall/FINDINGS.md` | All real-call and on-site detector results | Current |
-| `RED_TEAM.md` | Attacks run through the live pipeline and what they showed | Current |
-| `ml/DATA_CARD.md` | Licences and access for every dataset and model | Current |
-| `app/README.md` | Demo app: routes, scenarios, demo script | Current |
-| `app/VAMSI_HANDOFF.md` | Android app build, quality gate and live test matrix | Current |
-| `ml/realcall/README.md` | Real-call collection and the live attack call | Current |
-| `ml/realcall/V4_DEMO_RUNS.md` | Live conversational attack-call runs | Current |
-| `deploy/README.md` | Hosted demo deployment | Current |
-| `engine/results/README.md` | Simulator outputs and their assumptions | Current |
-| `FINALE_PLAN.md` | On-site plan against the finale rubric (24 Oct) | Record |
-| `HANDOVER.md` | Handover and machine setup (20 Oct) | Record; setup steps still apply |
-| `TASKS.md`, `ROADMAP.md` | Pre-finale task list and status (to 23 Oct) | Record |
-| `ml/README.md`, `ml/STATUS.md`, `ml/results/SUMMARY.md` | Round 1 detector work and results (6 Oct) | Record |
-| `app/NOTES.md`, `app/ANDROID_BRIEF.md`, `app/MOBILE_PLAN.md` | Design notes and app planning | Record |
-| `data/recording-kit/` | Recording kit and consent forms | Current |
-| `research/`, `research_notes/`, `reports/` | Cited research | Reference |
-| `CLAUDE.md` | Working rules for the team's coding assistant | Current |
-
-No licence file is included; third-party models and datasets keep their own licences (`ml/DATA_CARD.md`).

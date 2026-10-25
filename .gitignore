@@ -55,3 +55,13 @@ ml/runs/
 
 # Internal planning notes — never commit
 internal planning/
+
+# Handover, planning and status notes: kept locally, not in the repo
+HANDOVER.md
+FINALE_PLAN.md
+TASKS.md
+ROADMAP.md
+app/VAMSI_HANDOFF.md
+app/ANDROID_BRIEF.md
+app/MOBILE_PLAN.md
+ml/STATUS.md
