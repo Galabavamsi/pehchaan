@@ -51,45 +51,92 @@ flowchart TD
 | `data/recording-kit/` | Recording scripts and consent forms (recordings themselves are never in git) |
 | `research/`, `research_notes/`, `reports/` | Cited research behind the product and the deck |
 
-## Running it
+## Running it on your own machine
 
-Python 3.12 and Node 20 or later (Node 22 for the Android build). Install the Python packages and the engine:
+Works on Linux, macOS and Windows. The demo needs no keys, no model weights and no phones: every bank, registry
+and voice adapter has a built-in mock, and all people, banks and UPI IDs are fictional.
+
+### 1. Prerequisites
+
+| Tool | Version | Check |
+|---|---|---|
+| Python | 3.11 or later (3.12 recommended) | `python3 --version` |
+| Node.js | 20 or later (22 for the Android build) | `node --version` |
+| Git | any recent | `git --version` |
+| ffmpeg | optional; only for scoring mp3/m4a/webm audio | `ffmpeg -version` |
+
+### 2. Get the code and create a Python environment
 
 ```bash
-pip install -r app/server/requirements.txt -r ml/serve/requirements.txt -r ml/realcall/requirements.txt
-```
-```bash
+git clone https://github.com/Galabavamsi/pehchaan.git
+cd pehchaan
+python3 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install --upgrade pip
+pip install -r app/server/requirements.txt
 pip install -e engine
 ```
 
-Tests:
+### 3. Check everything works
 
 ```bash
-cd engine && python -m pytest -q
-```
-```bash
-cd app/server && python -m pytest -q
-```
-```bash
-cd ml && python -m pytest -q realcall/tests
+cd engine && python -m pytest -q && cd ..
+cd app/server && python -m pytest -q && cd ../..
 ```
 
-Local demo (API on port 8400, web on 5173; open `http://127.0.0.1:5173/#/demo`):
+Expected: engine 87 passed, API 41 passed.
+
+### 4. Run the demo (two terminals)
+
+Terminal 1, the risk API on port 8400:
 
 ```bash
-cd app/server && python -m uvicorn pehchaan_api.main:app --port 8400
-```
-```bash
-cd app/web && npm install && npm run dev
+cd app/server
+python -m uvicorn pehchaan_api.main:app --port 8400
 ```
 
-More detail:
-- `app/README.md`: demo routes, scenarios and the four-minute demo script.
-- `ml/README.md` and `ml/realcall/README.md`: the detector and the real-call pipeline.
-- `deploy/README.md`: the hosted demo.
+Terminal 2, the web demo on port 5173:
+
+```bash
+cd app/web
+npm install
+npm run dev
+```
+
+Open `http://127.0.0.1:5173/#/demo`. Click **T1** (cloned son), then on Sunita's phone tap **Pay**, **Family member**,
+**Rahul**; on Rahul's phone open the notification and tap **No, that's not me**. The payment is held and the bank
+console updates. **L2** is the genuine son (tap **Yes, it's me**: paid). **Your case** builds any scenario.
+
+Other pages: `#/console` (fraud analyst), `#/bench` (detector bench), `#/benchmark` (clone-vs-detect results),
+`#/redteam`, `#/tour`. The full demo script is in `app/README.md`.
+
+### 5. Optional: the voice-clone detectors
+
+Without the detector service the API uses a mock voice score, and the demo works as shown. To run the real
+detectors you need the model weights (about 1.3 GB each, kept in the team's private S3 bucket, not in git):
+
+```bash
+pip install -r ml/serve/requirements.txt
+cd ml
+PEHCHAAN_DEVICE=cpu python -m uvicorn serve.app:app --port 8500                       # served model v1 only
+PEHCHAAN_DEVICE=cpu PEHCHAAN_PANEL=v1,A,nii,n3 PEHCHAAN_FUSE=n3 python -m uvicorn serve.app:app --port 8510   # full panel, about 7.5 GB RAM
+```
+
+Then start the API with `VOICE_SERVICE_URL=http://127.0.0.1:8500` (or `8510`). Weight locations: `ml/serve/` and
+`ml/runs/<model>/best.pt`; see `ml/README.md`.
+
+### 6. Optional: Docker, Android app, real calls
+
+- **Docker (API + voice service):** `docker compose -f deploy/docker-compose.yml -f deploy/compose.local.yml up --build api voice`
+  (`deploy/README.md`).
+- **Android app:** Node 22, JDK 21, Android SDK 36. `cd app/web && npm run build && npx cap sync android`, then
+  `cd ../android && ./gradlew assembleDebug`; install the APK on two phones, choose Sunita on one and Rahul on the
+  other.
+- **Real phone calls and the live cloned-voice caller** need telephony and speech API keys in a repo-root `.env`
+  (never committed) and consent forms on file; see `ml/realcall/README.md`.
 
 Secrets (`.env`), participant phone numbers (`ml/realcall/participants.yaml`), audio and model weights are not in
-git. Weights and real-call data live in a private S3 bucket.
+git.
 
 ## Results
 
