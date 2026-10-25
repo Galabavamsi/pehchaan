@@ -1,6 +1,6 @@
 # CLAUDE.md: Pehchaan (team humanslop, RAKSHAM Track 01)
 
-Read `HANDOVER.md` (full context) and `TASKS.md` (what's left, day plan, final checklist) before doing work.
+Read `README.md` (overview, layout, results) and `SPEC.md` (the product contract) before doing work. The handover and task notes (`HANDOVER.md`, `TASKS.md`) are kept locally, not in git.
 The finale is **24–25 Oct 2026 at IIT Delhi**, 09:00–19:00 each day, and **everything must be built and tested
 before 24 Oct**. On site is for validating, polishing and presenting.
 
