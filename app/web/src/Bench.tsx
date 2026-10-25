@@ -164,7 +164,7 @@ export function Bench() {
         </div>
 
         {models.length === 1 && rows.some((r) => r.res) && (
-          <div className="fine" style={{ margin: "10px 2px 0" }} data-testid="bench-one-model">
+          <div className="fine" style={{ margin: "10px 2px 0", gridColumn: "1 / -1" }} data-testid="bench-one-model">
             Only {SHORT_NAME[models[0]] ?? models[0]} runs on this server. The full panel (four detectors, with our reference
             model n3 as the headline verdict) runs on the team laptop: ask us to show it.
           </div>
@@ -231,7 +231,9 @@ export function Bench() {
             <div className="sec-t">How the verdicts are made</div>
             <p className="fine">Each detector keeps its own threshold: its equal-error point on the same 6,000-clip simulated test sample.
               {" "}{fused?.members.length === 1
-                ? <>Pehchaan's verdict is our reference detector, {SHORT_NAME[fused.members[0]] ?? fused.members[0]} (simulated EER {(fused.sim_eer * 100).toFixed(1)}%), chosen on 25 Oct after it was the only new model to beat A on real calls. The others are shown beside it.</>
+                ? (fused.members[0] === "n3"
+                  ? <>Pehchaan's verdict is our reference detector, Ours n3 (simulated EER {(fused.sim_eer * 100).toFixed(1)}%), chosen on 25 Oct after it was the only new model to beat A on real calls. The others are shown beside it.</>
+                  : <>On this server Pehchaan's verdict is {SHORT_NAME[fused.members[0]] ?? fused.members[0]} alone (simulated EER {(fused.sim_eer * 100).toFixed(1)}%), the only detector it runs. On the team laptop it is our reference detector, Ours n3, beside the others.</>)
                 : <>Pehchaan's fused verdict is the plain average of {fused ? fused.members.map((m) => SHORT_NAME[m] ?? m).join(", ") : "ours v1, ours A and NII"} after putting each on that common scale. No weight was fitted
                   {fused ? <> (simulated EER {(fused.sim_eer * 100).toFixed(1)}%)</> : null}.</>}
               {models.includes("la") && " The off-the-shelf model is shown for comparison only."}</p>
