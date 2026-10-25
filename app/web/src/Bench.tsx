@@ -27,6 +27,7 @@ export function Bench() {
   const [busy, setBusy] = useState(false);
   const [rec, setRec] = useState<MediaRecorder | null>(null);
   const [drag, setDrag] = useState(false);
+  const [sel, setSel] = useState<number | null>(null);
   const nextId = useRef(1);
   const fileRef = useRef<HTMLInputElement>(null);
   const queue = useRef<{ id: number; blob: Blob; name: string }[]>([]);
@@ -96,6 +97,8 @@ export function Bench() {
 
   const fused = rows.find((r) => r.res?.fused)?.res?.fused;
   // one member = the headline is that detector alone (the laptop runs the reference model n3 this way)
+  const done = rows.filter((r) => r.status === "done" && r.res);
+  const shown = done.find((r) => r.id === sel) ?? done[done.length - 1];
   const headName = fused?.members.length === 1 ? `Pehchaan (${SHORT_NAME[fused.members[0]] ?? fused.members[0]})` : "Pehchaan fused";
 
   const summary = useMemo(() => {
@@ -164,7 +167,7 @@ export function Bench() {
         </div>
 
         {models.length === 1 && rows.some((r) => r.res) && (
-          <div className="fine" style={{ margin: "10px 2px 0" }} data-testid="bench-one-model">
+          <div className="fine" style={{ margin: "10px 2px 0", gridColumn: "1 / -1" }} data-testid="bench-one-model">
             Only {SHORT_NAME[models[0]] ?? models[0]} runs on this server. The full panel (four detectors, with our reference
             model n3 as the headline verdict) runs on the team laptop: ask us to show it.
           </div>
@@ -184,7 +187,8 @@ export function Bench() {
                   const right = r.res?.fused && r.label !== "unknown"
                     ? (r.label === "clone") === (r.res.fused.verdict === "synthetic") : null;
                   return (
-                    <tr key={r.id} className={right === false ? "wrong" : ""}>
+                    <tr key={r.id} className={`${right === false ? "wrong" : ""} ${shown?.id === r.id ? "sel" : ""}`}
+                      onClick={() => setSel(r.id)} style={{ cursor: "pointer" }} title="Click to explain this clip">
                       <td className="mono fname" title={r.name}>{r.name}</td>
                       <td>
                         <select value={r.label} onChange={(e) => update(r.id, { label: e.target.value as Label })}>
@@ -210,6 +214,8 @@ export function Bench() {
         )}
 
         <div className="bench-side">
+          <ClipExplain row={shown} head={headName} />
+          <Approach serverOnly={models.length === 1} />
           {summary.labelled > 0 && (
             <div className="panel">
               <div className="sec-t">On your labelled clips ({summary.labelled})</div>
@@ -231,7 +237,9 @@ export function Bench() {
             <div className="sec-t">How the verdicts are made</div>
             <p className="fine">Each detector keeps its own threshold: its equal-error point on the same 6,000-clip simulated test sample.
               {" "}{fused?.members.length === 1
-                ? <>Pehchaan's verdict is our reference detector, {SHORT_NAME[fused.members[0]] ?? fused.members[0]} (simulated EER {(fused.sim_eer * 100).toFixed(1)}%), chosen on 25 Oct after it was the only new model to beat A on real calls. The others are shown beside it.</>
+                ? (fused.members[0] === "n3"
+                  ? <>Pehchaan's verdict is our reference detector, Ours n3 (simulated EER {(fused.sim_eer * 100).toFixed(1)}%), chosen on 25 Oct after it was the only new model to beat A on real calls. The others are shown beside it.</>
+                  : <>On this server Pehchaan's verdict is {SHORT_NAME[fused.members[0]] ?? fused.members[0]} alone (simulated EER {(fused.sim_eer * 100).toFixed(1)}%), the only detector it runs. On the team laptop it is our reference detector, Ours n3, beside the others.</>)
                 : <>Pehchaan's fused verdict is the plain average of {fused ? fused.members.map((m) => SHORT_NAME[m] ?? m).join(", ") : "ours v1, ours A and NII"} after putting each on that common scale. No weight was fitted
                   {fused ? <> (simulated EER {(fused.sim_eer * 100).toFixed(1)}%)</> : null}.</>}
               {models.includes("la") && " The off-the-shelf model is shown for comparison only."}</p>
@@ -254,6 +262,80 @@ export function Bench() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Right-hand card: what every detector said about one clip, and what Pehchaan does with it. */
+function ClipExplain({ row, head }: { row?: Row; head: string }) {
+  if (!row?.res) {
+    return (
+      <div className="panel">
+        <div className="sec-t">This clip, explained</div>
+        <p className="fine">Drop or record a clip. Each detector's score appears here as a bar: right of the centre line means
+          "sounds synthetic", left means "sounds genuine". Click any row in the table to explain that clip.</p>
+      </div>
+    );
+  }
+  const r = row.res;
+  const syn = r.models.filter((m) => m.verdict === "synthetic").length;
+  const n3 = r.models.find((m) => m.id === "n3");
+  const nii = r.models.find((m) => m.id === "nii");
+  const headV = r.fused?.verdict;
+  const bar = (z: number) => Math.max(-3, Math.min(3, z)) / 3;   // clip to ±3 for the picture
+  return (
+    <div className="panel">
+      <div className="sec-t">This clip, explained</div>
+      <div className="mono fine" style={{ marginBottom: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.name}</div>
+      <div style={{ display: "grid", gap: 6 }}>
+        {r.models.map((m) => {
+          const b = bar(m.z);
+          return (
+            <div key={m.id} style={{ display: "grid", gridTemplateColumns: "92px 1fr 74px", alignItems: "center", gap: 8, fontSize: 12.5 }}>
+              <span style={{ fontWeight: m.id === "n3" ? 700 : 500 }}>{SHORT_NAME[m.id] ?? m.id}</span>
+              <span style={{ position: "relative", height: 10, background: "#eef2fb", borderRadius: 6 }}>
+                <span style={{ position: "absolute", left: "50%", top: -2, bottom: -2, width: 1, background: "#9aa8c4" }} />
+                <span style={{ position: "absolute", top: 0, bottom: 0, borderRadius: 6,
+                  left: b >= 0 ? "50%" : `${50 + b * 50}%`, width: `${Math.abs(b) * 50}%`,
+                  background: m.verdict === "synthetic" ? "#d64545" : "#2f9e6e" }} />
+              </span>
+              <span className="mono" style={{ color: m.verdict === "synthetic" ? "#b42318" : "#1e7a50" }}>
+                {m.verdict === "synthetic" ? "synthetic" : "genuine"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <ul className="fine" style={{ margin: "10px 0 0", paddingLeft: 18 }}>
+        <li><b>{head}</b> says <b>{headV ?? "–"}</b>. {syn} of {r.models.length} detectors say synthetic.</li>
+        {n3 && nii && n3.verdict !== nii.verdict && (
+          <li>n3 and NII disagree. NII catches clean commercial clones but, on phone calls, flags 56 % of genuine callers
+            (FINDINGS, v5); n3 is the one built for calls. A disagreement goes to an analyst.</li>
+        )}
+        {!r.quality.ok && <li>Under 4 s of speech or a noisy clip: low confidence, treated as inconclusive.</li>}
+        <li>{r.quality.speech_sec.toFixed(1)} s of speech scored in {(r.latency_ms / 1000).toFixed(1)} s; the audio was{r.audio_retained ? "" : " not"} kept.</li>
+        <li>This is evidence for an analyst. It never holds or releases money; the relative's own phone does that.</li>
+      </ul>
+    </div>
+  );
+}
+
+/** Right-hand card: the approach in five steps. */
+function Approach({ serverOnly }: { serverOnly: boolean }) {
+  const steps: [string, string][] = [
+    ["Decode", "Any format, mono 16 kHz, up to 60 s; whole clip scored in windows."],
+    ["Quality gate", "At least 4 s of speech and 10 dB SNR, or the result is inconclusive."],
+    ["Detectors", serverOnly ? "This server runs Ours v1. The laptop panel runs n3, v1, A and NII side by side."
+      : "n3 (our reference), v1 and A (ours), NII (public baseline), each at its own threshold."],
+    ["Verdict", "Headline: our reference n3 (7.8 % EER, 3/256 genuine flagged on real calls; FINDINGS v5)."],
+    ["Action", "Shadow only: hits go to the analyst's review queue. Payments are decided by verifying the person."],
+  ];
+  return (
+    <div className="panel">
+      <div className="sec-t">Our approach</div>
+      <ol className="fine" style={{ margin: "6px 0 0", paddingLeft: 18, display: "grid", gap: 4 }}>
+        {steps.map(([t, d]) => <li key={t}><b>{t}:</b> {d}</li>)}
+      </ol>
     </div>
   );
 }

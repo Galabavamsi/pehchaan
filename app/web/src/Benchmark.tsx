@@ -53,7 +53,7 @@ export function BenchmarkPage() {
   const dets = r ? DET_ORDER.filter((d) => rows && Object.values(rows).some((x) => d in x)) : [];
   const sim = (g: string) => r?.generators[g]?.similarity_mean;
   const clones = rows ? Object.keys(rows).filter((g) => g !== "genuine").sort((a, b) => (sim(b) ?? 0) - (sim(a) ?? 0)) : [];
-  const name = (d: string) => (d === "fused" ? `Fused (${(r?.fused_members ?? []).join(" + ")})` : r?.models[d] ?? d);
+  const name = (d: string) => (d === "fused" ? `Fused, 24 Oct (${(r?.fused_members ?? []).join(" + ")})` : r?.models[d] ?? d);
 
   return (
     <div className="tour">
@@ -70,6 +70,28 @@ export function BenchmarkPage() {
           ClonEval's measure (arXiv:2504.20581): how close a clone sounds to the real speaker to a speaker-recognition model
           (WavLM). The same files then go through a phone codec, and real phone calls come from our pre-registered test split.
         </p>
+        <div className="panel" style={{ margin: "4px 0 16px" }}>
+          <div className="sec-t">Read this first</div>
+          <ul className="fine" style={{ margin: "6px 0 10px", paddingLeft: 18, display: "grid", gap: 4 }}>
+            <li><b>Scored on 24 Oct</b>, before our reference model n3 existed. n3's results are in the table below (FINDINGS, v5).</li>
+            <li><b>Off-the-shelf</b> (XLS-R + AASIST) and <b>NII MMS-300M</b> are public models, shown for comparison only.
+              <b> Ours v1</b> and <b>Ours A</b> are trained by us.</li>
+            <li><b>Fused, 24 Oct</b> was the plain average of A, NII and v1, retired on 25 Oct. It shows why averaging fails:
+              on clean Sarvam clones NII caught 71/71, A and v1 caught 0/71, and the average caught 0/71.</li>
+            <li>Since 25 Oct the bench's headline is <b>n3</b>: our model, fine-tuned by us on our data starting from NII's
+              published weights, so it inherits NII's non-commercial licence.</li>
+          </ul>
+          <table className="rtable">
+            <thead><tr><th>Real phone calls, 510 test clips</th><th>EER</th><th>Genuine flagged</th><th>Clones caught</th><th>Sarvam clones, unseen speaker</th></tr></thead>
+            <tbody>
+              <tr className="fused-row"><td><b>n3, our reference</b></td><td className="mono">7.8 %</td><td className="mono">3/256</td><td className="mono">190/254</td><td className="mono">0/12</td></tr>
+              <tr><td>A, ours (previous)</td><td className="mono">11.0 %</td><td className="mono">11/256</td><td className="mono">204/254</td><td className="mono">0/12</td></tr>
+              <tr><td>NII, public, used as is</td><td className="mono">51.2 %</td><td className="mono">144/256</td><td className="mono">133/254</td><td className="mono">10/12</td></tr>
+            </tbody>
+          </table>
+          <p className="fine" style={{ marginTop: 6 }}>NII "catches" Sarvam on calls only by flagging 56 % of genuine callers. No detector is good
+            enough to decide on its own, which is why Pehchaan verifies the person instead. Source: ml/realcall/FINDINGS.md, v5 section.</p>
+        </div>
         {err && (err.startsWith("404")
           ? <p className="bm-note" title={err}>The results are being re-scored with the detector bench's scoring plan. They appear here
               as soon as that run finishes.</p>
