@@ -1,4 +1,4 @@
-# Pehchaan - DATA_CARD (licences, access, loading facts)
+# Pehchaan data card: licences, access and loading facts
 
 Verified 2026-10-06 against HF API (`/api/models|datasets/<id>`: `gated`, `cardData.license`, `siblings`), HF/GitHub cards and source, PyPI JSON, Zenodo API, Edinburgh DataShare, and vendor docs.
 **NC** = non-commercial licence. "unverified" = could not confirm from a primary source.

@@ -1,5 +1,7 @@
 # Pehchaan ML: voice-clone detector, red-team corpus and Voice Provenance Service
 
+> Written for Round 1 (6 Oct 2026). Added since: real-call collection and retraining (`realcall/`, `realcall/FINDINGS.md`), the side-by-side detector panel (`serve/panel.py`) and the reference detector n3 (FINDINGS, v5 section).
+
 What this folder proves, with measurements: off-the-shelf anti-spoofing models degrade on Indian-language,
 phone-channel cloned speech; our fine-tuned XLS-R + AASIST does better but still misses unseen generators.
 That is why the product treats voice as supporting evidence (SPEC section 4, G2/G3).

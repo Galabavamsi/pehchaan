@@ -1,5 +1,7 @@
 # Pehchaan: finale task list and checklist
 
+> **Record: the pre-finale task list and checklist (to 23 Oct 2026).** For the current state see `README.md`.
+
 **Finale:** RAKSHAM, IIT Delhi. On site **24 Oct 09:00 – 19:00** and **25 Oct 09:00 – 19:00 IST**. We can't stay on
 campus overnight. Results are announced on 25 Oct around 20:00.
 
@@ -11,7 +13,7 @@ Owners: **G** = Galaba, **V** = Varun. Tick boxes as you go and commit this file
 
 ---
 
-## 🎯 Goals
+## Goals
 
 1. **Win the finale.** Rubric (100): problem fit 20 · architecture & detection 20 · differentiation 15 ·
    feasibility 15 · safety/privacy/responsible AI 15 · adoption 10 · communication 5.
@@ -24,7 +26,7 @@ Owners: **G** = Galaba, **V** = Varun. Tick boxes as you go and commit this file
 
 ---
 
-## ✅ Already done
+## Already done
 
 ### Round 1 (by 6 Oct)
 - [x] Track 01 chosen; product spec `SPEC.md` v0.2 (guardrails G1–G7, voice in shadow mode)
@@ -49,7 +51,7 @@ Owners: **G** = Galaba, **V** = Varun. Tick boxes as you go and commit this file
 
 ---
 
-## 🔧 To do before 24 Oct, day by day
+## To do before 24 Oct, day by day
 
 ### Mon 20 Oct (evening): handover and access
 - [x] **G:** add Varun as a GitHub collaborator; merge this PR into `master` (merged, `e6370a5`)
@@ -125,7 +127,7 @@ Owners: **G** = Galaba, **V** = Varun. Tick boxes as you go and commit this file
 
 ---
 
-## 🏁 On site: 24 Oct (09:00 – 19:00)
+## On site: 24 Oct (09:00 – 19:00)
 
 | Time | What | Notes |
 |---|---|---|
@@ -137,7 +139,7 @@ Owners: **G** = Galaba, **V** = Varun. Tick boxes as you go and commit this file
 | 17:30–19:00 | Mentor rounds and buffer; commit and push everything | Leave by 19:00 |
 | Evening (hotel) | Light fixes only, rehearse the pitch out loud, sleep | No risky deploys at night |
 
-## 🏁 On site: 25 Oct (09:00 – 19:00)
+## On site: 25 Oct (09:00 – 19:00)
 
 | Time | What | Notes |
 |---|---|---|
@@ -149,7 +151,7 @@ Owners: **G** = Galaba, **V** = Varun. Tick boxes as you go and commit this file
 
 ---
 
-## 📋 Final checklist (tick on 23 Oct night, re-check 24 Oct morning)
+## Final checklist (tick on 23 Oct night, re-check 24 Oct morning)
 
 **Product**
 - [ ] `api.humanslop.in` and `demo.humanslop.in` live; checked from a phone on mobile data

@@ -1,6 +1,6 @@
 # Pehchaan on real phones: plan for the on-site mobile build
 
-Status: **plan** (21 Oct 2026). Build on site at the finale (24 Oct); see §7 for what to prepare before travel.
+Status: **record**. Plan written on 21 Oct 2026 and since built on site (`app/android`; build and test steps in `app/VAMSI_HANDOFF.md`). See §7 for what was prepared before travel.
 `SPEC.md` §7 gets the SDK/shell section before any code (spec-first rule).
 
 ## 0. What the judges should see
@@ -31,10 +31,10 @@ Today the phones run web pages and the "call" on screen comes from a scenario bu
 
 | Option | Effort on site | Real call state | Push to Phone B | Verdict |
 |---|---|---|---|---|
-| Web pages only (today) | 0 | ✗ | only while the page is open | the fallback |
-| **Capacitor (WebView) + small Kotlin plugins** | ~5–6 h | ✓ | ✓ local notification from a foreground service | **use this** |
-| React Native / Expo | rewrite UI | needs native module anyway | ✓ | no |
-| Native Kotlin app | rewrite everything | ✓ | ✓ | no time |
+| Web pages only (today) | 0 | no | only while the page is open | the fallback |
+| **Capacitor (WebView) + small Kotlin plugins** | ~5–6 h | yes | yes: local notification from a foreground service | **use this** |
+| React Native / Expo | rewrite UI | needs native module anyway | yes | no |
+| Native Kotlin app | rewrite everything | yes | yes | no time |
 
 **One APK, two roles** chosen on first launch ("I'm paying" → DemoPay with Pehchaan; "I'm family" → Pehchaan
 Family). One build, installed on both phones. Name and icon must be fictional ("DemoPay", no real bank/UPI brand).

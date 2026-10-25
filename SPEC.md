@@ -1,4 +1,4 @@
-# Pehchaan — product & detection spec (v0.2, 2026-10-06)
+# Pehchaan: product and detection spec (v0.3, updated 25 Oct 2026)
 
 > **Verify the person, not the voice.**
 > A safeguard inside UPI/bank apps that catches voice-clone fraud at the moment money moves. It asks *who* is on the line and checks that claim through channels a cloned voice cannot reach. AI voice forensics is one supporting signal, never the judge.

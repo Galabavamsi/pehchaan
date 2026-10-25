@@ -1,4 +1,19 @@
-# Real-call findings (2026-10-17)
+# Real-call findings (17-25 Oct 2026)
+
+Every detector result on real phone calls, and the on-site detector work. Sections are in date order; each keeps
+its own method and caveats. Numbers quoted elsewhere (deck, README) trace to this file.
+
+Contents:
+1. Baseline: the Round 1 detector (v1) on real tape calls (17 Oct). v1 caught 28-29 % of clones at p ≥ 0.8 and flagged 0-4 % of genuine clips.
+2. What it means; method notes; the learned speakerphone channel used for retraining.
+3. Retraining results (19 Oct): model A, real-call EER 24.6 % to 6.8 % on handset D1.
+4. Held-out handset D2 (19-23 Oct): model A 11.7 % EER on a phone never used in training; Sarvam clones 0/12.
+5. Live system checks (20-23 Oct): attack call, Pay-to-hold time, deployed voice latency.
+6. On site, 24 Oct: clone-vs-detect benchmark (every detector on every cloner).
+7. On site, 24 Oct: paid-API retrain (A2, A2-ivc), not promoted.
+8. On site, 25 Oct: generalisation run v5; n3 becomes the reference detector (7.8 % EER on real calls).
+
+## Baseline: the Round 1 detector on real tape calls (17 Oct 2026)
 
 The served Round 1 detector (`pehchaan-xlsr-aasist-ft-v1`) was scored on consented tape calls over a real
 Indian network: Vobiz number → Jio → Samsung M34 (D1) on speakerphone → laptop mic. Each tape mixes ~10 s

@@ -1,5 +1,7 @@
 # Android app brief (for Vamsi): build on site, 24–25 Oct
 
+> **Record: planning brief, 24 Oct 2026.** The app is built in `app/android`; build, quality gate and test steps are in `app/VAMSI_HANDOFF.md`.
+
 **Goal:** one Android app, installed on both phones, that makes the demo real instead of scripted:
 the scam call rings **Phone A** (Varun's Redmi, the payer), the app *knows* a call is live and who it's from,
 the payer pays, and **Phone B** (your Samsung, the "son") gets Family Verify as a **real notification**,
