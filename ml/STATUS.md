@@ -1,11 +1,13 @@
 # ML status (Pehchaan voice provenance)
 
+> **Record: Round 1 ML status, 6 Oct 2026.** Later detector results are in `ml/realcall/FINDINGS.md`.
+
 Last updated: 2026-10-06 06:25 IST. **Round-1 ML work is complete; the GPU instance is STOPPED (not terminated).**
 
 ## BLOCKERS (need the user)
 
 1. **HF gated audio still 403 for IndicF5 and MLAAD (checked 05:40 IST from the laptop).** `ai4bharat/IndicF5` -> GatedRepoError; `mueller91/MLAAD` README downloads but every `fake/*/*.wav` returns GatedRepoError (so the token can list but not read). `ai4bharat/indic-parler-tts` works and is used as an extra held-out generator. Script ready for when MLAAD opens: `data_prep/fetch_mlaad.py` (15 Indic MLAAD systems incl. IndicF5 outputs, test-only).
-2. **Keys stay on the laptop.** Copying `.env` (HF token / API keys) to the EC2 box was blocked by the Claude Code permission policy (credential exfiltration guard). So commercial TTS (Sarvam, OpenAI, Deepgram) runs **from the laptop** and only the audio is uploaded; gated HF files would be downloaded on the laptop and uploaded as files. If you want the GPU box/SageMaker to use the keys directly, you would have to allow it explicitly; not needed for Round 1.
+2. **Keys stay on the laptop.** Copying `.env` (HF token / API keys) to the EC2 box was not allowed: keys never leave the laptop. So commercial TTS (Sarvam, OpenAI, Deepgram) runs **from the laptop** and only the audio is uploaded; gated HF files would be downloaded on the laptop and uploaded as files. If you want the GPU box/SageMaker to use the keys directly, you would have to allow it explicitly; not needed for Round 1.
 3. **GPU capacity:** EC2 p4d / p4de / p5.4xlarge / g6e.2xlarge had no capacity in us-east-1 (all AZs) at 00:20 IST. Running on **g5.2xlarge (1x A10G 24 GB)**. SageMaker training in ap-southeast-1 (ml.p4d.24xlarge quota 1) is set up as the heavy-batch option.
 4. Gemini dropped (no key). SageMaker p4d job never got capacity (pending 04:11-06:00 IST) and was stopped unbilled ($0), so there are no A100 numbers and no multi-seed sweep.
 

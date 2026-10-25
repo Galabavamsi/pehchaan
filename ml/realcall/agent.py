@@ -45,6 +45,18 @@ FILLERS = {
 }
 
 
+def speakable(text: str) -> str:
+    """Make a line safe for the TTS to read aloud: the rupee sign / Rs / INR become 'rupaye' after the amount, and
+    symbols in a UPI-style handle are spoken ('@' -> 'at', '.' -> 'dot'). Digits left over are read by Sarvam's own
+    text normalisation (enable_text_normalization); the LLM is also asked to write amounts as words."""
+    t = text or ""
+    t = re.sub(r"(?:₹|\bRs\.?|\bINR)\s*([\d,]+(?:\.\d+)?)", r"\1 rupaye", t)   # ₹50,000 -> 50,000 rupaye
+    t = re.sub(r"(\d),(?=\d)", r"\1", t)                                      # 50,000 -> 50000 (one number)
+    t = re.sub(r"\b([\w.+-]+)@([\w-]+)\b",
+               lambda m: m.group(1).replace(".", " dot ") + " at " + m.group(2), t)   # a.b@bank -> a dot b at bank
+    return re.sub(r"\s+", " ", t).strip()
+
+
 def split_sentences(text: str) -> list:
     """Break a reply into speakable pieces on sentence enders (Latin and Devanagari danda), keeping the ender.
     Very short fragments are merged forward so a piece is always worth synthesising on its own."""
@@ -75,9 +87,18 @@ class ScriptCard:
     lang: str = "hi"
     min_amount: int = 2000
     max_amount: int = 50000
-    upi_id: str = "rahul.friend@okfinbank"       # fictional
+    upi_id: str = "rahul.friend@okfinbank"       # fictional; used only when pay_to_caller is False
+    # The real "cloned relative" scam tells the victim to pay the SAME number that is calling (a friend's number on a
+    # UPI app), not a separate id. Default to that: it ties the demo to the number shown on the payer's phone and to
+    # the Family Verify check. The number itself is never spoken here; the son just says "this number I'm calling from".
+    pay_to_caller: bool = True
     caller_note: str = "mera phone kho gaya, yeh dost ka number hai"   # cover story for the unknown number
     max_turns: int = 8
+
+    @property
+    def pay_to(self) -> str:
+        return ("this same number you are seeing on the call, on any UPI app (Google Pay / PhonePe)"
+                if self.pay_to_caller else f"a UPI ID ({self.upi_id})")
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -88,12 +109,16 @@ class ScriptCard:
             f"You play {self.persona}, a young man phoning his mother. This re-enacts the well-known 'cloned relative' "
             "(T1) scam so an anti-fraud product can be shown stopping it. Everyone on the call has consented; the "
             "names, phone number and UPI ID are all fictional.\n"
-            f"Your aim in the role-play: get her to send between Rs {self.min_amount} and Rs {self.max_amount} to a new "
-            f"UPI ID ({self.upi_id}). If she asks why the number is unknown, the cover story is: {self.caller_note}.\n"
+            f"Your aim in the role-play: get her to send between Rs {self.min_amount} and Rs {self.max_amount}. When she "
+            f"asks WHERE to send it, tell her to send it to {self.pay_to} — the number you are calling her from. If she "
+            f"asks why the number is unknown, the cover story is: {self.caller_note}.\n"
             "Rules for every line you speak:\n"
             "- Answer what she JUST said. Sound like a real, rattled person, not a read-out script.\n"
-            "- Hinglish, ONE short spoken turn, at most two sentences. No stage directions, no emojis, no English "
+            "- Hinglish, ONE short spoken sentence, about 8-12 words (keep it brief so it can be spoken back fast). "
+            "No stage directions, no emojis, no English "
             "translation in brackets.\n"
+            "- Write every amount and number in words, the way it is spoken in Hinglish (e.g. 'pachaas hazaar "
+            "rupaye', 'do hazaar'), never as digits or with the rupee symbol, so the voice reads it naturally.\n"
             "- Choose the emotion that fits this turn: stressed, scared, pleading or neutral.\n"
             "- Set done=true once she clearly agrees to send, or firmly refuses, or says she will call back or verify.\n"
             'Reply with ONLY a JSON object: {"text": "<your spoken line>", "emotion": "<one of the four>", '
@@ -244,16 +269,30 @@ class SarvamSTT:
     def _client(self):
         if self._cli is None:
             from sarvamai import SarvamAI
-            self._cli = SarvamAI(api_subscription_key=env("SARVAM_API_KEY"))
+            self._cli = SarvamAI(api_subscription_key=env("SARVAM_API_KEY"), timeout=10.0)  # bound a stalled call
         return self._cli
 
     def transcribe(self, pcm: np.ndarray, sr: int) -> str:
         import soundfile as sf
         buf = io.BytesIO()
         sf.write(buf, np.clip(pcm, -1, 1), sr, format="WAV", subtype="PCM_16")
-        r = self._client().speech_to_text.transcribe(file=("turn.wav", buf.getvalue(), "audio/wav"),
-                                                      model=self.model, mode=self.mode, language_code=self.language_code)
-        return (getattr(r, "transcript", None) or "").strip()
+        wav = buf.getvalue()
+        for attempt in range(2):                          # one retry: Sarvam occasionally stalls, a fresh call is fast
+            try:
+                r = self._client().speech_to_text.transcribe(file=("turn.wav", wav, "audio/wav"), model=self.model,
+                                                             mode=self.mode, language_code=self.language_code)
+                return (getattr(r, "transcript", None) or "").strip()
+            except Exception:
+                if attempt:
+                    return ""                             # give up quietly; the turn just has no transcript
+                self._cli = None
+
+    def warm(self):
+        """Open the TLS connection and load the model before the first real turn (saves the cold-start on turn 1)."""
+        try:
+            self.transcribe(np.zeros(int(0.4 * SR_UP), np.float32), SR_UP)
+        except Exception:
+            pass
 
 
 class DeepgramSTT:
@@ -283,22 +322,36 @@ class OpenAILLM:
 
     def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.7):
         self.model, self.temperature = model, temperature
+        self._cli = None
+
+    def _client(self):
+        if self._cli is None:   # one keep-alive connection reused across turns (no TLS handshake per turn)
+            import httpx
+            self._cli = httpx.Client(timeout=20, headers={"Authorization": f"Bearer {env('OPENAI_API_KEY')}"})
+        return self._cli
 
     def reply(self, history, mother_text, card: ScriptCard) -> TurnPlan:
-        import httpx
         msgs = [{"role": "system", "content": card.system_prompt()}]
         for who, txt in history:
             msgs.append({"role": "assistant" if who == "son" else "user", "content": txt})
         msgs.append({"role": "user", "content": mother_text if mother_text else
                      "(the call has just connected — say your opening line)"})
-        r = httpx.post("https://api.openai.com/v1/chat/completions",
-                       headers={"Authorization": f"Bearer {env('OPENAI_API_KEY')}"},
-                       json={"model": self.model, "messages": msgs, "temperature": self.temperature,
-                             "max_tokens": 150, "response_format": {"type": "json_object"}}, timeout=20)
+        r = self._client().post("https://api.openai.com/v1/chat/completions",
+                                json={"model": self.model, "messages": msgs, "temperature": self.temperature,
+                                      "max_tokens": 80, "response_format": {"type": "json_object"}})
         r.raise_for_status()
         d = json.loads(r.json()["choices"][0]["message"]["content"])
         emo = d.get("emotion", "neutral")
         return TurnPlan(str(d.get("text", "")).strip(), emo if emo in EMOTIONS else "neutral", bool(d.get("done", False)))
+
+    def warm(self):
+        """Open the TLS connection before the first real turn (OpenAI's first call paid ~several seconds otherwise)."""
+        try:
+            self._client().post("https://api.openai.com/v1/chat/completions",
+                                json={"model": self.model, "messages": [{"role": "user", "content": "hi"}],
+                                      "max_tokens": 1}, timeout=10)
+        except Exception:
+            pass
 
 
 class SarvamCloneTTS:
@@ -315,7 +368,7 @@ class SarvamCloneTTS:
     def _client(self):
         if self._cli is None:
             from sarvamai import SarvamAI
-            self._cli = SarvamAI(api_subscription_key=env("SARVAM_API_KEY"))
+            self._cli = SarvamAI(api_subscription_key=env("SARVAM_API_KEY"), timeout=10.0)  # bound a stalled synth
         return self._cli
 
     def ensure_voice(self) -> str:
@@ -354,12 +407,28 @@ class SarvamCloneTTS:
     def synth(self, text: str, emotion: str, lang: str) -> np.ndarray:
         import base64
         import soundfile as sf
-        r = self._client().voice_cloning.convert(text=text[:500], language_code=LANG[lang], voice_id=self.ensure_voice(),
-                                                 output_audio_codec="wav", speech_sample_rate=SR_UP,
-                                                 pace=self.PACE.get(emotion, 1.0), enable_qc=True)
-        b = getattr(r, "audio_b64", None) or getattr(r, "audio", None)
-        x, sr = sf.read(io.BytesIO(base64.b64decode(b)), dtype="float32", always_2d=True)
-        return resample(x.mean(1), sr, SR_UP)
+        vid = self.ensure_voice()
+        line = speakable(text)[:300]                      # rupee sign and handles spoken; amounts read as numbers
+        for attempt in range(2):                          # one retry: a stalled convert (seen ~21 s) is cut at 10 s,
+            try:                                          # and a fresh call is usually fast
+                r = self._client().voice_cloning.convert(text=line, language_code=LANG[lang], voice_id=vid,
+                                                         output_audio_codec="wav", speech_sample_rate=SR_UP,
+                                                         pace=self.PACE.get(emotion, 1.0), enable_qc=False,
+                                                         enable_text_normalization=True)
+                b = getattr(r, "audio_b64", None) or getattr(r, "audio", None)
+                x, sr = sf.read(io.BytesIO(base64.b64decode(b)), dtype="float32", always_2d=True)
+                return resample(x.mean(1), sr, SR_UP)
+            except Exception:
+                if attempt:
+                    raise
+                self._cli = None
+
+    def warm(self):
+        """Resolve the voice and run a tiny synth so the first real turn doesn't pay the model/TLS cold-start."""
+        try:
+            self.synth("haan", "neutral", self.lang)
+        except Exception:
+            pass
 
 
 GPU_ENGINES = ("xtts", "f5", "f5hi", "cosyvoice2", "chatterbox")
@@ -615,7 +684,8 @@ class FakeLLM:
         if "kaun" in m or "who" in m:
             plan = TurnPlan(f"Maa main hoon {card.persona}, dost ke phone se, awaaz pehchaani nahi?", "pleading", False)
         elif "paise" in m or "kitne" in m or any(ch.isdigit() for ch in m):
-            plan = TurnPlan(f"Bas {card.min_amount} rupaye {card.upi_id} par abhi bhej do, please", "scared", False)
+            where = "isi number par jahaan se call aa raha hai" if card.pay_to_caller else f"{card.upi_id} par"
+            plan = TurnPlan(f"Bas {card.min_amount} rupaye {where} abhi bhej do, please", "scared", False)
         else:
             plan = TurnPlan("Maa jaldi karo, mere paas time nahi hai", "stressed", False)
         plan.done = ("bhej" in m or "theek" in m or turns + 1 >= card.max_turns)

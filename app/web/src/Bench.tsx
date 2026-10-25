@@ -6,8 +6,8 @@ import { Seal } from "./components";
 type Label = "unknown" | "genuine" | "clone";
 interface Row { id: number; name: string; label: Label; status: "queued" | "scoring" | "done" | "error"; res?: PanelResult; err?: string }
 
-const MODEL_ORDER = ["v1", "A", "nii", "la"];
-const SHORT_NAME: Record<string, string> = { v1: "Ours v1", A: "Ours A", nii: "NII", la: "Off-the-shelf" };
+const MODEL_ORDER = ["n3", "v1", "A", "nii", "la"];
+const SHORT_NAME: Record<string, string> = { v1: "Ours v1", A: "Ours A", nii: "NII", la: "Off-the-shelf", n3: "Ours n3" };
 
 /** Guess a label from the file name (judges can change it): only used for the accuracy summary. */
 function guessLabel(name: string): Label {
@@ -94,6 +94,10 @@ export function Bench() {
     return MODEL_ORDER.filter((m) => seen.has(m));
   }, [rows]);
 
+  const fused = rows.find((r) => r.res?.fused)?.res?.fused;
+  // one member = the headline is that detector alone (the laptop runs the reference model n3 this way)
+  const headName = fused?.members.length === 1 ? `Pehchaan (${SHORT_NAME[fused.members[0]] ?? fused.members[0]})` : "Pehchaan fused";
+
   const summary = useMemo(() => {
     const done = rows.filter((r) => r.status === "done" && r.res && r.label !== "unknown");
     const score = (pick: (r: Row) => string | undefined) => {
@@ -107,11 +111,11 @@ export function Bench() {
       return { ok, n: gen + cl, fp, gen, miss, cl };
     };
     const out: { id: string; name: string; s: ReturnType<typeof score> }[] = [
-      { id: "fused", name: "Pehchaan fused", s: score((r) => r.res?.fused?.verdict) },
+      { id: "fused", name: headName, s: score((r) => r.res?.fused?.verdict) },
       ...models.map((m) => ({ id: m, name: SHORT_NAME[m] ?? m, s: score((r) => r.res?.models.find((x) => x.id === m)?.verdict) })),
     ];
     return { labelled: done.length, out };
-  }, [rows, models]);
+  }, [rows, models, headName]);
 
   const csv = () => {
     const head = ["file", "label", "audio_s", "speech_s", "fused", ...models.flatMap((m) => [`${m}_verdict`, `${m}_z`])];
@@ -131,7 +135,6 @@ export function Bench() {
     a.click();
   };
 
-  const fused = rows.find((r) => r.res?.fused)?.res?.fused;
   return (
     <div className="bench" data-testid="bench">
       <header className="demo-top">
@@ -162,8 +165,8 @@ export function Bench() {
 
         {models.length === 1 && rows.some((r) => r.res) && (
           <div className="fine" style={{ margin: "10px 2px 0" }} data-testid="bench-one-model">
-            Only {SHORT_NAME[models[0]] ?? models[0]} runs on this server. The full panel (four detectors and the fused
-            verdict) runs on the team laptop: ask us to show it.
+            Only {SHORT_NAME[models[0]] ?? models[0]} runs on this server. The full panel (four detectors, with our reference
+            model n3 as the headline verdict) runs on the team laptop: ask us to show it.
           </div>
         )}
         {rows.length > 0 && (
@@ -171,7 +174,7 @@ export function Bench() {
             <table className="rtable bench-table">
               <thead>
                 <tr>
-                  <th>File</th><th>Your label</th><th>Pehchaan fused</th>
+                  <th>File</th><th>Your label</th><th>{headName}</th>
                   {models.map((m) => <th key={m}>{SHORT_NAME[m] ?? m}</th>)}
                   <th>Speech</th><th>Time</th>
                 </tr>
@@ -227,16 +230,22 @@ export function Bench() {
           <div className="panel">
             <div className="sec-t">How the verdicts are made</div>
             <p className="fine">Each detector keeps its own threshold: its equal-error point on the same 6,000-clip simulated test sample.
-              Pehchaan's fused verdict is the plain average of {fused ? fused.members.map((m) => SHORT_NAME[m] ?? m).join(", ") : "ours v1, ours A and NII"} after putting each on that common scale. No weight was fitted
-              {fused ? <> (simulated EER {(fused.sim_eer * 100).toFixed(1)}%)</> : null}. The off-the-shelf model is shown for comparison only.</p>
+              {" "}{fused?.members.length === 1
+                ? <>Pehchaan's verdict is our reference detector, {SHORT_NAME[fused.members[0]] ?? fused.members[0]} (simulated EER {(fused.sim_eer * 100).toFixed(1)}%), chosen on 25 Oct after it was the only new model to beat A on real calls. The others are shown beside it.</>
+                : <>Pehchaan's fused verdict is the plain average of {fused ? fused.members.map((m) => SHORT_NAME[m] ?? m).join(", ") : "ours v1, ours A and NII"} after putting each on that common scale. No weight was fitted
+                  {fused ? <> (simulated EER {(fused.sim_eer * 100).toFixed(1)}%)</> : null}.</>}
+              {models.includes("la") && " The off-the-shelf model is shown for comparison only."}</p>
           </div>
           <div className="panel bench-fail">
             <div className="sec-t"><WarningCircle size={16} weight="fill" /> Where it still fails</div>
             <ul className="fine">
-              <li><b>Brand-new commercial cloners</b>, especially instant voice cloning, can pass as genuine.</li>
+              <li><b>Brand-new commercial cloners</b>, especially instant voice cloning, can pass as genuine: Sarvam's instant
+                clones of a person no model was trained on got through on real calls 0 of 12 times for every model we trained,
+                n3 included (v5, 25 Oct).</li>
               <li><b>Real voices recorded from the phone network</b> (a dialer's recording of a cellular call) are almost always
                 flagged: model A flagged 40 of 44 such clips, but none of 80 direct microphone recordings. On the speakerphone
-                path Pehchaan uses, it flagged 13 of 256 (clone-vs-detect benchmark, 24 Oct).</li>
+                path Pehchaan uses, it flagged 13 of 256 (clone-vs-detect benchmark, 24 Oct). n3 flags 18 of 44 dialer clips,
+                none of the 80 microphone recordings and 3 of 256 genuine speakerphone clips (v5, 25 Oct).</li>
               <li><b>Short clips</b> (under 4 s of speech) and heavy noise: low confidence.</li>
               <li><b>Phone audio</b> through cheap speakerphones and codecs shifts scores; the real-call retrain (A) helps but doesn't remove it.</li>
               <li>Music, overlapping speakers or non-speech are out of scope.</li>

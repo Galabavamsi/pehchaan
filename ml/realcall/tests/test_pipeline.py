@@ -215,6 +215,7 @@ def test_attack_call_plays_clip_only_while_live(monkeypatch):
     from fastapi.testclient import TestClient
     from realcall import dial, server
     server.config = lambda: {**settings.DEFAULTS, "public_base_url": "https://example.trycloudflare.com"}
+    monkeypatch.setattr(dial, "_tunnel_ok", lambda: True)          # offline test: pretend the tunnel is up
     cl = TestClient(server.app)
     clip = TMP / "t1_S02.wav"
     save(clip, fake_speech(4, 180, 11), SR)
@@ -342,6 +343,7 @@ def test_agent_server_answer_ws_and_never_recorded(monkeypatch):
 def test_agent_dial_registers_card_and_enforces_consent(monkeypatch):
     from realcall import dial, server
     server.config = lambda: {**settings.DEFAULTS, "public_base_url": "https://example.trycloudflare.com"}
+    monkeypatch.setattr(dial, "_tunnel_ok", lambda: True)          # offline test: pretend the tunnel is up
     dialled = []
     monkeypatch.setattr(dial, "_vobiz_call", lambda to, cid: (dialled.append((to, cid)), {"request_uuid": "r1"})[1])
     monkeypatch.setattr(dial, "_wait_hangup", lambda cid, t: {"hangup_cause": "NORMAL_CLEARING", "duration_s": 3})
@@ -513,3 +515,64 @@ def test_agent_live_feel_opener_and_filler(monkeypatch):
     assert turns[0]["prerendered"] is True and turns[0]["filler"] is False
     assert turns[1]["filler"] is True                                       # the filler covered the slow reply
     assert all("text" not in e and "transcript" not in e for e in turns.values())
+
+
+def test_speakable_numbers_and_handles():
+    from realcall import agent
+    assert agent.speakable("Maa, ₹50,000 bhej do") == "Maa, 50000 rupaye bhej do"
+    assert agent.speakable("Rs. 2000 abhi") == "2000 rupaye abhi"
+    assert agent.speakable("rahul.friend@okfinbank par") == "rahul dot friend at okfinbank par"
+    assert agent.speakable("pachaas hazaar rupaye") == "pachaas hazaar rupaye"           # words pass through
+
+
+def test_agent_skips_empty_transcript(monkeypatch):
+    """Noise and echo transcribe to nothing; the agent must not reply to them. With an STT that always returns
+    whitespace, only the opener is spoken and no reply turn is logged."""
+    from fastapi.testclient import TestClient
+    from realcall import agent, server
+    server.config = lambda: {**settings.DEFAULTS, "public_base_url": "https://example.trycloudflare.com"}
+    card = agent.ScriptCard(max_turns=4)
+
+    class EmptySTT:
+        def transcribe(self, pcm, sr):
+            return "   "                                          # whitespace only, like a noise/echo transcript
+
+    providers = agent.Providers(EmptySTT(), agent.FakeLLM(), agent.FakeTTS())
+    monkeypatch.setattr(server, "_make_agent", lambda c: (providers, agent.make_vad("energy", sr=agent.SR_UP), card))
+    cl = TestClient(server.app)
+    cid = "d" * 32
+    settings.log_event("call_registered", call_id=cid, kind="agent", device="D2", speaker="S02", card=card.as_dict())
+    speech = fake_speech(1.1, 150, 11)
+    with cl.websocket_connect(f"/ws/agent/{cid}") as ws:
+        ws.send_text(json.dumps({"event": "start", "start": {"streamId": "s1"}}))
+        warm = np.zeros(int(0.3 * SR), np.float32)                # a little audio first, so the byte order is known
+        for i in range(0, len(warm) // 320 * 320, 320):
+            ws.send_text(json.dumps({"event": "media", "media": {"track": "inbound",
+                        "payload": base64.b64encode((warm[i:i + 320] * 32767).astype("<i2").tobytes()).decode()}}))
+        for _ in range(400):                                      # let the opener play before anything else
+            if ws.receive_json()["event"] == "playAudio":
+                break
+        inbound = np.concatenate([np.zeros(int(0.3 * SR), np.float32), speech, np.zeros(int(0.9 * SR), np.float32)])
+        for i in range(0, len(inbound) // 320 * 320, 320):
+            pcm = (inbound[i:i + 320] * 32767).astype("<i2").tobytes()
+            ws.send_text(json.dumps({"event": "media", "media": {"track": "inbound", "payload": base64.b64encode(pcm).decode()}}))
+        ws.send_text(json.dumps({"event": "stop"}))               # end the call (the agent would otherwise just wait)
+        for _ in range(400):
+            if ws.receive_json()["event"] == "stop":
+                break
+    turns = [e for e in settings.read_ledger() if e.get("ev") == "agent_turn" and e.get("call_id") == cid]
+    assert [e["step"] for e in turns] == [0]                      # only the opener; the empty turns were skipped
+
+
+def test_dial_refuses_when_tunnel_down(monkeypatch):
+    """If the webhook can't be reached the call would drop on connect, so nothing is dialled (no paid call)."""
+    from realcall import dial
+    dialled = []
+    monkeypatch.setattr(dial, "_tunnel_ok", lambda: False)
+    monkeypatch.setattr(dial, "_vobiz_call", lambda to, cid: dialled.append(cid) or {"request_uuid": "r1"})
+    base = dict(device="D1", speaker="S02", lang="hi", persona="Rahul", upi="rahul.friend@okfinbank",
+                min_amount=2000, max_amount=50000, max_turns=4, n=1, stt="sarvam", llm="openai", vad="energy",
+                no_prewarm=True)
+    with pytest.raises(SystemExit, match="tunnel"):
+        dial.cmd_agent(type("A", (), base), Registry())
+    assert dialled == []

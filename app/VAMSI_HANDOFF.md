@@ -37,6 +37,27 @@ the commit id. Don't rewrite history and don't commit to `master`.
 | Gradle / AGP / Kotlin | 8.14.3 (wrapper) / 8.13.0 / 2.2.20 | downloaded by the wrapper on first build |
 | Python | 3.11+ venv | only for the quality gate (§5). Setup: `HANDOVER.md` §6 |
 
+## 2b. Demo change: the scam pays the CALLER's own number (25 Oct)
+
+The live attack call now does what the real "cloned relative" scam does: when the payer asks *where* to send the
+money, the cloned son says **"send it to this same number I'm calling from, on any UPI app"** — not a separate UPI ID.
+This is cleaner for the demo and ties three things together: the number on the payer's phone, the payee they pay, and
+the person Family Verify checks.
+
+What this needs on the app side (please align DemoPay for the T1 run):
+- In the T1 / attack flow, the **payee is the caller's number** (a UPI number payee, e.g. `+91XXXXXXXXXX@upi` style or a
+  "pay to mobile number" entry), shown as a **new payee** so the trigger fires. Keep it fictional on screen.
+- So the on-screen story reads: caller's number rings → the son says "pay this number" → the payer starts a payment
+  **to that same number** → Pehchaan asks "who asked you to pay?" → Family → the real relative's phone → "not me" →
+  HOLD. The number paid, the number that called, and the verified person are all the one contact.
+- The genuine path (L2) is unchanged: the real relative says "yes, it's me" → paid.
+- If wiring the caller's number as the payee is fiddly before the freeze, keep the existing fictional payee for the app
+  and let the **call audio** carry the "pay this number" line — the defense (claim → verify → HOLD) is identical either
+  way. Tell Varun which you did so the narration matches.
+
+The live-call side is already done (`ml/realcall/agent.py` `ScriptCard.pay_to_caller`, default on); this section is only
+about keeping DemoPay's payee consistent with it.
+
 ## 3. What changed around your code in the merge
 
 Your 11 commits are in, unchanged except where they met our changes from the same day:

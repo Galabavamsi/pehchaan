@@ -130,6 +130,19 @@ def is_heldout(generator: str, speaker: str = "") -> bool:
 # (language, system) of data_prep/fetch_mlaad.SYSTEMS (seeded), clean and through the AMR channel, scored by every
 # model. Every one of those generators is registered held-out above, so they stay never-trained. Downloads use signed
 # links made on the laptop (infra/sign_urls.py): the HF token never reaches the box.
+# 2026-10-25, 02:50 IST, after every v5 result had been seen (Varun's decision): ours_n3 is named the reference
+# detector, the model we quote and show beside the others in the laptop detector bench. The v5 promotion rule did not
+# say how to choose when several candidates beat A on the fixed dev set, and all three did (n1 1.29 %, n3 2.04 %,
+# a3 2.68 %, A 2.86 %); by dev alone n1 is the lowest. n3 was chosen because it is the only candidate that also improves
+# on A on the pre-registered real-call test (EER 7.8 % vs 11.0 %, genuine flagged 3/256 vs 11/256). So the choice used
+# test results: n3's numbers are the best of four models compared on that test, an optimistic pick, and are always
+# quoted with this caveat and "single seed". The v4 decision also let the real-call test decide (A2 and A2-ivc beat A
+# on dev and were not promoted). Nothing else changes: voice stays shadow-only (G2) until the live-caller gate passes,
+# the deployed server keeps v1, and ours_n3 inherits CC-BY-NC-SA-4.0 from the NII initialisation (research and
+# education only; DATA_CARD.md, the deck's disclosures). Its panel threshold is its EER point on the shared 6,000-clip
+# simulated sample, the rule every panel detector uses (serve/make_panel_config.py). On the laptop the bench's headline
+# verdict is n3 alone (PEHCHAAN_FUSE=n3), no new fusion is fitted or chosen; the 24 Oct fused combination (A, NII, v1)
+# stays available with PEHCHAAN_FUSE=A,nii,v1 and is still the code default, so the server is unchanged.
 IV_SHARDS = list(range(0, 82, 8))
 IV_SALT = "pehchaan-iv-v5"
 IV_MAX_SPEAKERS = 600

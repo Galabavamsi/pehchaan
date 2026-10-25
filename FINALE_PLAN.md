@@ -1,5 +1,7 @@
 # Pehchaan: finale plan (on site, 24–25 Oct 2026)
 
+> **Record: the on-site plan written on 24 Oct 2026.** Its results are in `ml/realcall/FINDINGS.md` (on-site sections) and `RED_TEAM.md`; the current state is in `README.md`.
+
 Written 24 Oct, 11:30 IST, against the **Round 2 judging rubric** (`Final Rubric.pdf`). Research behind it:
 `reports/Pehchaan finale models and positioning.md`. Repo state at the start of on-site work:
 `e6370a5` (declared at check-in) → `87602a9` (Varun's work from 20–23 Oct, labelled as pre-check-in) → on-site

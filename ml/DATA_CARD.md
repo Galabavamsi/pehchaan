@@ -1,4 +1,4 @@
-# Pehchaan - DATA_CARD (licences, access, loading facts)
+# Pehchaan data card: licences, access and loading facts
 
 Verified 2026-10-06 against HF API (`/api/models|datasets/<id>`: `gated`, `cardData.license`, `siblings`), HF/GitHub cards and source, PyPI JSON, Zenodo API, Edinburgh DataShare, and vendor docs.
 **NC** = non-commercial licence. "unverified" = could not confirm from a primary source.
@@ -51,7 +51,7 @@ people.
 | Sarvam instant voice cloning of S01 (consented) | training spoofs for `ours_a2_ivc` only | Sarvam ToS (§10.2: the speaker's consent) | (commercial API) |
 | ai4bharat/IndicVoices, Hindi, 11 of 82 train shards | run "v5": bona fide speech of many speakers + cloning references | CC-BY-4.0 (cite arXiv:2403.01926) | |
 | XTTS-v2 and F5-Hindi clones of those IndicVoices speakers | run "v5": training/test spoofs, research corpus only | CPML **NC** (XTTS) / CC-BY-4.0 (F5-Hindi) | **NC** (XTTS) |
-| nii-yamagishilab/mms-300m-anti-deepfake as the starting point of fine-tuned models (`ours_n1`, `ours_n3`) | candidate detectors | CC-BY-NC-SA-4.0; the fine-tuned weights inherit it | **NC** |
+| nii-yamagishilab/mms-300m-anti-deepfake as the starting point of fine-tuned models (`ours_n1`, `ours_n3`) | candidate detectors; since 25 Oct `ours_n3` is the reference detector, shown in the laptop bench panel (not deployed) | CC-BY-NC-SA-4.0; the fine-tuned weights inherit it (research and education only; a commercial deployment would retrain without it) | **NC** |
 
 Not used as bona fide: **IndicVoices-R**. Its audio went through HTDemucs, VoiceFixer (re-synthesis with a neural
 vocoder) and DeepFilterNet3, so labelling it "real" would teach a detector that vocoder artefacts are real.

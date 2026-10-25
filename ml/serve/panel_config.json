@@ -38,6 +38,16 @@
    "sim_eer": 0.3528,
    "sim_eer_heldout_generators": 0.5478,
    "n": 6000
+  },
+  "n3": {
+   "name": "Pehchaan n3 (reference: NII init + IndicVoices)",
+   "trained_on": "NII MMS-300M fine-tuned on A's data + paid-API voices + 438 IndicVoices Hindi speakers",
+   "licence": "CC BY-NC-SA 4.0 (inherits NII's)",
+   "threshold": 1.7378,
+   "std": 6.3162,
+   "sim_eer": 0.0245,
+   "sim_eer_heldout_generators": 0.0295,
+   "n": 6000
   }
  },
  "fused": {
@@ -56,6 +66,11 @@
    "sim_eer": 0.1243,
    "n": 6000
   },
+  "n3+v1": {
+   "threshold": 0.0224,
+   "sim_eer": 0.025,
+   "n": 6000
+  },
   "A+nii": {
    "threshold": 0.0903,
    "sim_eer": 0.052,
@@ -66,9 +81,24 @@
    "sim_eer": 0.141,
    "n": 6000
   },
+  "A+n3": {
+   "threshold": -0.0108,
+   "sim_eer": 0.032,
+   "n": 6000
+  },
   "la+nii": {
    "threshold": 0.119,
    "sim_eer": 0.1825,
+   "n": 6000
+  },
+  "n3+nii": {
+   "threshold": -0.0467,
+   "sim_eer": 0.0562,
+   "n": 6000
+  },
+  "la+n3": {
+   "threshold": -0.1521,
+   "sim_eer": 0.1063,
    "n": 6000
   },
   "A+nii+v1": {
@@ -81,9 +111,24 @@
    "sim_eer": 0.0757,
    "n": 6000
   },
+  "A+n3+v1": {
+   "threshold": -0.0268,
+   "sim_eer": 0.0353,
+   "n": 6000
+  },
   "la+nii+v1": {
    "threshold": 0.1043,
    "sim_eer": 0.0727,
+   "n": 6000
+  },
+  "n3+nii+v1": {
+   "threshold": 0.0461,
+   "sim_eer": 0.0303,
+   "n": 6000
+  },
+  "la+n3+v1": {
+   "threshold": -0.0477,
+   "sim_eer": 0.0537,
    "n": 6000
   },
   "A+la+nii": {
@@ -91,9 +136,49 @@
    "sim_eer": 0.0847,
    "n": 6000
   },
+  "A+n3+nii": {
+   "threshold": 0.0261,
+   "sim_eer": 0.0348,
+   "n": 6000
+  },
+  "A+la+n3": {
+   "threshold": -0.0914,
+   "sim_eer": 0.0628,
+   "n": 6000
+  },
+  "la+n3+nii": {
+   "threshold": 0.0172,
+   "sim_eer": 0.0707,
+   "n": 6000
+  },
   "A+la+nii+v1": {
    "threshold": 0.0494,
    "sim_eer": 0.0544,
+   "n": 6000
+  },
+  "A+n3+nii+v1": {
+   "threshold": 0.0499,
+   "sim_eer": 0.03,
+   "n": 6000
+  },
+  "A+la+n3+v1": {
+   "threshold": -0.0537,
+   "sim_eer": 0.0487,
+   "n": 6000
+  },
+  "la+n3+nii+v1": {
+   "threshold": 0.0398,
+   "sim_eer": 0.042,
+   "n": 6000
+  },
+  "A+la+n3+nii": {
+   "threshold": 0.0103,
+   "sim_eer": 0.0495,
+   "n": 6000
+  },
+  "A+la+n3+nii+v1": {
+   "threshold": 0.0252,
+   "sim_eer": 0.039,
    "n": 6000
   }
  }

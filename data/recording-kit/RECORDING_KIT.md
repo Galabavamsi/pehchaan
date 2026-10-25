@@ -120,4 +120,4 @@ Tell each other that the call is being recorded. Everyone on the call must have 
 
 ---
 
-**Checklist before handing over:** signed consent form ✓ · sections A, B, D (and C if applicable) ✓ · one cellular and one WhatsApp call per pair ✓ · files named correctly ✓
+**Checklist before handing over:** signed consent form; sections A, B, D (and C if applicable); one cellular and one WhatsApp call per pair; files named correctly.

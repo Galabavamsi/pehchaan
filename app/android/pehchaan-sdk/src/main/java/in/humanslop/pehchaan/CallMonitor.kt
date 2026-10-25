@@ -29,10 +29,11 @@ import java.util.concurrent.CopyOnWriteArraySet
 object CallMonitor {
     private const val PREFS = "pehchaan.call"
     /**
-     * Calls that ended longer ago are reported as "none", with no number: three times the 10-minute trigger
-     * window, so "paid 15 minutes later" still reaches the API, but older personal calls never leave the phone.
+     * Calls that ended longer ago are reported as "none", with no number. It matches the longest trigger window
+     * (60 minutes for ₹50,000 or more, engine config call_window_large_min), so a large payment within the hour
+     * still reaches the API with its call, but older personal calls never leave the phone.
      */
-    private const val STALE_MS = 30 * 60 * 1000L
+    private const val STALE_MS = 60 * 60 * 1000L
 
     private val listeners = CopyOnWriteArraySet<(CallContext) -> Unit>()
     private var telephonyHooked = false
@@ -143,7 +144,7 @@ object CallMonitor {
         // Live correction: the app may have started mid-call, or missed the hang-up while killed.
         val audioMode = c.getSystemService(AudioManager::class.java).mode
         val liveTel = if (has(c, Manifest.permission.READ_PHONE_STATE))
-            runCatching { c.getSystemService(TelephonyManager::class.java).callStateCompat() }.getOrNull() else null
+            callStateCompat(c) else null
         val onPstn = liveTel == TelephonyManager.CALL_STATE_OFFHOOK || audioMode == AudioManager.MODE_IN_CALL
         val onVoip = audioMode == AudioManager.MODE_IN_COMMUNICATION
         if ((onPstn || onVoip) && state != "active") {
@@ -204,9 +205,17 @@ object CallMonitor {
         }
     }.getOrNull()
 
+    /** The live call state, or null when READ_PHONE_STATE isn't granted (checked here, where lint can see it). */
     @Suppress("DEPRECATION")
-    private fun TelephonyManager.callStateCompat(): Int =
-        if (Build.VERSION.SDK_INT >= 31) callStateForSubscription else callState
+    private fun callStateCompat(c: Context): Int? {
+        if (ContextCompat.checkSelfPermission(c, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) return null
+        val tm = c.getSystemService(TelephonyManager::class.java)
+        return try {
+            if (Build.VERSION.SDK_INT >= 31) tm.callStateForSubscription else tm.callState
+        } catch (e: SecurityException) {
+            null
+        }
+    }
 
     /** E.164 for Indian numbers as the risk API expects (+91…); other formats are passed through. */
     fun normalise(raw: String?): String? {

@@ -821,3 +821,4 @@ html.native .dp-scan { margin-top: calc(-1 * env(safe-area-inset-top)); padding-
 .fam-dot.on { background: #1f9d6b; }
 .dp-fam .fam-dot { margin: 0 6px 0 4px; }
 .dp-fam .fam-ans { font-weight: 700; }
+.dp-rc-secs { font-size: 14px; color: var(--slate); font-variant-numeric: tabular-nums; }

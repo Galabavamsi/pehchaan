@@ -1,5 +1,7 @@
 # Pehchaan voice-clone detector: results
 
+> **Record: Round 1 results on simulated phone channels, 6 Oct 2026.** Real-call and on-site results are in `ml/realcall/FINDINGS.md`.
+
 All numbers are on held-out TEST data; calibration and band thresholds were fitted on DEV only.
 FAR = clones accepted as real; FRR = real people flagged. EER in %. Channels are simulated unless marked real.
 

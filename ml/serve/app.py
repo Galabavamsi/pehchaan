@@ -191,7 +191,9 @@ app = FastAPI(title="Pehchaan Voice Provenance Service", version="0.1")
 _svc = None
 _panel = None
 # default: a panel of just the served model (no extra memory), so #/bench works on a small server too;
-# the laptop runs the full panel with PEHCHAAN_PANEL=v1,A,nii,la
+# the laptop runs PEHCHAAN_PANEL=v1,A,nii,n3 PEHCHAAN_FUSE=n3 (n3, the reference detector, as the headline verdict:
+# common/protocol.py note of 2026-10-25) under a memory cap: on the 16 GB laptop it peaks at ~7.5 GB, and adding la
+# went over 8 GB and froze the machine on 25 Oct (app/README.md has the command); the server keeps the defaults below
 PANEL_IDS = [m.strip() for m in os.environ.get("PEHCHAAN_PANEL", "v1").split(",") if m.strip()]
 FUSE_IDS = [m.strip() for m in os.environ.get("PEHCHAAN_FUSE", "A,nii,v1").split(",") if m.strip()]
 

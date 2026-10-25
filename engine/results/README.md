@@ -5,6 +5,7 @@
 - The sessions run through the real Pehchaan fusion config (`engine/pehchaan/config.yaml`, v0.2.0).
 - Every distribution is listed in `engine/sim_assumptions.yaml`, either cited to `research/` or labelled "team assumption".
 - The vectorised engine in `sim.py` is tested against `pehchaan.fusion.assess`: identical tiers and p on 10,000 random plus 6,000 scenario-like signal sets.
+- Checked 25 Oct 2026: re-running with the current engine (SPEC v0.3 rules) gives the same headline numbers. The v0.3 rules change outcomes only for attack patterns the simulator does not generate (split payments, payments after the call window, a spoofed saved number); those were tested through the live API instead (`RED_TEAM.md`).
 
 ```bash
 cd engine && python -m pehchaan.sim                          # one command refreshes every file below (about 20 s)

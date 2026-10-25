@@ -1,5 +1,7 @@
 # Pehchaan: handover (as of 20 Oct 2026, finale on 24–25 Oct)
 
+> **Record: the handover written on 20 Oct 2026, before the finale.** For the current state see `README.md`. Setup (section 6), how to run things (section 7) and the gotchas (section 10) still apply.
+
 Read this first, then `TASKS.md` (what's left, day by day, and the final checklist), then `SPEC.md` (the
 product contract). `CLAUDE.md` is the short version for Claude Code sessions.
 
@@ -37,16 +39,16 @@ third-party assets.
 
 | Area | State |
 |---|---|
-| Spec, engine, simulator | ✅ done (Round 1) |
-| Risk API + React demo (3 surfaces) | ✅ works locally; ❌ not deployed yet |
-| Voice detector v1 | ✅ served locally (`ml/serve`), 4.8 % EER simulated |
-| Real-call pipeline (`ml/realcall`) | ✅ built; 48 real calls to D1; hands-free on Samsung |
-| Retrained model A (real-call data + learned channel) | ✅ real-call EER 6.8 % (v1: 24.6 %); weights in S3; ❌ not served |
-| D2 (Redmi) held-out handset test | ⚠️ ~7 calls; adb can answer but can't turn on speaker → answer by hand |
-| Live genuine volunteer calls (the gate) | ❌ not started; consent forms needed |
-| Deployment on humanslop.in | ❌ only `calls.humanslop.in` (tunnel to a laptop) |
-| Live attack call + Family Verify on a real 2nd phone | ❌ not built yet; this is the finale headline |
-| Deck update for the finale | ❌ |
+| Spec, engine, simulator | Done (Round 1) |
+| Risk API + React demo (3 surfaces) | Works locally; not deployed yet |
+| Voice detector v1 | Served locally (`ml/serve`), 4.8 % EER simulated |
+| Real-call pipeline (`ml/realcall`) | Built; 48 real calls to D1; hands-free on Samsung |
+| Retrained model A (real-call data + learned channel) | Real-call EER 6.8 % (v1: 24.6 %); weights in S3; not served |
+| D2 (Redmi) held-out handset test | Partial: ~7 calls; adb can answer but can't turn on speaker → answer by hand |
+| Live genuine volunteer calls (the gate) | Not started; consent forms needed |
+| Deployment on humanslop.in | Only `calls.humanslop.in` (tunnel to a laptop) |
+| Live attack call + Family Verify on a real 2nd phone | Not built yet; this is the finale headline |
+| Deck update for the finale | Not started |
 
 What to do next, in order, is in **`TASKS.md`**.
 

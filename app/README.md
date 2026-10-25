@@ -25,6 +25,11 @@ Other routes:
 - `#/console`: the full analyst console, 1440 px wide.
 - `#/demo` → **Your case**: the jury sets the caller, call state, amount, payee and registry flags (`POST /v1/demo/custom`); Restart replays it.
 - `#/bench`: drop or record audio, every detector side by side (`POST /v1/voice/panel`, needs the voice service with `PEHCHAAN_PANEL`).
+  Laptop panel with the reference detector n3 as the headline verdict (weights: `aws s3 cp --recursive
+  s3://pehchaan-ml-301745146083-use1/runs/ours_n3/ ml/runs/ours_n3/`, plus `runs/ours_v3_rc`). It peaks at ~7.5 GB, so
+  run it under a memory cap; adding the off-the-shelf `la` goes over 8 GB and froze the 16 GB laptop on 25 Oct:
+  `cd ml && systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0 -E PEHCHAAN_DEVICE=cpu -E PEHCHAAN_PANEL=v1,A,nii,n3 -E PEHCHAAN_FUSE=n3 ../.venv/bin/python -m uvicorn serve.app:app --port 8510`,
+  then the API with `VOICE_SERVICE_URL=http://127.0.0.1:8510` (`.claude/launch.json`: `voice-panel`, `api-panel`, `web-panel`).
 - `#/benchmark`: clone-vs-detect results (`GET /v1/benchmark`, from `ml/results/clone_vs_detect.json`).
 - `#/redteam`, `#/tour`: the red-team matrix (`GET /v1/redteam`, from `python app/server/redteam.py`) and the visitor tour.
 

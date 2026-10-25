@@ -315,7 +315,10 @@ async def agent_ws(ws: WebSocket, call_id: str):
     loop = asyncio.get_event_loop()
     utt_q: asyncio.Queue = asyncio.Queue()
     started, barge = asyncio.Event(), asyncio.Event()
-    st = {"stream_id": None, "be": None, "speaking": False, "stop": False, "turns": 0}
+    # Vobiz streams little-endian L16 both ways. Forcing it (rather than guessing from the first frames) fixes the
+    # calls where the guess flipped to big-endian on an opening of near-silence: that garbled every turn's audio, so
+    # STT returned empty and the opener went out as static. Little-endian calls always transcribed and sounded right.
+    st = {"stream_id": None, "be": False, "speaking": False, "stop": False, "turns": 0}
 
     async def send(obj):
         await ws.send_text(json.dumps(obj))
@@ -329,10 +332,13 @@ async def agent_ws(ws: WebSocket, call_id: str):
                 if ev == "start":
                     st["stream_id"] = msg["start"]["streamId"]
                     started.set()
-                    log_event("stream_start", call_id=call_id, stream_id=st["stream_id"])
+                    st["t_stream"] = time.perf_counter()
+                    log_event("stream_start", call_id=call_id, stream_id=st["stream_id"],
+                              start=msg.get("start"))       # Vobiz declares its media format here (rate, codec)
                 elif ev == "media" and msg.get("media", {}).get("track", "inbound") == "inbound":
                     raw = base64.b64decode(msg["media"]["payload"])
                     buf.extend(raw)
+                    st["in_bytes"] = st.get("in_bytes", 0) + len(raw)   # to derive the true inbound rate vs wall clock
                     if st["be"] is None and len(buf) >= 3200:
                         st["be"] = _guess_big_endian(bytes(buf))
                     n = len(raw) // 2 * 2
@@ -388,17 +394,22 @@ async def agent_ws(ws: WebSocket, call_id: str):
         return " ".join(spoken), t_first
 
     async def do_turn(utt):
-        """One of her turns: STT+LLM off-thread, a filler if that runs long, then the reply streamed by sentence."""
+        """One of her turns. Transcribe first and only reply if she actually said something: line noise and the echo
+        tail of the agent's own voice transcribe to nothing, and replying to those is what made the call babble. A
+        skipped turn returns None (no LLM, no TTS, not counted)."""
         t0 = time.perf_counter()
-
-        def _blocking():
-            ta = time.perf_counter()
-            text = conv.transcribe(utt, agent.SR_UP)
-            tb = time.perf_counter()
-            plan = conv.plan(text)
-            return text, plan, agent._ms(ta, tb), agent._ms(tb, time.perf_counter())
-
-        fut = loop.run_in_executor(None, _blocking)
+        text = await loop.run_in_executor(None, conv.transcribe, utt, agent.SR_UP)
+        stt_ms = agent._ms(t0, time.perf_counter())
+        if len(text.strip()) < 2:                 # nothing was said -> don't answer, don't burn a turn
+            u = np.asarray(utt, np.float32)        # metadata only (no audio): is it silence, noise, or clean speech?
+            rms = float(np.sqrt(np.mean(u ** 2))) if len(u) else 0.0
+            rms_db = round(20 * float(np.log10(rms + 1e-9)), 1)
+            hf = float(np.mean(np.diff(u) ** 2) / (np.mean(u ** 2) + 1e-12)) if len(u) > 1 else 0.0
+            log_event("agent_skip", call_id=call_id, stt_ms=stt_ms, utt_s=round(len(utt) / agent.SR_UP, 2),
+                      chars=len(text.strip()), rms_db=rms_db, hf_ratio=round(hf, 2), be=bool(st["be"]))
+            return None
+        t1 = time.perf_counter()
+        fut = loop.run_in_executor(None, conv.plan, text)
         filler, t_first = False, None
         done, _ = await asyncio.wait({fut}, timeout=agent.FILLER_AFTER_S)
         if not done and fillers is not None and not st["stop"]:
@@ -406,7 +417,8 @@ async def agent_ws(ws: WebSocket, call_id: str):
             if fa is not None:
                 filler, t_first = True, time.perf_counter()
                 await speak(fa)
-        text, plan, stt_ms, llm_ms = await fut
+        plan = await fut
+        llm_ms = agent._ms(t1, time.perf_counter())
         reply_ms = agent._ms(t0, time.perf_counter())
         spoken, t_reply = await speak_reply(plan)
         conv.record(text, spoken)
@@ -416,33 +428,51 @@ async def agent_ws(ws: WebSocket, call_id: str):
                           first_sound_ms=agent._ms(t0, t_first) if t_first else reply_ms,
                           mother_chars=len(text), son_chars=len(spoken))
 
+    async def warm_providers():
+        """Open the STT/LLM/TTS connections (and load their models) while the opener plays, so the first real turn
+        isn't a cold start. The opener itself is pre-rendered, so nothing in this process is warm until now."""
+        for p in (providers.stt, providers.llm, providers.tts):
+            w = getattr(p, "warm", None)
+            if w and not st["stop"]:
+                try:
+                    await loop.run_in_executor(None, w)
+                except Exception:
+                    pass
+
     async def brain():
         await started.wait()
-        if st["stop"]:
-            return
+        asyncio.create_task(warm_providers())            # fire-and-forget; it swallows its own errors
+        for _ in range(30):                              # wait up to ~1.5 s for enough inbound to know the byte order,
+            if st["be"] is not None or st["stop"]:       # so the opener isn't sent byte-swapped (heard as static)
+                break
+            await asyncio.sleep(0.05)
         t0 = time.perf_counter()
-        op = await loop.run_in_executor(None, agent.take_opener, call_id)     # rendered before the ring, if present
-        if op is not None:
-            plan, audio = op
-            conv.use_opener(plan)
-            llm_ms = 0
-        else:
-            plan, audio, ot = await loop.run_in_executor(None, conv.open)
-            llm_ms = ot["llm_ms"]
-        t_first = time.perf_counter()
-        await speak(audio, cut=False)                                                    # opener is one pre-synthesised blob
-        log_event("agent_turn", call_id=call_id, step=0, emotion=plan.emotion, done=plan.done, prerendered=op is not None,
-                  stt_ms=0, llm_ms=llm_ms, reply_ms=agent._ms(t0, t_first), first_sound_ms=agent._ms(t0, t_first), filler=False,
-                  mother_chars=0, son_chars=len(plan.text))
-        print(f"[agent {call_id[:8]}] son ({plan.emotion}): {plan.text}", flush=True)
+        if not st["stop"]:                               # hung up during the wait -> skip to the end (sends stop)
+            op = await loop.run_in_executor(None, agent.take_opener, call_id)   # rendered before the ring, if present
+            if op is not None:
+                plan, audio = op
+                conv.use_opener(plan)
+                llm_ms = 0
+            else:
+                plan, audio, ot = await loop.run_in_executor(None, conv.open)
+                llm_ms = ot["llm_ms"]
+            t_first = time.perf_counter()
+            await speak(audio, cut=False)                                       # opener is one pre-synthesised blob
+            log_event("agent_turn", call_id=call_id, step=0, emotion=plan.emotion, done=plan.done, prerendered=op is not None,
+                      stt_ms=0, llm_ms=llm_ms, reply_ms=agent._ms(t0, t_first), first_sound_ms=agent._ms(t0, t_first),
+                      filler=False, mother_chars=0, son_chars=len(plan.text))
+            print(f"[agent {call_id[:8]}] son ({plan.emotion}): {plan.text}", flush=True)
         while not st["stop"] and st["turns"] < card.max_turns:
             utt = await utt_q.get()
             if utt is None:
                 break
             if len(utt) / agent.SR_UP < 0.3:                                  # too short to be a real turn
                 continue
+            result = await do_turn(utt)
+            if result is None:                                                # noise / echo, nothing said: wait
+                continue
             st["turns"] += 1
-            plan, t = await do_turn(utt)
+            plan, t = result
             log_event("agent_turn", call_id=call_id, step=st["turns"], emotion=plan.emotion, done=plan.done, **t)
             print(f"[agent {call_id[:8]}] mother: {conv.last_mother!r} -> son ({plan.emotion}): {plan.text}", flush=True)
             if plan.done:
@@ -463,7 +493,10 @@ async def agent_ws(ws: WebSocket, call_id: str):
             await recv_task
         except (asyncio.CancelledError, Exception):
             pass
-        log_event("agent_done", call_id=call_id, turns=st["turns"])
+        secs = time.perf_counter() - st.get("t_stream", time.perf_counter())
+        rate = round(st.get("in_bytes", 0) / 2 / secs) if secs > 0.5 else 0   # samples/sec: should be ~16000
+        log_event("agent_done", call_id=call_id, turns=st["turns"], inbound_rate_hz=rate,
+                  inbound_s=round(st.get("in_bytes", 0) / 2 / agent.SR_UP, 1), stream_s=round(secs, 1))
 
 
 def main():

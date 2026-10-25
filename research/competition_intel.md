@@ -78,7 +78,7 @@ This page mirrors the Unstop text. It states team size as 2–4 and adds: "Regis
 ### 1.5 ARIES IIT Delhi
 - Website https://ariesiitd.com/events: the site map has **no RAKSHAM page**. Past events include the Eightfold AI hackathon (Innov8), QRT x ARIES, Citadel Securities x ARIES, Ship-a-thon, and an NDTV AI Summit.
 - Instagram https://www.instagram.com/aries.iitd/: Instagram blocks scraping. The caption below was reconstructed from search-engine snippets:
-  > "Got an idea to fight AI-powered fraud? Now's your chance to build it! Introducing RAKSHAM: AI Cybersecurity Hackathon. Presented by IIT Delhi in collaboration with Amazon. Pick a problem. Build your solution. Make an impact … Finale: 24–25 Oct 2026 ⏰ **Submit your idea by 10 Oct 2026.** Think. Build. Defend. 🛡️ #RAKSHAM #AIHackathon #CyberSecurity #IITDelhi #Amazon"
+  > "Got an idea to fight AI-powered fraud? Now's your chance to build it! Introducing RAKSHAM: AI Cybersecurity Hackathon. Presented by IIT Delhi in collaboration with Amazon. Pick a problem. Build your solution. Make an impact … Finale: 24–25 Oct 2026. **Submit your idea by 10 Oct 2026.** Think. Build. Defend. #RAKSHAM #AIHackathon #CyberSecurity #IITDelhi #Amazon"
 - LinkedIn https://in.linkedin.com/company/aries-artificial-intelligence-society-iitd could not be scraped. **[UNVERIFIED]**
 
 ### 1.6 Learning Links Foundation (LLF)

@@ -1,5 +1,7 @@
 # Implementation notes and SPEC proposals
 
+> **Record: Round 1 design notes and SPEC proposals, 6 Oct 2026.** The adopted proposals are in `SPEC.md`.
+
 **Status (SPEC v0.2):** the coordinator adopted proposals B1, B2, B3, B4, B6 and B7 below into SPEC v0.2; the engine, server, web and simulator now implement them (config v0.2.0).
 - B5 (precision of Red) is addressed by tuning θ_red with the simulator. See `engine/results/sim_threshold_sweep.json` and `deck_numbers.json`.
 - Section A2 is superseded by strict G2, A3 by the v0.2 rules in A13, and A4 by G7.

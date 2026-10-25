@@ -6,6 +6,24 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "app/web", "run", "dev"],
       "port": 5173
+    },
+    {
+      "name": "voice-panel",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd ml && exec systemd-run --user --scope -q -p MemoryMax=8G -p MemorySwapMax=0 -E PEHCHAAN_DEVICE=cpu -E PEHCHAAN_PANEL=v1,A,nii,n3 -E PEHCHAAN_FUSE=n3 ../.venv/bin/python -m uvicorn serve.app:app --port 8510"],
+      "port": 8510
+    },
+    {
+      "name": "api-panel",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd app/server && VOICE_SERVICE_URL=http://127.0.0.1:8510 ../../.venv/bin/python -m uvicorn pehchaan_api.main:app --port 8410"],
+      "port": 8410
+    },
+    {
+      "name": "web-panel",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd app/web && npx vite --port 5174 --strictPort"],
+      "port": 5174
     }
   ]
 }
